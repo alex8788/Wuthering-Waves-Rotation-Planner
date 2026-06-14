@@ -61,7 +61,6 @@ export const useSidebarStore = defineStore('sidebar', () => {
   /**
    * 監聽 templates 的變化，自動同步至 LocalStorage。
    * 使用 deep watch 確保陣列內部物件的屬性變更也能觸發。
-   * { immediate: false }：避免初始化時重複寫入（載入時已從 storage 讀取）。
    */
   watch(
     templates,
@@ -80,23 +79,18 @@ export const useSidebarStore = defineStore('sidebar', () => {
   // ──────────────────────────────────────────
 
   /**
-   * defaultBlocks：系統預設的七個基礎招式區塊（直接引用常數，不存在 store 狀態中）。
-   * 包裝成 computed 讓元件使用時可以直接解構，保持介面一致性。
+   * defaultBlocks：系統預設的基礎招式區塊。
    */
   const defaultBlocks = computed(() => DEFAULT_BLOCKS);
 
   /**
    * getTemplatesByCharacter：依角色 ID 篩選對應的自訂模板。
-   * 回傳函式（getter factory），供元件傳入不同 characterId 使用。
-   *
-   * 使用方式：
-   *   const templates = sidebarStore.getTemplatesByCharacter('jiyan')
+   * 依建立時間由舊到新排序，讓最新加入的在下方。
    */
   const getTemplatesByCharacter = computed(
     () => (characterId: string) =>
       templates.value
         .filter((t) => t.characterId === characterId)
-        // 依建立時間由舊到新排序，讓最新加入的在下方
         .sort((a, b) => a.createdAt - b.createdAt)
   );
 
@@ -107,37 +101,30 @@ export const useSidebarStore = defineStore('sidebar', () => {
   /**
    * serializeToTemplate：將主軸上的 InstanceBlock 序列化為模板，加入側邊欄。
    *
-   * 對應設計文件「序列化（Move & Serialization）」章節。
-   *
-   * 操作流程：
-   *  1. 深拷貝 InstanceBlock 的資料
-   *  2. 賦予新的 templateId（UUID）
-   *  3. 設定 source 為 'template'，記錄建立時間
-   *  4. 推入 templates 陣列（watch 會自動同步至 LocalStorage）
-   *  5. 觸發 Toast 提示
-   *
    * @param instance - 主軸上要序列化的 InstanceBlock
-   * @returns 建立完成的 TemplateBlock（供觸發「閃爍」動畫使用）
+   * @returns 建立完成的 TemplateBlock
    */
   function serializeToTemplate(instance: InstanceBlock): TemplateBlock {
-    // 確保 characterId 不為 null（InstanceBlock 的 characterId 保證非 null）
+    // 確保 characterId 不為 null（自訂模板一定要綁定角色）
     if (!instance.characterId) {
-      throw new Error('[useSidebarStore.serializeToTemplate] InstanceBlock.characterId 不可為 null');
+      throw new Error('[useSidebarStore.serializeToTemplate] 區塊的 characterId 不可為 null');
     }
 
     // 深拷貝，避免主軸上的資料與模板庫共用參考
     const clonedBlock = deepClone(instance);
 
-    // 組裝 TemplateBlock
+    // 精確組裝 TemplateBlock，不將 instance 專屬的 originId 屬性帶入
     const newTemplate: TemplateBlock = {
-      ...clonedBlock,
-      templateId: generateUUID(), // 賦予新的模板 ID
+      id: generateUUID(), // 統一使用泛用 id
+      label: clonedBlock.label,
+      color: clonedBlock.color,
       source: 'template',
-      characterId: instance.characterId, // TypeScript 已確保非 null
+      characterId: clonedBlock.characterId,
+      tags: clonedBlock.tags,
       createdAt: Date.now(),
     };
 
-    // 推入模板陣列（watch 自動持久化）
+    // 推入模板陣列（watch 會自動持久化）
     templates.value.push(newTemplate);
 
     // 觸發 Toast 提示
@@ -149,36 +136,27 @@ export const useSidebarStore = defineStore('sidebar', () => {
   /**
    * deleteTemplate：從側邊欄刪除指定的自訂模板。
    *
-   * @param templateId - 要刪除的 TemplateBlock.templateId
+   * @param id - 要刪除的 TemplateBlock.id
    */
-  function deleteTemplate(templateId: string): void {
-    templates.value = templates.value.filter(
-      (t) => t.templateId !== templateId
-    );
+  function deleteTemplate(id: string): void {
+    templates.value = templates.value.filter((t) => t.id !== id);
   }
 
   /**
-   * showToast：顯示右下角的提示框。
-   * Toast 顯示 2 秒後自動清除。
-   *
-   * @param message - 要顯示的訊息文字
+   * showToast：顯示右下角的提示框（2 秒後自動清除）。
    */
   function showToast(message: string): void {
     toastMessage.value = message;
-    // 2000ms 後清除，讓 ToastNotification 元件執行淡出動畫
     setTimeout(() => {
       toastMessage.value = '';
     }, 2000);
   }
 
   return {
-    // State
     templates,
     toastMessage,
-    // Computed
     defaultBlocks,
     getTemplatesByCharacter,
-    // Actions
     serializeToTemplate,
     deleteTemplate,
     showToast,
