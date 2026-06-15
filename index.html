@@ -1,17 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="鳴潮三人輪切排軸輔助工具" />
     <title>鳴潮排軸工具</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-    </head>
+
+    <!--
+      Google Fonts CDN
+      - Noto Sans TC：繁體中文介面文字（weight 400, 500, 700）
+      - JetBrains Mono：區塊標籤使用等寬字型，確保 'A'、'3AE' 等符號對齊
+      display=swap：優先用系統字渲染，字型載入後換字，避免 FOIT
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
   <body>
+    <!-- Vue 應用程式掛載點 -->
     <div id="app"></div>
+    <!-- Vite 入口腳本 -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
