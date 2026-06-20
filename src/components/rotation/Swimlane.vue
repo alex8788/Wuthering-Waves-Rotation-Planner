@@ -1,39 +1,27 @@
 <script setup lang="ts">
-// ============================================================
-// Swimlane.vue
-// 單一角色的橫向時間軸軌道。
-//
-// Phase 4.3 異動：
-//   1. 引入 <VueDraggable> 包裹區塊序列，取代純 v-for 靜態渲染。
-//   2. 使用 v-model 綁定「本地緩衝陣列」localEntries（非 props.entries
-//      本身）：vue-draggable-plus 無論是否用 v-model，內部都會直接
-//      mutate 綁定的陣列物件，若直接綁定唯讀的 props.entries 會與
-//      Vue 的渲染追蹤脫鉤。localEntries 由本元件自己持有，放給套件
-//      自由操作；真正的真相來源仍是 useRotationStore——@add/@update
-//      會呼叫 useBlockDrag 的 handler 換算全域索引並寫回 store，
-//      待 store 更新、props.entries 重新計算後，watch 會立即把
-//      localEntries 校正回真相內容（詳見下方 localEntries 宣告處註解）。
-//   3. group / put（角色匹配）/ ghostClass 等規則統一由
-//      useBlockDrag.getRotationSortableOptions(slotIndex) 提供，
-//      本元件不重複定義拖曳規則。
-// ============================================================
+// Swimlane.vue：單一角色的橫向時間軸軌道
+
+// 核心機制：
+// 1. 使用 VueDraggable 處理區塊拖曳。
+// 2. 綁定 localEntries 緩衝陣列，避免套件直接修改唯讀 props 導致 VDOM 脫鉤。
+// 3. 拖曳結束後由 useBlockDrag 換算全域索引並更新 store，watch 再同步回 localEntries。
 
 import { ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import RotationBlock from '@/components/rotation/RotationBlock.vue'
 import { useRotationStore } from '@/stores/useRotationStore'
-import { useBlockDrag, type SortableEventLike } from '@/composables/useBlockDrag'
+import { useBlockDrag, DROP_ZONE_ATTRIBUTE, type SortableEventLike } from '@/composables/useBlockDrag'
 import type { Character } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
 // ── Props ────────────────────────────────────────────────────
 
 interface Props {
-  /** 此泳道對應的角色。null 代表槽位尚未選角，Header 顯示佔位狀態。 */
+  /** 此泳道對應的角色 (null 代表未選角) */
   character: Character | null
-  /** 槽位索引（0 / 1 / 2） */
+  /** 槽位索引 (0 / 1 / 2) */
   slotIndex: 0 | 1 | 2
-  /** 此泳道的區塊序列（已由父層 RotationBoard 依 slotIndex 過濾完畢） */
+  /** 父層過濾後的區塊序列 (唯讀真相來源) */
   entries: RotationEntry[]
 }
 
@@ -51,11 +39,10 @@ const {
   getRotationSortableOptions,
 } = useBlockDrag()
 
-/**
- * localEntries：VueDraggable 實際操作的「本地緩衝陣列」。
- */
+// VueDraggable 操作的本地緩衝陣列，防止套件直接修改 prop 導致資料流脫鉤
 const localEntries = ref<RotationEntry[]>([...props.entries])
 
+// 當 store 更新導致 props.entries 改變時，同步校正緩衝陣列
 watch(
   () => props.entries,
   (newEntries) => {
@@ -63,23 +50,12 @@ watch(
   }
 )
 
-/**
- * dragOptions：本泳道專屬的 SortableJS 設定（group/put/ghostClass...）。
- * 直接透傳 useBlockDrag 集中管理的規則，本元件不重複定義。
- */
+// 取得本泳道專屬的 SortableJS 設定 (包含 group 角色匹配防護等)
 const dragOptions = computed(
   (): Record<string, unknown> => getRotationSortableOptions(props.slotIndex)
 )
 
-/**
- * getEntryFromDragEvent：依 SortableJS 事件的舊索引反查對應的 RotationEntry。
- *
- * 僅在「同泳道內拖曳起點（@start）」場景使用：
- * 此時尚未發生任何 splice，localEntries 內容等同本泳道原始序列，
- * 故 event.oldDraggableIndex（不計入不可拖曳元素時優先採用）
- * 或 event.oldIndex 可直接對應 localEntries 的陣列索引，
- * 不需要再做全域換算（全域換算交由 useBlockDrag 內部處理）。
- */
+// 依 SortableJS 事件索引反查對應區塊 (僅限同泳道拖曳起點 @start 且未發生 splice 時使用)
 function getEntryFromDragEvent(event: SortableEventLike): RotationEntry | undefined {
   const localIndex = event.oldDraggableIndex ?? event.oldIndex ?? -1
   return localEntries.value[localIndex]
@@ -87,33 +63,41 @@ function getEntryFromDragEvent(event: SortableEventLike): RotationEntry | undefi
 
 // ── 事件處理 ──────────────────────────────────────────────────
 
-/**
- * handleDragStart：拖曳起點。
- * 僅當拖曳來源為「本泳道既有區塊」時才需要記錄；
- * 從側邊欄拖入的起點記錄已在 sidebar 欄位元件呼叫 onSidebarDragStart 完成。
- */
+// 拖曳起點：僅記錄本泳道既有區塊的起點 (側邊欄拖入由 sidebar 處理)
 function handleDragStart(event: SortableEventLike): void {
   const entry = getEntryFromDragEvent(event)
   if (entry) onRotationDragStart(entry)
 }
 
-/** handleAdd：側邊欄拖入本泳道（onAdd） */
+// 側邊欄拖入本泳道 (onAdd)
 function handleAdd(event: SortableEventLike): void {
   handleSidebarToLaneDrop(event, props.slotIndex)
 }
 
-/** handleUpdate：本泳道內排序（onUpdate） */
+// 本泳道內重新排序 (onUpdate)
 function handleUpdate(event: SortableEventLike): void {
   handleSameLaneDrop(event, props.slotIndex)
 }
 
-/** handleEnd：拖曳結束的統一決策點（序列化 / 拖曳刪除 / 安全過關），交由 useBlockDrag 分流 */
+// 拖曳結束：統一交由 useBlockDrag 決策
 function handleEnd(): void {
   handleDragEnd()
 }
 
-// ── 既有邏輯（Phase 4.2，未變動）──────────────────────────────
+// 區塊點擊選取 (支援 Ctrl/Meta 多選)
+function handleBlockSelect(entryId: string, event: MouseEvent): void {
+  const isMultiSelect = event.ctrlKey || event.metaKey
+  rotationStore.selectBlock(entryId, isMultiSelect)
+}
 
+// 判斷區塊是否應顯示「拖曳刪除」紅色警告 (正被拖曳且懸停於無效放置區)
+function isEntryDanger(entryId: string): boolean {
+  return dragState.draggingId === entryId && dragState.isOverInvalidZone
+}
+
+// ── 既有邏輯 ──────────────────────────────────────────────────
+
+// 定位本泳道最後一個區塊的全局索引；若為空則回傳全局末尾
 const insertAfterIndex = computed<number>(() => {
   const globalEntries = rotationStore.entries
   for (let i = globalEntries.length - 1; i >= 0; i--) {
@@ -124,6 +108,7 @@ const insertAfterIndex = computed<number>(() => {
   return globalEntries.length - 1
 })
 
+// 於本泳道末尾新增空白實體區塊
 function handleAddBlock(): void {
   if (!props.character) return
   rotationStore.addFreeformBlock(
@@ -135,6 +120,7 @@ function handleAddBlock(): void {
   )
 }
 
+// 點擊軌道空白處時清除全域選取
 function handleTrackClick(): void {
   rotationStore.clearSelection()
 }
@@ -147,7 +133,6 @@ function handleTrackClick(): void {
     :aria-label="character ? `${character.nameZh} 的輸出軸` : `槽位 ${slotIndex + 1}（未選角）`"
   >
 
-    <!-- ── 左側：固定 Header ────────────────────────────────── -->
     <div
       class="swimlane__header"
       :style="character ? { '--lane-color': character.themeColor } : {}"
@@ -183,7 +168,6 @@ function handleTrackClick(): void {
       </span>
     </div>
 
-    <!-- ── 右側：可橫向捲動的區塊軌道 ─────────────────────── -->
     <div
       class="swimlane__track"
       role="list"
@@ -192,31 +176,17 @@ function handleTrackClick(): void {
     >
       <div class="track__inner">
 
-        <div
-          v-if="!character"
-          class="track__empty-hint"
-          aria-label="請先於上方選擇角色"
-        >
+        <div v-if="!character" class="track__empty-hint" aria-label="請先於上方選擇角色">
           請先選擇角色
         </div>
 
         <template v-else>
-          <!--
-            拖曳區塊序列：
-            - v-model 綁定本元件自己持有的 localEntries（緩衝陣列），
-              而非父層傳入的唯讀 props.entries，避免套件直接 mutate
-              非自有參考導致 VDOM/真實 DOM 脫鉤。
-            - item-key 對應 RotationEntry.id，確保 Vue keyed-diff
-              在 watch 校正 localEntries 後能正確比對、平滑過渡。
-            - class="track__draggable" 搭配 display: contents，
-              讓拖曳容器在版面上「消失」，子層 RotationBlock 直接
-              參與 .track__inner 的 flex 排列，不多一層盒模型。
-          -->
           <VueDraggable
             v-model="localEntries"
             item-key="id"
             tag="div"
             class="track__draggable"
+            :[DROP_ZONE_ATTRIBUTE]="true"
             v-bind="dragOptions"
             @start="handleDragStart"
             @add="handleAdd"
@@ -229,15 +199,13 @@ function handleTrackClick(): void {
               :entry-id="entry.id"
               :label="entry.block.label"
               :color="entry.block.color || character.themeColor"
+              :is-selected="rotationStore.isSelected(entry.id)"
+              :is-danger="isEntryDanger(entry.id)"
               role="listitem"
+              @select="(event) => handleBlockSelect(entry.id, event)"
             />
           </VueDraggable>
 
-          <!--
-            空泳道拖放提示：
-            僅在「正在拖曳中」且「本泳道目前沒有任何區塊」時顯示，
-            對應 SDD 預期落點提示：「如果該輸出軸為空，就在輸出軸上呈現提示效果」。
-          -->
           <div
             v-if="localEntries.length === 0 && dragState.isDragging"
             class="track__empty-dropzone"
@@ -388,19 +356,10 @@ function handleTrackClick(): void {
   min-width: 100%;
 }
 
-/*
-  拖曳容器：display: contents 讓 <VueDraggable> 的根節點在版面上「消失」，
-  子層 RotationBlock 直接參與 .track__inner 的 flex 排列。
-  注意：display: contents 元素本身無盒模型，因此 SortableJS 動態掛載的
-  ghostClass / chosenClass 若要顯示陰影或位移，必須作用在其「子層」
-  （見全域 src/style.css 的 .sortable-chosen > * 等選擇器），
-  不能直接對 .track__draggable 本身套用視覺樣式。
-*/
 .track__draggable {
   display: contents;
 }
 
-/* 空泳道拖放提示 */
 .track__empty-dropzone {
   flex: 1;
   display: flex;
