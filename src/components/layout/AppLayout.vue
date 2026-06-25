@@ -8,6 +8,8 @@
 // 完全透過具名 slot（header / sidebar / main）由外部注入。
 // ============================================================
 
+import { DROP_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
+
 interface Props {
   /** 側邊欄固定寬度（px） */
   sidebarWidth?: number
@@ -29,11 +31,11 @@ const props = withDefaults(defineProps<Props>(), {
       '--app-header-height': `${props.headerHeight}px`,
     }"
   >
-    <div class="app-layout__header">
+    <div class="app-layout__header" :[DROP_ZONE_ATTRIBUTE]="true">
       <slot name="header" />
     </div>
 
-    <div class="app-layout__sidebar">
+    <div class="app-layout__sidebar" :[DROP_ZONE_ATTRIBUTE]="true">
       <slot name="sidebar" />
     </div>
 

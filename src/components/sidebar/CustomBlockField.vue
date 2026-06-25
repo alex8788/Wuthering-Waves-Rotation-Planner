@@ -12,7 +12,7 @@ import type { TemplateBlock } from '@/types/block'
 
 const sidebarStore = useSidebarStore()
 const characterStore = useCharacterStore()
-const { onSidebarDragStart, getSidebarSortableOptions } = useBlockDrag()
+const { dragState, onSidebarDragStart, getSidebarSortableOptions } = useBlockDrag()
 
 // 三個槽位各自的模板列表，未選角的槽位給空陣列
 const slotTemplates = computed(() =>
@@ -31,10 +31,12 @@ watch(slotTemplates, (next) => {
 const dragOptions = computed(() => getSidebarSortableOptions())
 
 // 拖去主軸時，先包成「看起來像主軸區塊」的暫時資料，避免畫面在
-// 正式寫入 store 前因為資料形狀不對而報錯
+// 正式寫入 store 前因為資料形狀不對而報錯。
+// id 改用 dragState.pendingInstanceId（拖曳開始時已預先產生），確保
+// 之後正式寫入 store 的資料與這個暫時物件共用同一個 id，:key 全程不變。
 function cloneToPlaceholder(original: TemplateBlock) {
   return {
-    id: original.id,
+    id: dragState.pendingInstanceId ?? original.id,
     slotIndex: 0,
     block: { ...original },
   }

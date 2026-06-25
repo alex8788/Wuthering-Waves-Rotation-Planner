@@ -66,22 +66,26 @@ export const useRotationStore = defineStore('rotation', () => {
    * @param targetSlotIndex - 要放置的泳道索引
    * @param targetCharacterId - 目標角色 ID
    * @param afterIndex - 插入在哪個索引之後（預設追加末尾）
+   * @param forcedId - 指定要使用的 id（例如拖曳預覽階段已先產生好的 id，
+   *   讓正式資料與預覽用的暫時物件共用同一個 id，維持 :key 穩定）；
+   *   未提供時才內部重新產生一個新的 UUID
    */
   function instantiateBlock(
     sourceBlock: DefaultBlock | TemplateBlock,
     targetSlotIndex: SlotIndex,
     targetCharacterId: string,
-    afterIndex: number = entries.value.length - 1
+    afterIndex: number = entries.value.length - 1,
+    forcedId?: string
   ): void {
     const clonedData = deepClone(sourceBlock);
 
     const newBlock: Block = {
       ...clonedData,
-      id: generateUUID(),             // 賦予全新的泛用識別碼
+      id: forcedId ?? generateUUID(), // 賦予全新的泛用識別碼
       source: 'instance',             // 標記來源為「主軸實體」
       characterId: targetCharacterId, // 覆蓋為目標角色
       originId: sourceBlock.id,       // 統一對應來源的泛用 id
-      tags: deepClone(clonedData.tags), 
+      tags: deepClone(clonedData.tags),
     } as Block;
 
     const newEntry: RotationEntry = {

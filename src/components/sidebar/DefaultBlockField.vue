@@ -10,7 +10,7 @@ import { DEFAULT_BLOCKS } from '@/constants/defaultBlocks'
 import { useBlockDrag, DROP_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
 import type { DefaultBlock } from '@/types/block'
 
-const { onSidebarDragStart, getSidebarSortableOptions, handleDragEnd: _handleDragEnd } = useBlockDrag()
+const { dragState, onSidebarDragStart, getSidebarSortableOptions, handleDragEnd: _handleDragEnd } = useBlockDrag()
 
 function handleDragEnd(): void {
   localBlocks.value = [...DEFAULT_BLOCKS]
@@ -25,9 +25,12 @@ const dragOptions = computed(() => getSidebarSortableOptions())
 
 // 拖去其他清單時，把原始區塊包成「看起來像主軸區塊」的暫時資料，
 // 避免畫面在正式寫入 store 前因為資料形狀不對而報錯。
+// id 改用 dragState.pendingInstanceId（拖曳開始時已預先產生），而非
+// 側邊欄原始 block 的固定 id：確保之後正式寫入 store 的資料與這個
+// 暫時物件共用同一個 id，:key 全程不變，也避免跟主軸上同款區塊撞號。
 function cloneToPlaceholder(original: DefaultBlock) {
   return {
-    id: original.id,
+    id: dragState.pendingInstanceId ?? original.id,
     slotIndex: 0,
     block: { ...original },
   }

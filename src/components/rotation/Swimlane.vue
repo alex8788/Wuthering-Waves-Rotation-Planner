@@ -6,7 +6,7 @@
 // 2. 綁定 localEntries 緩衝陣列，避免套件直接修改唯讀 props 導致 VDOM 脫鉤。
 // 3. 拖曳結束後由 useBlockDrag 換算全域索引並更新 store，watch 再同步回 localEntries。
 
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import RotationBlock from '@/components/rotation/RotationBlock.vue'
 import { useRotationStore } from '@/stores/useRotationStore'
@@ -70,11 +70,11 @@ function handleDragStart(event: SortableEventLike): void {
 }
 
 // 側邊欄拖入本泳道 (onAdd)
-// 延後到 nextTick 寫入 store，避免在 SortableJS 仍處理同一手勢的同步流程中
-// 換掉 localEntries 的陣列引用（key 改變會讓 Vue 銷毀重建套件正在追蹤的 DOM 節點，
-// 導致套件內部狀態錯亂、後續拖曳失效）
+// 拖曳預覽用的暫時物件與正式寫入 store 的資料共用同一個 id（見
+// useBlockDrag.ts 的 pendingInstanceId），:key 全程不變，可以同步寫入，
+// 不需要延後時機。
 function handleAdd(event: SortableEventLike): void {
-  nextTick(() => handleSidebarToLaneDrop(event, props.slotIndex))
+  handleSidebarToLaneDrop(event, props.slotIndex)
 }
 
 // 本泳道內重新排序 (onUpdate)
@@ -133,6 +133,7 @@ function handleTrackClick(): void {
   <div
     class="swimlane"
     :class="`swimlane--slot-${slotIndex}`"
+    :[DROP_ZONE_ATTRIBUTE]="true"
     :aria-label="character ? `${character.nameZh} 的輸出軸` : `槽位 ${slotIndex + 1}（未選角）`"
   >
 
@@ -189,7 +190,7 @@ function handleTrackClick(): void {
             item-key="id"
             tag="div"
             class="track__draggable"
-            :[DROP_ZONE_ATTRIBUTE]="true"
+            :class="{ 'track__draggable--empty': localEntries.length === 0 }"
             v-bind="dragOptions"
             @start="handleDragStart"
             @add="handleAdd"
@@ -365,6 +366,12 @@ function handleTrackClick(): void {
   align-items: center;
   gap: var(--track-gap);
   min-width: 0;
+}
+
+/* 泳道為空時，撐滿整條泳道寬度，讓 SortableJS 在任意位置都能命中此清單 */
+.track__draggable--empty {
+  flex: 1;
+  align-self: stretch;
 }
 
 .track__empty-dropzone {

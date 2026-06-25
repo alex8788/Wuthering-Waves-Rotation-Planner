@@ -3,6 +3,7 @@ import { useRotationStore } from '@/stores/useRotationStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { getEntriesBySlot } from '@/utils/arrayHelpers';
+import { generateUUID } from '@/utils/uuid';
 import type { DefaultBlock, TemplateBlock } from '@/types/block';
 import type { RotationEntry, DragSourceType } from '@/types/rotation';
 import type { SlotIndex } from '@/types/character';
@@ -24,6 +25,10 @@ interface DragState {
   sourceType: DragSourceType | null;
   draggingId: string | null;
   draggingSourceBlock: DefaultBlock | TemplateBlock | null;
+  // 側邊欄拖曳開始時就先產生好的「未來實體 id」，讓拖曳預覽用的暫時物件
+  // 與之後寫入 store 的正式 InstanceBlock 共用同一個 id（key 全程不變，
+  // 避免 SortableJS 追蹤的 DOM 節點被 Vue 中途摧毀重建）
+  pendingInstanceId: string | null;
   draggingSlotIndex: SlotIndex | null;
   isOverSidebar: boolean;
   isOverInvalidZone: boolean;
@@ -35,14 +40,17 @@ const _dragState = reactive<DragState>({
   sourceType: null,
   draggingId: null,
   draggingSourceBlock: null,
+  pendingInstanceId: null,
   draggingSlotIndex: null,
   isOverSidebar: false,
   isOverInvalidZone: false,
   dropHandled: false,
 });
 
-// 原生 DnD 模式（forceFallback: false）下用 dragover 偵測游標是否在合法容器外
-function _handleDragOver(event: DragEvent): void {
+// forceFallback 模式下 SortableJS 不會觸發原生 dragover，改用 mousemove
+// 偵測游標是否在合法容器外（fallback 浮動分身預設 pointer-events: none，
+// 滑鼠事件會正常穿透到底下的真實元素）
+function _handleDragOver(event: MouseEvent): void {
   if (!_dragState.isDragging) return;
   const isOverValidZone = !!(event.target as HTMLElement)?.closest(`[${DROP_ZONE_ATTRIBUTE}]`);
   _dragState.isOverInvalidZone = !isOverValidZone;
@@ -52,13 +60,13 @@ let _isDragOverListenerAttached = false;
 
 function _attachDragOverListener(): void {
   if (_isDragOverListenerAttached) return;
-  window.addEventListener('dragover', _handleDragOver);
+  window.addEventListener('mousemove', _handleDragOver);
   _isDragOverListenerAttached = true;
 }
 
 function _detachDragOverListener(): void {
   if (!_isDragOverListenerAttached) return;
-  window.removeEventListener('dragover', _handleDragOver);
+  window.removeEventListener('mousemove', _handleDragOver);
   _isDragOverListenerAttached = false;
 }
 
@@ -67,6 +75,7 @@ function _resetDragState(): void {
   _dragState.sourceType = null;
   _dragState.draggingId = null;
   _dragState.draggingSourceBlock = null;
+  _dragState.pendingInstanceId = null;
   _dragState.draggingSlotIndex = null;
   _dragState.isOverSidebar = false;
   _dragState.isOverInvalidZone = false;
@@ -107,10 +116,12 @@ export function useBlockDrag() {
   const dragState = readonly(_dragState);
 
   function onSidebarDragStart(block: DefaultBlock | TemplateBlock): void {
+    const pendingInstanceId = generateUUID();
     _dragState.isDragging = true;
     _dragState.sourceType = block.source === 'default' ? 'sidebar-default' : 'sidebar-template';
-    _dragState.draggingId = block.id;
+    _dragState.draggingId = pendingInstanceId;
     _dragState.draggingSourceBlock = block;
+    _dragState.pendingInstanceId = pendingInstanceId;
     _dragState.draggingSlotIndex = null;
     _dragState.dropHandled = false;
     _dragState.isOverSidebar = false;
@@ -123,6 +134,7 @@ export function useBlockDrag() {
     _dragState.sourceType = 'rotation-instance';
     _dragState.draggingId = entry.id;
     _dragState.draggingSourceBlock = null;
+    _dragState.pendingInstanceId = null;
     _dragState.draggingSlotIndex = entry.slotIndex;
     _dragState.dropHandled = false;
     _dragState.isOverSidebar = false;
@@ -147,7 +159,13 @@ export function useBlockDrag() {
     if (!isCharacterMatch) return;
     const laneInsertIndex = event.newDraggableIndex ?? event.newIndex ?? 0;
     const globalInsertAfter = _laneInsertIndexToGlobal(rotationStore.entries, targetSlotIndex, laneInsertIndex);
-    rotationStore.instantiateBlock(sourceBlock, targetSlotIndex, targetCharacterId, globalInsertAfter);
+    rotationStore.instantiateBlock(
+      sourceBlock,
+      targetSlotIndex,
+      targetCharacterId,
+      globalInsertAfter,
+      _dragState.pendingInstanceId ?? undefined,
+    );
   }
 
   function handleSameLaneDrop(event: SortableEventLike, slotIndex: SlotIndex): void {
@@ -193,6 +211,9 @@ export function useBlockDrag() {
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
       dragClass: 'sortable-drag',
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 3,
     } as const;
   }
 
@@ -202,6 +223,9 @@ export function useBlockDrag() {
       sort: false,
       animation: 0,
       ghostClass: 'sortable-ghost',
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 3,
     } as const;
   }
 
