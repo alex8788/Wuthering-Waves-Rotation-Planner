@@ -160,17 +160,14 @@ export function useBlockDrag() {
     rotationStore.moveBlock(draggingId, globalInsertAfter);
   }
 
-  function handleDragEnd(event?: SortableEventLike): void {
+  function handleDragEnd(_event?: SortableEventLike): void {
     if (!_dragState.isDragging) return;
-    const { sourceType, draggingId, isOverSidebar, dropHandled } = _dragState;
-    // to === from 代表 SortableJS 拒絕此次放置並自行還原（例如跨軸被 put 規則擋下、
-    // 或快速放開時目標容器沒有變），不應視為「拖到無效區刪除」
-    const wasCancelled = event?.to && event?.from && event.to === event.from;
+    const { sourceType, draggingId, isOverSidebar, dropHandled, isOverInvalidZone } = _dragState;
     if (sourceType === 'rotation-instance' && draggingId) {
       if (isOverSidebar) {
         const entry = rotationStore.entries.find((e) => e.id === draggingId);
         if (entry) sidebarStore.serializeToTemplate(entry.block);
-      } else if (!dropHandled && !wasCancelled) {
+      } else if (!dropHandled && isOverInvalidZone) {
         rotationStore.deleteBlock(draggingId);
       }
     }
@@ -183,7 +180,7 @@ export function useBlockDrag() {
         name: 'rotation',
         pull: true,
         // 來源必須是 sidebar group，且 characterId 為 null（通用）或等於本泳道角色
-        put: (to: { options?: { group?: { name?: string } } }, from: { options?: { group?: { name?: string } } }) => {
+        put: (_to: { options?: { group?: { name?: string } } }, from: { options?: { group?: { name?: string } } }) => {
           if (from?.options?.group?.name !== 'sidebar') return false;
           const sourceBlock = _dragState.draggingSourceBlock;
           if (!sourceBlock) return false;

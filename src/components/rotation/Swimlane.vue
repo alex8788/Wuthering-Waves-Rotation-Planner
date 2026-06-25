@@ -6,7 +6,7 @@
 // 2. 綁定 localEntries 緩衝陣列，避免套件直接修改唯讀 props 導致 VDOM 脫鉤。
 // 3. 拖曳結束後由 useBlockDrag 換算全域索引並更新 store，watch 再同步回 localEntries。
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import RotationBlock from '@/components/rotation/RotationBlock.vue'
 import { useRotationStore } from '@/stores/useRotationStore'
@@ -70,8 +70,11 @@ function handleDragStart(event: SortableEventLike): void {
 }
 
 // 側邊欄拖入本泳道 (onAdd)
+// 延後到 nextTick 寫入 store，避免在 SortableJS 仍處理同一手勢的同步流程中
+// 換掉 localEntries 的陣列引用（key 改變會讓 Vue 銷毀重建套件正在追蹤的 DOM 節點，
+// 導致套件內部狀態錯亂、後續拖曳失效）
 function handleAdd(event: SortableEventLike): void {
-  handleSidebarToLaneDrop(event, props.slotIndex)
+  nextTick(() => handleSidebarToLaneDrop(event, props.slotIndex))
 }
 
 // 本泳道內重新排序 (onUpdate)
@@ -347,6 +350,7 @@ function handleTrackClick(): void {
 }
 
 .track__inner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--track-gap);
@@ -360,17 +364,18 @@ function handleTrackClick(): void {
   display: flex;
   align-items: center;
   gap: var(--track-gap);
-  flex: 1;
   min-width: 0;
 }
 
 .track__empty-dropzone {
-  flex: 1;
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: var(--track-px);
+  right: var(--track-px);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(100% - 0.5rem);
-  margin: 0 0.25rem;
   border: 1px dashed rgba(125, 211, 252, 0.45);
   border-radius: 6px;
   background: rgba(125, 211, 252, 0.06);
