@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wuwa-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "..", "--port", "5199", "--strictPort"],
+      "autoPort": false,
+      "port": 5199
+    }
+  ]
+}

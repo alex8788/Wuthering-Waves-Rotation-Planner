@@ -153,9 +153,73 @@
 }
 
 /* ── 拖曳分身 Drag：僅 forceFallback: true 時可見 ────────────── */
+/* 內容保持全不透明：先前 0.92 會讓文字（尤其灰底預設區塊）看起來黯淡 */
 .sortable-drag > * {
-  opacity: 0.92;
+  opacity: 1;
   transform: scale(1.05);
   box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
   cursor: grabbing;
+}
+
+/* ── 拖曳到「可刪除區」時的紅色警告 ──────────────────────────────
+   forceFallback 模式下，真正可見的被拖物件是 SortableJS 的靜態浮動克隆
+   .sortable-fallback，拿不到 Vue 響應式更新。改由 useBlockDrag 在游標進入
+   無效（=可刪除）區時，於 <body> 掛上 .dragging-over-delete，純 CSS 直接
+   替浮動克隆本體上紅色斜紋＋紅框。此規則不碰泳道上既有區塊，故不會誤觸
+   同款區塊一起亮紅。 */
+/* 浮動分身的 transform 由 SortableJS 在每次 mousemove 直接寫 inline style，
+   絕不能套用任何 transition——否則每次更新都跑一次過渡，分身會嚴重落後鼠標
+   （.block-chip 自帶 transition: transform，側邊欄直接拖 chip 才中招，主軸的
+   .rotation-block 外層無 transition 故正常）。這是 p7 的根因。 */
+.sortable-fallback,
+.sortable-drag {
+  transition: none !important;
+}
+
+/* 條紋流動動畫（元件內的 danger-march 為 scoped，全域無法引用，需自備一份） */
+@keyframes danger-march-global {
+  from { background-position: 0 0; }
+  to   { background-position: 15.56px 0; }
+}
+
+/* 紅色刪除警告：直接改寫分身內「實心填色層」.block-chip__bg 的背景。
+   先前用 ::after 疊層雖然 z-index 較高，但分身內 .block-chip 因 transform 自成
+   堆疊脈絡，實測仍被蓋住；改寫填色層本身最穩——它就是覆蓋整塊的那層，文字層
+   (.block-chip__label, z-index:2) 仍保留在最上方可讀。 */
+body.dragging-over-delete .sortable-fallback {
+  border: 1.5px solid rgba(248, 113, 113, 0.95) !important;
+  border-radius: 6px;
+  box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.65);
+}
+
+body.dragging-over-delete .sortable-fallback .block-chip__bg {
+  background-color: rgba(239, 68, 68, 0.92) !important;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(248, 113, 113, 0.98) 0px,
+    rgba(248, 113, 113, 0.98) 6px,
+    rgba(153, 27, 27, 0.85) 6px,
+    rgba(153, 27, 27, 0.85) 12px
+  ) !important;
+  animation: danger-march-global 0.55s linear infinite;
+}
+
+/* 側邊欄區塊拖到無效區：不可放置（放開彈回）→ 禁止游標 ＋ 在填色層畫上禁止符號。
+   同樣改寫填色層而非疊 ::after，確保符號不被分身內容遮住；文字層淡出讓符號清晰。 */
+body.dragging-forbidden .sortable-fallback {
+  cursor: not-allowed;
+  border: 1.5px solid rgba(239, 68, 68, 0.85) !important;
+  border-radius: 6px;
+}
+
+body.dragging-forbidden .sortable-fallback .block-chip__bg {
+  background-color: rgba(18, 18, 24, 0.92) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='%23ff5b5b' stroke-width='2.4'/%3E%3Cline x1='5.6' y1='5.6' x2='18.4' y2='18.4' stroke='%23ff5b5b' stroke-width='2.4'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 1.25rem 1.25rem !important;
+}
+
+body.dragging-forbidden .sortable-fallback .block-chip__label {
+  opacity: 0.2;
 }

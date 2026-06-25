@@ -33,7 +33,14 @@
 export function deepClone<T>(obj: T): T {
   // 優先使用原生 structuredClone（現代瀏覽器支援）
   if (typeof structuredClone === 'function') {
-    return structuredClone(obj);
+    try {
+      return structuredClone(obj);
+    } catch {
+      // structuredClone 無法複製 Vue reactive proxy，會丟出 DataCloneError。
+      // 本專案的 Block 皆為純資料（無 undefined/Date/循環引用），改用 JSON
+      // 序列化既安全又能「讀穿」proxy，取得乾淨的純資料副本。
+      return JSON.parse(JSON.stringify(obj)) as T;
+    }
   }
 
   // 回退方案：JSON 序列化（相容舊版環境）

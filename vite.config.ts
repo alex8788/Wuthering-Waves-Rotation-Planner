@@ -19,6 +19,6 @@ export default defineConfig({
   // 本地開發伺服器環境設定
   server: {
     port: 5173, // 鎖定預設連接埠，避免多個專案衝突時亂跳號
-    open: true, // 執行 npm run dev 時自動開啟瀏覽器視窗，提升開發效率
+    open: false, // 執行 npm run dev 時自動開啟瀏覽器視窗，提升開發效率
   },
 });

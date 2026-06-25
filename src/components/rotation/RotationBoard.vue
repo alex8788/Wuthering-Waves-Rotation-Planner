@@ -27,6 +27,7 @@ import { computed, onMounted } from 'vue'
 import Swimlane from '@/components/rotation/Swimlane.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useRotationStore } from '@/stores/useRotationStore'
+import { DELETE_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
 import type { SlotIndex } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
@@ -107,6 +108,7 @@ onMounted(() => {
 <template>
   <section
     class="rotation-board"
+    :[DELETE_ZONE_ATTRIBUTE]="true"
     aria-label="輸出軸面板"
   >
 

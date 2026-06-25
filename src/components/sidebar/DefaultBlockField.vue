@@ -7,10 +7,10 @@ import { ref, computed } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { DEFAULT_BLOCKS } from '@/constants/defaultBlocks'
-import { useBlockDrag, DROP_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
+import { useBlockDrag } from '@/composables/useBlockDrag'
 import type { DefaultBlock } from '@/types/block'
 
-const { dragState, onSidebarDragStart, getSidebarSortableOptions, handleDragEnd: _handleDragEnd } = useBlockDrag()
+const { getOrCreatePendingInstanceId, onSidebarDragStart, getSidebarSortableOptions, handleDragEnd: _handleDragEnd } = useBlockDrag()
 
 function handleDragEnd(): void {
   localBlocks.value = [...DEFAULT_BLOCKS]
@@ -30,7 +30,7 @@ const dragOptions = computed(() => getSidebarSortableOptions())
 // 暫時物件共用同一個 id，:key 全程不變，也避免跟主軸上同款區塊撞號。
 function cloneToPlaceholder(original: DefaultBlock) {
   return {
-    id: dragState.pendingInstanceId ?? original.id,
+    id: getOrCreatePendingInstanceId(),
     slotIndex: 0,
     block: { ...original },
   }
@@ -52,7 +52,6 @@ function handleDragStart(event: { oldIndex?: number }): void {
         tag="div"
         class="chip-row__draggable"
         :clone="cloneToPlaceholder"
-        :[DROP_ZONE_ATTRIBUTE]="true"
         v-bind="dragOptions"
         @start="handleDragStart"
         @end="handleDragEnd"
@@ -91,8 +90,13 @@ function handleDragStart(event: { oldIndex?: number }): void {
   flex-wrap: wrap;    /* 超出寬度自動換行 */
   gap: 0.375rem;      /* 區塊間距：6px，緊湊但有呼吸感 */
 }
-/* 讓拖曳容器在版面上「隱形」，BlockChip 直接參與 .chip-row 的排列 */
+/* 拖曳容器本身需有真實 layout box：display:contents 會移除盒模型，
+   使 SortableJS forceFallback 的浮動分身定位數學算錯（分身幾乎不跟手，p7）。
+   改用與 .chip-row 相同的 flex-wrap 排列，視覺一致但保有盒模型。 */
 .chip-row__draggable {
-  display: contents;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  width: 100%;
 }
 </style>

@@ -7,12 +7,12 @@ import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { useSidebarStore } from '@/stores/useSidebarStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
-import { useBlockDrag, DROP_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
+import { useBlockDrag } from '@/composables/useBlockDrag'
 import type { TemplateBlock } from '@/types/block'
 
 const sidebarStore = useSidebarStore()
 const characterStore = useCharacterStore()
-const { dragState, onSidebarDragStart, getSidebarSortableOptions } = useBlockDrag()
+const { getOrCreatePendingInstanceId, onSidebarDragStart, getSidebarSortableOptions } = useBlockDrag()
 
 // 三個槽位各自的模板列表，未選角的槽位給空陣列
 const slotTemplates = computed(() =>
@@ -36,7 +36,7 @@ const dragOptions = computed(() => getSidebarSortableOptions())
 // 之後正式寫入 store 的資料與這個暫時物件共用同一個 id，:key 全程不變。
 function cloneToPlaceholder(original: TemplateBlock) {
   return {
-    id: dragState.pendingInstanceId ?? original.id,
+    id: getOrCreatePendingInstanceId(),
     slotIndex: 0,
     block: { ...original },
   }
@@ -97,7 +97,6 @@ function handleDelete(templateId: string): void {
           tag="div"
           class="chip-row__draggable"
           :clone="cloneToPlaceholder"
-          :[DROP_ZONE_ATTRIBUTE]="true"
           v-bind="dragOptions"
           @start="(e: { oldIndex?: number }) => handleDragStart(idx, e)"
         >
@@ -204,9 +203,14 @@ function handleDelete(templateId: string): void {
   gap: 0.375rem;
 }
 
-/* 讓拖曳容器在版面上「隱形」，chip-wrapper 直接參與 .chip-row 的排列 */
+/* 拖曳容器本身需有真實 layout box：display:contents 會移除盒模型，
+   使 SortableJS forceFallback 的浮動分身定位數學算錯（分身幾乎不跟手，p7）。
+   改用與 .chip-row 相同的 flex-wrap 排列，視覺一致但保有盒模型。 */
 .chip-row__draggable {
-  display: contents;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  width: 100%;
 }
 
 .chip-wrapper {

@@ -70,9 +70,12 @@ function handleDragStart(event: SortableEventLike): void {
 }
 
 // 側邊欄拖入本泳道 (onAdd)
-// 拖曳預覽用的暫時物件與正式寫入 store 的資料共用同一個 id（見
-// useBlockDrag.ts 的 pendingInstanceId），:key 全程不變，可以同步寫入，
-// 不需要延後時機。
+// SortableJS 在跨清單複製（pull:'clone' + forceFallback）時，會把一個克隆的
+// DOM 節點實際插入到本泳道清單裡。這個節點是側邊欄 chip 的克隆，結構與本泳道
+// 的 RotationBlock 不同；若放任它留下，Vue 會以相同 :key 嘗試接管這個外來節點，
+// 造成 VDOM 與 SortableJS 內部參照雙重脫鉤（下一次拖曳即失效）。
+// 依 SortableJS 官方建議：「自行管理資料時，於 onAdd 移除套件插入的節點」，
+// 改由 store 更新 → watch → Vue 重新渲染作為唯一的 DOM 來源。
 function handleAdd(event: SortableEventLike): void {
   handleSidebarToLaneDrop(event, props.slotIndex)
 }
@@ -93,10 +96,9 @@ function handleBlockSelect(entryId: string, event: MouseEvent): void {
   rotationStore.selectBlock(entryId, isMultiSelect)
 }
 
-// 判斷區塊是否應顯示「拖曳刪除」紅色警告 (正被拖曳且懸停於無效放置區)
-function isEntryDanger(entryId: string): boolean {
-  return dragState.draggingId === entryId && dragState.isOverInvalidZone
-}
+// 註：拖曳到可刪除區的紅色警告，改由 useBlockDrag 在 <body> 掛全域 class、
+// 純 CSS 直接套在 SortableJS 浮動克隆 .sortable-fallback 上（forceFallback 下
+// 響應式 prop 無法作用於靜態克隆），故此處不再逐塊計算 danger 狀態。
 
 // ── 既有邏輯 ──────────────────────────────────────────────────
 
@@ -204,7 +206,6 @@ function handleTrackClick(): void {
               :label="entry.block.label"
               :color="entry.block.color || character.themeColor"
               :is-selected="rotationStore.isSelected(entry.id)"
-              :is-danger="isEntryDanger(entry.id)"
               role="listitem"
               @select="(event) => handleBlockSelect(entry.id, event)"
             />

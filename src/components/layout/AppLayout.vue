@@ -8,8 +8,6 @@
 // 完全透過具名 slot（header / sidebar / main）由外部注入。
 // ============================================================
 
-import { DROP_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
-
 interface Props {
   /** 側邊欄固定寬度（px） */
   sidebarWidth?: number
@@ -31,11 +29,13 @@ const props = withDefaults(defineProps<Props>(), {
       '--app-header-height': `${props.headerHeight}px`,
     }"
   >
-    <div class="app-layout__header" :[DROP_ZONE_ATTRIBUTE]="true">
+    <!-- 標題列與側邊欄皆屬「禁止放置區」：不掛任何 drop/delete 屬性，
+         游標在此 → _handleDragOver 判定為禁止放置（顯示禁止圖標、放開彈回） -->
+    <div class="app-layout__header">
       <slot name="header" />
     </div>
 
-    <div class="app-layout__sidebar" :[DROP_ZONE_ATTRIBUTE]="true">
+    <div class="app-layout__sidebar">
       <slot name="sidebar" />
     </div>
 
