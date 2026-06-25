@@ -219,7 +219,10 @@ function handleTrackClick(): void {
             拖放至此
           </div>
 
-          <div class="track__tail">
+          <div
+            class="track__tail"
+            :class="{ 'track__tail--lane-empty': localEntries.length === 0 }"
+          >
             <button
               class="track__add-btn"
               type="button"
@@ -400,6 +403,13 @@ function handleTrackClick(): void {
   align-items: center;
   padding-left: 0.25rem;
   padding-right: var(--track-px);
+}
+
+/* 空泳道時，draggable 命中區以 flex:1 撐滿整條泳道（不可改動），會把 ＋ 按鈕
+   擠到最右邊；用 order 讓 ＋ 按鈕排到最前（靠左），命中區範圍維持不變。 */
+.track__tail--lane-empty {
+  order: -1;
+  padding-left: 0;
 }
 
 .track__add-btn {
