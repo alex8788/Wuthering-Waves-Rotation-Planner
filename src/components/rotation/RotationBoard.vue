@@ -23,11 +23,12 @@
 //   所有渲染邏輯限於「讀取 store → 分配資料 → 傳入 Swimlane」三步驟。
 // ============================================================
 
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
 import Swimlane from '@/components/rotation/Swimlane.vue'
+import BlockChip from '@/components/ui/BlockChip.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useRotationStore } from '@/stores/useRotationStore'
-import { DELETE_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
+import { DELETE_ZONE_ATTRIBUTE, useBlockDrag } from '@/composables/useBlockDrag'
 import type { SlotIndex } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
@@ -35,6 +36,7 @@ import type { RotationEntry } from '@/types/rotation'
 
 const characterStore = useCharacterStore()
 const rotationStore  = useRotationStore()
+const { dragState, setColumnBaseline } = useBlockDrag()
 
 // ── Computed：依 slotIndex 分配 entries ─────────────────────
 
@@ -53,6 +55,136 @@ const entriesBySlot = computed<Record<SlotIndex, RotationEntry[]>>(() => {
   }
   return map
 })
+
+// ── 單線程欄位對齊（共用 CSS Grid）────────────────────────────
+//
+// 三條泳道各自只渲染「自己的真實區塊」，但縱向必須對齊到同一條全域序列的欄位。
+// 作法：量出每個全域區塊的固有像素寬，組成一份共用的 grid-template-columns，
+// 三條泳道共用；每個真實區塊用 grid-column 放到它的全域欄位，未被佔用的欄自然留白。
+
+/** entryId → 全域 0-based 欄位序，供各泳道以 grid-column 定位（一次 O(N) 建好） */
+const idToColumnIndex = computed<Map<string, number>>(() => {
+  const map = new Map<string, number>()
+  rotationStore.entries.forEach((entry, index) => map.set(entry.id, index))
+  return map
+})
+
+/** 量測列的 fallback 顏色（顏色不影響寬度，僅求穩） */
+function measurerColor(entry: RotationEntry): string {
+  return characterStore.slotCharacters[entry.slotIndex]?.themeColor ?? '#888888'
+}
+
+// 隱藏量測列：用真實 BlockChip 量出每個全域區塊的固有寬度（依 label 文字 + 字體）
+const measurerRef = ref<HTMLElement | null>(null)
+const columnWidths = ref<number[]>([])
+
+/** grid-template-columns 字串；三條泳道共用 */
+const gridTemplate = computed<string>(() =>
+  columnWidths.value.map((w) => `${w}px`).join(' '),
+)
+
+function measure(): void {
+  const el = measurerRef.value
+  if (!el) return
+  // getBoundingClientRect 取小數寬度，避免次像素累積導致欄位逐漸偏移
+  columnWidths.value = Array.from(el.children).map(
+    (child) => (child as HTMLElement).getBoundingClientRect().width,
+  )
+}
+
+async function remeasureAfterRender(): Promise<void> {
+  await nextTick()
+  measure()
+}
+
+// 全域序列變動（新增/刪除/移動/改文字）後重新量測
+watch(() => rotationStore.entries, remeasureAfterRender, { deep: true })
+
+// 拖曳開始時，快照「靜態欄位幾何」給 useBlockDrag 做落點 hit-test（主軸與側邊欄皆用）。
+// 同步讀取（不 await nextTick）：watch 'pre' flush 時 DOM 仍是拖曳前佈局（被拖區塊尚未因
+// isDragging 重渲染成 hidden），故能量到含被拖在內的完整欄位中心。之後 hit-test 全程用此
+// 快照、不再讀即時 DOM，不受預覽擠出造成的 layout 位移影響（修 p10-1 飄忽，含側邊欄來源）。
+watch(
+  () => dragState.isDragging,
+  (now) => {
+    if (!now) return
+    const centerById = new Map<string, number>()
+    document.querySelectorAll<HTMLElement>('.rotation-block[data-entry-id]').forEach((el) => {
+      const id = el.getAttribute('data-entry-id')
+      if (!id) return
+      const r = el.getBoundingClientRect()
+      centerById.set(id, r.left + r.width / 2)
+    })
+    // 含全部 entries、依全域順序，左→右
+    const baseline = rotationStore.entries.map((e) => ({
+      id: e.id,
+      center: centerById.get(e.id) ?? Infinity,
+    }))
+    setColumnBaseline(baseline)
+  },
+)
+
+// ── 拖曳落點預覽（single thread 跨泳道同步擠出）──────────────────
+//
+// 拖曳中於落點欄「同步空出一欄」：在共用 grid 上重算欄寬與每個 block 的欄序，
+// 三泳道因共用同一份 template 而一起擠出 → 達成「column 視為整體」。
+// 落點由 useBlockDrag 的 previewInsertAfterIndex（全域 after-index）驅動。
+
+const PREVIEW_PLACEHOLDER = '__preview_placeholder__'
+
+const isPreviewing = computed<boolean>(
+  () => dragState.isDragging && dragState.previewInsertAfterIndex !== null,
+)
+
+/**
+ * previewLayout：拖曳預覽下的「顯示欄位」描述。
+ *  - 非預覽：回退原始 gridTemplate / idToColumnIndex。
+ *  - 預覽：主軸來源先收合被拖區塊原欄，再於落點插入一欄（寬＝被拖寬度），重算欄序。
+ */
+const previewLayout = computed<{
+  template: string
+  idToColumn: Map<string, number>
+  placeholderColumn: number | null
+  slotIndex: SlotIndex | null
+}>(() => {
+  if (!isPreviewing.value) {
+    return {
+      template: gridTemplate.value,
+      idToColumn: idToColumnIndex.value,
+      placeholderColumn: null,
+      slotIndex: null,
+    }
+  }
+
+  const entries = rotationStore.entries
+  const widths = columnWidths.value
+  const afterIn = dragState.previewInsertAfterIndex as number // 含全部 entries 的全域 after-index
+  const draggingId = dragState.draggingId
+  const isRotationSource = dragState.sourceType === 'rotation-instance'
+
+  // 先在「含全部」序列的 afterIn+1 插入落點空欄，再（主軸來源）收合被拖區塊原欄。
+  // 先插後收合可保證落點與被拖欄的相對位置正確，且 afterIn 與 store moveBlock 語意完全一致。
+  const cols = entries.map((e, i) => ({ id: e.id, width: widths[i] ?? 0 }))
+  const insertAt = afterIn < 0 ? 0 : Math.min(afterIn + 1, cols.length)
+  cols.splice(insertAt, 0, { id: PREVIEW_PLACEHOLDER, width: dragState.draggingWidth })
+  const working = isRotationSource && draggingId ? cols.filter((c) => c.id !== draggingId) : cols
+
+  // (c) 重算欄序與 template
+  const idToColumn = new Map<string, number>()
+  working.forEach((c, i) => idToColumn.set(c.id, i)) // 0-based（與原 idToColumnIndex 一致）
+  const template = working.map((c) => `${c.width}px`).join(' ')
+
+  return {
+    template,
+    idToColumn,
+    placeholderColumn: idToColumn.get(PREVIEW_PLACEHOLDER) ?? null,
+    // 落點泳道由 hit-test 直接記錄（主軸＝被拖泳道；側邊欄＝游標所在合法泳道）
+    slotIndex: dragState.previewSlotIndex,
+  }
+})
+
+const previewGridTemplate = computed<string>(() => previewLayout.value.template)
+const previewIdToColumn = computed<Map<string, number>>(() => previewLayout.value.idToColumn)
 
 // ── 假資料初始化（Store 驗證用）────────────────────────────
 
@@ -93,7 +225,11 @@ function seedStoreWithStubData(): void {
   })
 }
 
-onMounted(() => {
+function handleResize(): void {
+  void remeasureAfterRender()
+}
+
+onMounted(async () => {
   // 為了在開發階段能立即看到三條泳道有資料，
   // 先預設選入三位角色（僅當槽位為空時），再注入假區塊。
   const slots = characterStore.slots
@@ -102,6 +238,18 @@ onMounted(() => {
   if (!slots[2].character) characterStore.setCharacter(2, 'shorekeeper')
 
   seedStoreWithStubData()
+
+  // 首次量測：等假資料渲染進量測列後
+  await remeasureAfterRender()
+  // 字體（JetBrains Mono）載入後寬度會變，再量一次
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => void remeasureAfterRender())
+  }
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -113,17 +261,43 @@ onMounted(() => {
   >
 
     <!--
-      三條泳道：依 slotIndex 0 / 1 / 2 順序渲染。
-      character 與 entries 皆從 store computed 中取得，
-      Swimlane 本身不直接存取任何 store。
+      共用水平捲動容器：三條泳道共用同一條捲軸，
+      確保連招超寬、捲動時三泳道縱向欄位仍對齊（single thread 完整性）。
     -->
-    <Swimlane
-      v-for="slot in characterStore.slots"
-      :key="slot.slotIndex"
-      :slot-index="slot.slotIndex"
-      :character="slot.character"
-      :entries="entriesBySlot[slot.slotIndex]"
-    />
+    <div class="board__scroll">
+      <div class="board__lanes">
+        <!--
+          三條泳道：依 slotIndex 0 / 1 / 2 順序渲染。
+          character 與 entries 皆從 store computed 中取得。
+          grid-template / id-to-column-index 拖曳時改用「預覽版」以呈現跨泳道同步擠出。
+        -->
+        <Swimlane
+          v-for="slot in characterStore.slots"
+          :key="slot.slotIndex"
+          :slot-index="slot.slotIndex"
+          :character="slot.character"
+          :entries="entriesBySlot[slot.slotIndex]"
+          :grid-template="previewGridTemplate"
+          :id-to-column-index="previewIdToColumn"
+          :placeholder-column="previewLayout.placeholderColumn"
+          :preview-slot-index="previewLayout.slotIndex"
+        />
+      </div>
+    </div>
+
+    <!--
+      隱藏量測列：用真實 BlockChip 量出每個全域區塊的固有寬度，
+      組成三條泳道共用的 grid-template-columns。絕對定位且 visibility:hidden，
+      不影響版面也不參與互動。掛在非捲動容器上，定位最穩。
+    -->
+    <div ref="measurerRef" class="board__measurer" aria-hidden="true">
+      <BlockChip
+        v-for="entry in rotationStore.entries"
+        :key="entry.id"
+        :label="entry.block.label"
+        :color="entry.block.color || measurerColor(entry)"
+      />
+    </div>
 
   </section>
 </template>
@@ -142,5 +316,39 @@ onMounted(() => {
   overflow: hidden;           /* 讓第一/最後條 Swimlane 的 border-radius 生效 */
 
   background: rgba(255, 255, 255, 0.015);
+
+  /* 量測列以此為定位基準 */
+  position: relative;
+}
+
+/* ── 共用水平捲動容器 ────────────────────────────────────────
+   唯一的橫向捲軸；三泳道改由內容撐寬並共用此捲動，捲動時對齊不破。 */
+.board__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.board__lanes {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+  height: 100%;
+}
+
+/* ── 隱藏量測列 ──────────────────────────────────────────────
+   gap 必須與泳道軌道的 --track-gap（0.375rem）一致，否則量到的寬度會偏。
+   只量每個 chip 自身寬度，gap 不影響逐欄寬度，但保持一致較不易出錯。 */
+.board__measurer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  gap: 0.375rem;
 }
 </style>

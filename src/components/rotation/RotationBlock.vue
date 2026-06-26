@@ -41,6 +41,7 @@ function handleClick(event: MouseEvent): void {
 <template>
   <div
     class="rotation-block"
+    :data-entry-id="entryId"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
     @click="handleClick"

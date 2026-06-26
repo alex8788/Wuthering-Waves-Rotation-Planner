@@ -23,6 +23,14 @@ interface Props {
   slotIndex: 0 | 1 | 2
   /** 父層過濾後的區塊序列 (唯讀真相來源) */
   entries: RotationEntry[]
+  /** 三條泳道共用的 grid-template-columns（拖曳時為含落點空欄的預覽版） */
+  gridTemplate: string
+  /** entryId → 全域 0-based 欄位序，供 grid-column 定位（拖曳時為預覽版） */
+  idToColumnIndex: Map<string, number>
+  /** 落點空欄的 0-based 欄序（拖曳預覽用，null = 無落點） */
+  placeholderColumn: number | null
+  /** 落點所在泳道（只有此泳道畫單欄虛框） */
+  previewSlotIndex: 0 | 1 | 2 | null
 }
 
 const props = defineProps<Props>()
@@ -55,6 +63,17 @@ const dragOptions = computed(
   (): Record<string, unknown> => getRotationSortableOptions(props.slotIndex)
 )
 
+// 每個區塊的定位樣式：
+//  - 被拖本體：隱藏並抽離 grid flow（forceFallback 分身在跟手；落點由預覽空欄表示）。
+//  - 其餘：依（預覽版）欄序釘 grid-column；拿不到欄序則隱藏（保險）。
+function blockStyle(id: string): Record<string, string> {
+  if (dragState.isDragging && id === dragState.draggingId) {
+    return { visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }
+  }
+  const col = props.idToColumnIndex.get(id)
+  return col != null ? { gridColumn: String(col + 1) } : { display: 'none' }
+}
+
 // 依 SortableJS 事件索引反查對應區塊 (僅限同泳道拖曳起點 @start 且未發生 splice 時使用)
 function getEntryFromDragEvent(event: SortableEventLike): RotationEntry | undefined {
   const localIndex = event.oldDraggableIndex ?? event.oldIndex ?? -1
@@ -63,10 +82,12 @@ function getEntryFromDragEvent(event: SortableEventLike): RotationEntry | undefi
 
 // ── 事件處理 ──────────────────────────────────────────────────
 
-// 拖曳起點：僅記錄本泳道既有區塊的起點 (側邊欄拖入由 sidebar 處理)
+// 拖曳起點：記錄本泳道既有區塊的起點，並量被拖 DOM 寬度作為落點空欄寬
 function handleDragStart(event: SortableEventLike): void {
   const entry = getEntryFromDragEvent(event)
-  if (entry) onRotationDragStart(entry)
+  if (!entry) return
+  const width = event.item?.getBoundingClientRect().width ?? 0
+  onRotationDragStart(entry, width)
 }
 
 // 側邊欄拖入本泳道 (onAdd)
@@ -136,6 +157,7 @@ function handleTrackClick(): void {
     class="swimlane"
     :class="`swimlane--slot-${slotIndex}`"
     :[DROP_ZONE_ATTRIBUTE]="true"
+    :data-slot-index="slotIndex"
     :aria-label="character ? `${character.nameZh} 的輸出軸` : `槽位 ${slotIndex + 1}（未選角）`"
   >
 
@@ -193,6 +215,7 @@ function handleTrackClick(): void {
             tag="div"
             class="track__draggable"
             :class="{ 'track__draggable--empty': localEntries.length === 0 }"
+            :style="{ gridTemplateColumns: gridTemplate }"
             v-bind="dragOptions"
             @start="handleDragStart"
             @add="handleAdd"
@@ -206,13 +229,22 @@ function handleTrackClick(): void {
               :label="entry.block.label"
               :color="entry.block.color || character.themeColor"
               :is-selected="rotationStore.isSelected(entry.id)"
+              :style="blockStyle(entry.id)"
               role="listitem"
               @select="(event) => handleBlockSelect(entry.id, event)"
+            />
+
+            <!-- 落點空欄虛框：只有落點泳道畫；其他兩泳道因共用 template 也會同步空出該欄 -->
+            <div
+              v-if="previewSlotIndex === slotIndex && placeholderColumn != null"
+              class="track__preview-slot"
+              :style="{ gridColumn: String(placeholderColumn + 1) }"
+              aria-hidden="true"
             />
           </VueDraggable>
 
           <div
-            v-if="localEntries.length === 0 && dragState.isDragging && dragState.sourceType !== 'rotation-instance'"
+            v-if="localEntries.length === 0 && idToColumnIndex.size === 0 && dragState.isDragging && dragState.sourceType !== 'rotation-instance'"
             class="track__empty-dropzone"
             aria-hidden="true"
           >
@@ -253,7 +285,10 @@ function handleTrackClick(): void {
   display: flex;
   align-items: stretch;
   height: var(--lane-height);
-  width: 100%;
+  /* 共用水平捲動：泳道由內容撐寬（max-content），但至少填滿捲動視窗（min-width:100%），
+     讓三泳道等寬且對齊；橫向捲軸統一由上層 .board__scroll 提供。 */
+  width: max-content;
+  min-width: 100%;
 
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -270,7 +305,10 @@ function handleTrackClick(): void {
    左側 Header
    ══════════════════════════════════════════════════════════ */
 .swimlane__header {
-  position: relative;
+  /* sticky 固定在左側：橫向捲動時角色名不跟著捲走。
+     必須用不透明底色，否則捲動時區塊會從 header 下方透出。 */
+  position: sticky;
+  left: 0;
   flex-shrink: 0;
   width: var(--header-width);
 
@@ -283,8 +321,9 @@ function handleTrackClick(): void {
 
   border-right: 1px solid rgba(255, 255, 255, 0.07);
 
-  z-index: 1;
-  background: inherit;
+  z-index: 5;
+  /* 不透明底（面板深色），上面再疊各槽位細微色調 */
+  background-color: #0b101d;
 }
 
 .header__color-bar {
@@ -344,14 +383,8 @@ function handleTrackClick(): void {
 .swimlane__track {
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-
-  scrollbar-width: none;
-}
-
-.swimlane__track::-webkit-scrollbar {
-  display: none;
+  /* 不再各自捲動：橫向捲軸統一由上層 .board__scroll 提供，確保三泳道捲動同步、對齊不破 */
+  overflow: visible;
 }
 
 .track__inner {
@@ -365,17 +398,34 @@ function handleTrackClick(): void {
   min-width: 100%;
 }
 
+/* 單線程欄位對齊：以 grid 取代 flex，gridTemplateColumns 由父層注入（三泳道共用）。
+   真實區塊用 grid-column 放到全域欄位，未佔用的欄自然留白 → 縱向對齊。 */
 .track__draggable {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
   align-items: center;
   gap: var(--track-gap);
-  min-width: 0;
+  width: max-content;
 }
 
-/* 泳道為空時，撐滿整條泳道寬度，讓 SortableJS 在任意位置都能命中此清單 */
-.track__draggable--empty {
+/* 泳道本身為空時撐滿，讓 SortableJS 在任意位置都能命中此清單。
+   但若全域序列非空（gridTemplate 有值），仍需保留 grid 欄位以維持對齊，
+   故 flex 撐滿只在「全域也為空」時才套用（此時 gridTemplate 為空字串）。 */
+.track__draggable--empty:not([style*='grid-template-columns:']) {
+  display: flex;
   flex: 1;
   align-self: stretch;
+}
+
+/* 落點空欄虛框（拖曳預覽）：佔據共用 grid 的落點欄，呈現「將插入於此」的提示。
+   高度貼齊區塊；不攔截滑鼠事件（hit-test 用 elementFromPoint 需穿透）。 */
+.track__preview-slot {
+  align-self: center;
+  height: 2.5rem;
+  border: 1.5px dashed rgba(125, 211, 252, 0.7);
+  border-radius: 3px;
+  background: rgba(125, 211, 252, 0.10);
+  pointer-events: none;
 }
 
 .track__empty-dropzone {
