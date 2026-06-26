@@ -13,6 +13,7 @@ import CharacterSelector from '@/components/character/CharacterSelector.vue'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useBlockDrag, DROP_ZONE_ATTRIBUTE, type SortableEventLike } from '@/composables/useBlockDrag'
+import { getElementColor } from '@/constants/elements'
 import type { Character } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
@@ -49,6 +50,9 @@ const {
   handleDragEnd,
   getRotationSortableOptions,
 } = useBlockDrag()
+
+// 本泳道統一顏色＝角色屬性色（同屬性 header 色條/區塊顏色完全一致）。未選角給中性色。
+const laneColor = computed<string>(() => getElementColor(props.character?.element ?? null))
 
 // VueDraggable 操作的本地緩衝陣列，防止套件直接修改 prop 導致資料流脫鉤
 const localEntries = ref<RotationEntry[]>([...props.entries])
@@ -157,7 +161,7 @@ function handleAddBlock(): void {
   if (!props.character) return
   const newId = rotationStore.addFreeformBlock(
     '',
-    props.character.themeColor,
+    laneColor.value,
     props.slotIndex,
     props.character.id,
     insertAfterIndex.value,
@@ -193,8 +197,11 @@ function handleTrackClick(): void {
   rotationStore.clearSelection()
 }
 
-// header 選擇器變更角色 → 寫入 characterStore（slotCharacters 連動本泳道 character prop）
+// header 選擇器變更角色 → 先清空本泳道既有區塊（換角色＝重開連招），再寫入 characterStore
 function handleSelectCharacter(characterId: string): void {
+  if (props.character?.id !== characterId) {
+    rotationStore.clearSlot(props.slotIndex)
+  }
   characterStore.setCharacter(props.slotIndex, characterId)
 }
 </script>
@@ -210,12 +217,12 @@ function handleSelectCharacter(characterId: string): void {
 
     <div
       class="swimlane__header"
-      :style="character ? { '--lane-color': character.themeColor } : {}"
+      :style="{ '--lane-color': laneColor }"
       aria-hidden="false"
     >
       <div
         class="header__color-bar"
-        :style="{ backgroundColor: character?.themeColor ?? 'rgba(255,255,255,0.15)' }"
+        :style="{ backgroundColor: character ? laneColor : 'rgba(255,255,255,0.15)' }"
         aria-hidden="true"
       />
 
@@ -231,7 +238,7 @@ function handleSelectCharacter(characterId: string): void {
       <span
         v-if="character"
         class="header__element"
-        :style="{ color: character.themeColor }"
+        :style="{ color: laneColor }"
         :aria-label="`屬性：${character.element}`"
       >
         {{ character.element }}
@@ -269,7 +276,7 @@ function handleSelectCharacter(characterId: string): void {
               :key="entry.id"
               :entry-id="entry.id"
               :label="entry.block.label"
-              :color="entry.block.color || character.themeColor"
+              :color="laneColor"
               :is-selected="rotationStore.isSelected(entry.id)"
               :is-editing="editingId === entry.id"
               :style="blockStyle(entry.id)"

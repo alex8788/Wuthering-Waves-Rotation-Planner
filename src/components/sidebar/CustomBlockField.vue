@@ -8,6 +8,7 @@ import BlockChip from '@/components/ui/BlockChip.vue'
 import { useSidebarStore } from '@/stores/useSidebarStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useBlockDrag } from '@/composables/useBlockDrag'
+import { getElementColor } from '@/constants/elements'
 import type { TemplateBlock } from '@/types/block'
 
 const sidebarStore = useSidebarStore()
@@ -75,7 +76,7 @@ function handleDelete(templateId: string): void {
       <div class="group-header">
         <span
           class="group-color-bar"
-          :style="{ backgroundColor: slot.character?.themeColor ?? 'rgba(255,255,255,0.18)' }"
+          :style="{ backgroundColor: slot.character ? getElementColor(slot.character.element) : 'rgba(255,255,255,0.18)' }"
           aria-hidden="true"
         />
         <span class="group-label">
@@ -115,7 +116,7 @@ function handleDelete(templateId: string): void {
           @end="handleDragEnd"
         >
           <div v-for="template in localTemplatesPerSlot[idx]" :key="template.id" class="chip-wrapper">
-            <BlockChip :label="template.label" :color="template.color" />
+            <BlockChip :label="template.label" :color="slot.character ? getElementColor(slot.character.element) : template.color" />
 
             <button
               class="delete-btn"

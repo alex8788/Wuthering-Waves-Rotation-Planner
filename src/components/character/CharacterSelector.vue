@@ -22,7 +22,8 @@ let uidCounter = 0
 // ============================================================
 
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import type { Character } from '@/types/character'
+import { getElementColor } from '@/constants/elements'
+import type { Character, CharacterElement } from '@/types/character'
 
 export interface Props {
   /** 目前選中的角色 ID；null 代表該槽位尚未選擇角色 */
@@ -76,9 +77,9 @@ function updateDropdownPosition(): void {
 
 // a5：依鳴潮角色屬性（element）分組。每個選項保留其在 props.options 的扁平索引，
 // 讓鍵盤高亮（highlightedIndex 對應扁平 options）與分組渲染共用同一套索引。
-const groupedOptions = computed<{ element: string; items: { char: Character; index: number }[] }[]>(() => {
-  const groups: { element: string; items: { char: Character; index: number }[] }[] = []
-  const byElement = new Map<string, { char: Character; index: number }[]>()
+const groupedOptions = computed<{ element: CharacterElement; items: { char: Character; index: number }[] }[]>(() => {
+  const groups: { element: CharacterElement; items: { char: Character; index: number }[] }[] = []
+  const byElement = new Map<CharacterElement, { char: Character; index: number }[]>()
   props.options.forEach((char, index) => {
     let bucket = byElement.get(char.element)
     if (!bucket) {
@@ -90,6 +91,28 @@ const groupedOptions = computed<{ element: string; items: { char: Character; ind
   })
   return groups
 })
+
+// a5/2-1：屬性頁籤版型。tabs＝有序屬性清單；目前選中的頁籤決定只顯示哪一屬性的角色。
+const elements = computed<CharacterElement[]>(() => groupedOptions.value.map((g) => g.element))
+const activeTabElement = ref<CharacterElement | null>(null)
+const activeItems = computed<{ char: Character; index: number }[]>(
+  () => groupedOptions.value.find((g) => g.element === activeTabElement.value)?.items ?? [],
+)
+
+function setActiveTab(element: CharacterElement): void {
+  activeTabElement.value = element
+  // 切頁籤時把高亮移到該頁籤第一個角色（highlightedIndex 仍對 props.options 的扁平索引）
+  const items = groupedOptions.value.find((g) => g.element === element)?.items ?? []
+  highlightedIndex.value = items[0]?.index ?? 0
+  scrollHighlightedIntoView()
+}
+
+function moveTab(delta: number): void {
+  const els = elements.value
+  if (els.length === 0) return
+  const cur = activeTabElement.value ? els.indexOf(activeTabElement.value) : 0
+  setActiveTab(els[(cur + delta + els.length) % els.length])
+}
 
 function setOptionRef(el: Element | null, index: number): void {
   optionRefs[index] = el as HTMLLIElement | null
@@ -108,8 +131,11 @@ function scrollHighlightedIntoView(): void {
 }
 
 function openDropdown(): void {
+  const selected = props.options.find((o) => o.id === props.modelValue)
+  // 開啟時頁籤定位到選中角色的屬性（未選角→第一個屬性），高亮對應角色
+  activeTabElement.value = selected?.element ?? elements.value[0] ?? null
   const selectedIdx = props.options.findIndex((o) => o.id === props.modelValue)
-  highlightedIndex.value = selectedIdx >= 0 ? selectedIdx : 0
+  highlightedIndex.value = selectedIdx >= 0 ? selectedIdx : (activeItems.value[0]?.index ?? 0)
   updateDropdownPosition()
   isOpen.value = true
   scrollHighlightedIntoView()
@@ -127,10 +153,13 @@ function toggleDropdown(): void {
   }
 }
 
+// 上下移動：限制在「目前頁籤的角色」之內（不再跨整個扁平清單）
 function moveHighlight(delta: number): void {
-  const len = props.options.length
-  if (len === 0) return
-  highlightedIndex.value = (highlightedIndex.value + delta + len) % len
+  const items = activeItems.value
+  if (items.length === 0) return
+  const cur = items.findIndex((it) => it.index === highlightedIndex.value)
+  const next = cur < 0 ? 0 : (cur + delta + items.length) % items.length
+  highlightedIndex.value = items[next].index
   scrollHighlightedIntoView()
 }
 
@@ -155,17 +184,30 @@ function onTriggerKeydown(event: KeyboardEvent): void {
       event.preventDefault()
       isOpen.value ? moveHighlight(-1) : openDropdown()
       break
+    case 'ArrowRight':
+      if (isOpen.value) {
+        event.preventDefault()
+        moveTab(1)
+      }
+      break
+    case 'ArrowLeft':
+      if (isOpen.value) {
+        event.preventDefault()
+        moveTab(-1)
+      }
+      break
     case 'Home':
       if (isOpen.value) {
         event.preventDefault()
-        highlightedIndex.value = 0
+        highlightedIndex.value = activeItems.value[0]?.index ?? 0
         scrollHighlightedIntoView()
       }
       break
     case 'End':
       if (isOpen.value) {
         event.preventDefault()
-        highlightedIndex.value = props.options.length - 1
+        const items = activeItems.value
+        highlightedIndex.value = items[items.length - 1]?.index ?? 0
         scrollHighlightedIntoView()
       }
       break
@@ -237,7 +279,7 @@ onUnmounted(() => {
       <span
         v-if="selectedCharacter"
         class="char-selector__swatch"
-        :style="{ '--swatch-color': selectedCharacter.themeColor }"
+        :style="{ '--swatch-color': getElementColor(selectedCharacter.element) }"
         aria-hidden="true"
       />
       <span
@@ -260,33 +302,42 @@ onUnmounted(() => {
           role="listbox"
           @wheel.stop
         >
-          <template v-for="group in groupedOptions" :key="group.element">
-            <li class="char-selector__group-label" role="presentation">
-              {{ group.element }}
-            </li>
-            <li
-              v-for="{ char, index } in group.items"
-              :id="`${listboxId}-option-${index}`"
-              :key="char.id"
-              :ref="(el) => setOptionRef(el as Element | null, index)"
-              role="option"
-              class="char-selector__option"
-              :class="{
-                'char-selector__option--highlighted': index === highlightedIndex,
-                'char-selector__option--selected': char.id === modelValue,
-              }"
-              :aria-selected="char.id === modelValue"
-              @mouseenter="highlightedIndex = index"
-              @click="selectOption(char)"
+          <!-- 屬性頁籤列：每個頁籤一條屬性色條（2-2 改由此處表示顏色），點擊切換顯示該屬性角色 -->
+          <li class="char-selector__tabs" role="presentation">
+            <button
+              v-for="el in elements"
+              :key="el"
+              type="button"
+              class="char-selector__tab"
+              :class="{ 'char-selector__tab--active': el === activeTabElement }"
+              :style="{ '--tab-color': getElementColor(el) }"
+              :aria-label="`屬性 ${el}`"
+              @click="setActiveTab(el)"
             >
-              <span
-                class="char-selector__swatch"
-                :style="{ '--swatch-color': char.themeColor }"
-                aria-hidden="true"
-              />
-              <span class="char-selector__option-name">{{ char.nameZh }}</span>
-            </li>
-          </template>
+              <span class="char-selector__tab-bar" aria-hidden="true" />
+              <span class="char-selector__tab-label">{{ el }}</span>
+            </button>
+          </li>
+
+          <!-- 僅顯示目前頁籤屬性的角色；移除角色色點，左側保留頭像佔位（未來放角色頭像） -->
+          <li
+            v-for="{ char, index } in activeItems"
+            :id="`${listboxId}-option-${index}`"
+            :key="char.id"
+            :ref="(el) => setOptionRef(el as Element | null, index)"
+            role="option"
+            class="char-selector__option"
+            :class="{
+              'char-selector__option--highlighted': index === highlightedIndex,
+              'char-selector__option--selected': char.id === modelValue,
+            }"
+            :aria-selected="char.id === modelValue"
+            @mouseenter="highlightedIndex = index"
+            @click="selectOption(char)"
+          >
+            <span class="char-selector__avatar" aria-hidden="true" />
+            <span class="char-selector__option-name">{{ char.nameZh }}</span>
+          </li>
         </ul>
       </Transition>
     </Teleport>
@@ -398,21 +449,72 @@ onUnmounted(() => {
   border-radius: 3px;
 }
 
-/* ── 屬性分組標題（a5） ─────────────────────────────────── */
-.char-selector__group-label {
-  padding: 0.375rem 0.625rem 0.1875rem;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(34, 211, 238, 0.55);
-  user-select: none;
+/* ── 屬性頁籤列（2-1 / 2-2） ─────────────────────────────── */
+.char-selector__tabs {
   position: sticky;
   top: -0.25rem;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: -0.25rem -0.25rem 0.25rem;
+  padding: 0.375rem;
   background-color: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.char-selector__group-label:first-child {
-  padding-top: 0.125rem;
+.char-selector__tab {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  color: rgba(240, 244, 248, 0.5);
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.char-selector__tab:hover {
+  color: rgba(240, 244, 248, 0.82);
+}
+
+.char-selector__tab--active {
+  color: rgba(240, 244, 248, 0.95);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.char-selector__tab-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background-color: var(--tab-color, #6b7280);
+  opacity: 0.45;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease;
+}
+
+.char-selector__tab--active .char-selector__tab-bar {
+  opacity: 1;
+  box-shadow: 0 0 6px var(--tab-color, transparent);
+}
+
+.char-selector__tab-label {
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* 角色頭像佔位：暫以方塊呈現，未來換成角色頭像（取代原本的屬性色點） */
+.char-selector__avatar {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 /* ── 選項 ───────────────────────────────────────────────── */

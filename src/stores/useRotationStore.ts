@@ -277,6 +277,20 @@ export const useRotationStore = defineStore('rotation', () => {
     selectedIds.value.clear();
   }
 
+  /**
+   * clearSlot：清空某條泳道（slotIndex）的所有區塊，並一併移除其選取狀態。
+   * 用於更換泳道角色時清掉舊角色殘留的區塊。
+   */
+  function clearSlot(slotIndex: SlotIndex): void {
+    entries.value = entries.value.filter((entry) => {
+      if (entry.slotIndex === slotIndex) {
+        selectedIds.value.delete(entry.id);
+        return false;
+      }
+      return true;
+    });
+  }
+
   return {
     entries,
     selectedIds,
@@ -294,5 +308,6 @@ export const useRotationStore = defineStore('rotation', () => {
     clearSelection,
     isSelected,
     clearRotation,
+    clearSlot,
   };
 });
