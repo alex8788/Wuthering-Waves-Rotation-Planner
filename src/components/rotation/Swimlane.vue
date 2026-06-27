@@ -74,15 +74,23 @@ const dragOptions = computed(
 //  - 被拖本體：隱藏並抽離 grid flow（forceFallback 分身在跟手；落點由預覽空欄表示）。
 //  - 其餘：依（預覽版）欄序釘 grid-column；拿不到欄序則隱藏（保險）。
 function blockStyle(id: string): Record<string, string> {
-  if (dragState.isDragging && id === dragState.draggingId) {
+  // 被拖區塊（多選＝整組）一律隱藏並抽離 grid flow；落點由共用預覽空欄表示。
+  if (dragState.isDragging && (id === dragState.draggingId || dragState.draggingIds.includes(id))) {
     return { visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }
   }
   const col = props.idToColumnIndex.get(id)
   return col != null ? { gridColumn: String(col + 1) } : { display: 'none' }
 }
 
-// 依 SortableJS 事件索引反查對應區塊 (僅限同泳道拖曳起點 @start 且未發生 splice 時使用)
+// 反查被拖區塊對應的 entry。優先用被拖 DOM 的 data-entry-id 直接比對（最穩；
+// 不受 grid 內裝飾節點＋按鈕/落點虛框影響 SortableJS 索引而對不到 → 抓不起來）。
+// 退而求其次才用事件索引。
 function getEntryFromDragEvent(event: SortableEventLike): RotationEntry | undefined {
+  const id = event.item?.getAttribute?.('data-entry-id')
+  if (id) {
+    const byId = localEntries.value.find((e) => e.id === id)
+    if (byId) return byId
+  }
   const localIndex = event.oldDraggableIndex ?? event.oldIndex ?? -1
   return localEntries.value[localIndex]
 }

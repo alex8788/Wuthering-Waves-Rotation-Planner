@@ -162,12 +162,32 @@ const previewLayout = computed<{
   const draggingId = dragState.draggingId
   const isRotationSource = dragState.sourceType === 'rotation-instance'
 
-  // 先在「含全部」序列的 afterIn+1 插入落點空欄，再（主軸來源）收合被拖區塊原欄。
-  // 先插後收合可保證落點與被拖欄的相對位置正確，且 afterIn 與 store moveBlock 語意完全一致。
+  // 被拖區塊集合（多選＝整組；單選＝單一）。主軸來源才需收合原欄。
+  const TRACK_GAP = 6 // 與 .track__inner / .track__draggable 的 --track-gap（0.375rem）一致
+  const draggingIds = dragState.draggingIds
+  const idSet = new Set<string>(draggingIds.length ? draggingIds : draggingId ? [draggingId] : [])
+
+  // 落點空欄寬度：多選＝各選中欄寬加總（含其間 gap），讓「解壓縮」插入的預留空間貼近實際；
+  // 否則沿用 draggingWidth（單選被拖欄寬 / 側邊欄浮動分身寬）。
+  let placeholderWidth = dragState.draggingWidth
+  if (isRotationSource && idSet.size > 0) {
+    let sum = 0
+    let cnt = 0
+    entries.forEach((e, i) => {
+      if (idSet.has(e.id)) {
+        sum += widths[i] ?? 0
+        cnt++
+      }
+    })
+    if (cnt > 0) placeholderWidth = sum + TRACK_GAP * (cnt - 1)
+  }
+
+  // 先在「含全部」序列的 afterIn+1 插入落點空欄，再（主軸來源）收合所有被拖欄。
+  // 先插後收合可保證落點與被拖欄的相對位置正確，且 afterIn 與 store moveBlock(s) 語意一致。
   const cols = entries.map((e, i) => ({ id: e.id, width: widths[i] ?? 0 }))
   const insertAt = afterIn < 0 ? 0 : Math.min(afterIn + 1, cols.length)
-  cols.splice(insertAt, 0, { id: PREVIEW_PLACEHOLDER, width: dragState.draggingWidth })
-  const working = isRotationSource && draggingId ? cols.filter((c) => c.id !== draggingId) : cols
+  cols.splice(insertAt, 0, { id: PREVIEW_PLACEHOLDER, width: placeholderWidth })
+  const working = isRotationSource ? cols.filter((c) => !idSet.has(c.id)) : cols
 
   // (c) 重算欄序與 template
   const idToColumn = new Map<string, number>()
@@ -323,13 +343,17 @@ onMounted(async () => {
     document.fonts.ready.then(() => void remeasureAfterRender())
   }
   window.addEventListener('resize', handleResize)
+  // 框選起手用 window capture 監聽（見 onWindowMouseDown 註解）
+  window.addEventListener('mousedown', onWindowMouseDown, true)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('mousedown', onWindowMouseDown, true)
   // 卸載時若仍在框選，移除殘留的全域監聽
   window.removeEventListener('mousemove', onBoardMouseMove)
   window.removeEventListener('mouseup', onBoardMouseUp)
+  window.removeEventListener('click', _suppressNextClick, true)
 })
 </script>
 
@@ -338,8 +362,6 @@ onBeforeUnmount(() => {
     class="rotation-board"
     :[DELETE_ZONE_ATTRIBUTE]="true"
     aria-label="輸出軸面板"
-    @mousedown="onBoardMouseDown"
-    @click.capture="onBoardClickCapture"
   >
 
     <!--

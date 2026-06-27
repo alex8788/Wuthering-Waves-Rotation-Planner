@@ -1,4 +1,4 @@
-import { reactive, readonly } from 'vue';
+import { reactive, readonly, type DeepReadonly } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -55,6 +55,7 @@ const _dragState = reactive<DragState>({
   isDragging: false,
   sourceType: null,
   draggingId: null,
+  draggingIds: [],
   draggingSourceBlock: null,
   pendingInstanceId: null,
   draggingSlotIndex: null,
@@ -201,6 +202,7 @@ function _resetDragState(): void {
   _dragState.isDragging = false;
   _dragState.sourceType = null;
   _dragState.draggingId = null;
+  _dragState.draggingIds = [];
   _dragState.draggingSourceBlock = null;
   _dragState.pendingInstanceId = null;
   _dragState.draggingSlotIndex = null;
@@ -222,7 +224,9 @@ export function useBlockDrag() {
   const rotationStore = useRotationStore();
   const sidebarStore = useSidebarStore();
   const characterStore = useCharacterStore();
-  const dragState = readonly(_dragState);
+  // 顯式標註對外型別，避免 readonly() 的型別推論在部分 Volar 版本展開
+  // DeepReadonly<UnwrapNestedRefs<…>> 時掉欄位（如 draggingIds 誤判不存在）。
+  const dragState: DeepReadonly<DragState> = readonly(_dragState);
 
   // 取得（必要時生成）本次側邊欄拖曳的「未來實體 id」。
   // SortableJS 的 :clone 與我們的 @start 事件觸發順序不保證，兩邊都透過此函式
@@ -246,6 +250,7 @@ export function useBlockDrag() {
     _dragState.isOverInvalidZone = false;
     _dragState.isOverDeleteZone = false;
     _dragState.previewInsertAfterIndex = null;
+    _dragState.draggingIds = [];
     // 側邊欄來源寬度於拖曳中由浮動分身量得（_handleDragOver）
     _dragState.draggingWidth = 0;
     _attachDragOverListener();
@@ -263,7 +268,18 @@ export function useBlockDrag() {
     _dragState.isOverInvalidZone = false;
     _dragState.isOverDeleteZone = false;
     _dragState.previewInsertAfterIndex = null;
-    // 主軸來源：被拖區塊原欄寬，作為落點空欄寬度（由 Swimlane 量 DOM 傳入）
+    // 多選拖曳：抓起的區塊本身在選取集合且有複數選取時，整組一起拖（依全域順序）。
+    // 否則只拖這一個。
+    const sel = rotationStore.selectedIds;
+    if (sel.has(entry.id) && sel.size > 1) {
+      _dragState.draggingIds = rotationStore.entries
+        .filter((e) => sel.has(e.id))
+        .map((e) => e.id);
+    } else {
+      _dragState.draggingIds = [entry.id];
+    }
+    // 主軸來源：被拖區塊原欄寬，作為落點空欄寬度（由 Swimlane 量 DOM 傳入；
+    // 多選的落點總寬由 RotationBoard previewLayout 依各選中欄寬自行加總）
     _dragState.draggingWidth = width;
     _attachDragOverListener();
   }
@@ -289,6 +305,7 @@ export function useBlockDrag() {
     // 快照所有落地所需資料（setTimeout 內 _dragState 已被重置）
     const sourceType = _dragState.sourceType;
     const draggingId = _dragState.draggingId;
+    const draggingIds = [..._dragState.draggingIds];
     const sourceBlock = _dragState.draggingSourceBlock;
     const isOverSidebar = _dragState.isOverSidebar;
     const isOverDeleteZone = _dragState.isOverDeleteZone;
@@ -299,15 +316,18 @@ export function useBlockDrag() {
     // setTimeout：避免打斷 SortableJS 同步清理導致 dragEl 殘留（p1-1）；且與 reset 同拍消除 n9 閃爍。
     setTimeout(() => {
       if (sourceType === 'rotation-instance' && draggingId) {
+        const isMulti = draggingIds.length > 1;
         if (isOverSidebar) {
           const entry = rotationStore.entries.find((e) => e.id === draggingId);
           if (entry) sidebarStore.serializeToTemplate(entry.block);
         } else if (afterIn !== null) {
-          // 全域重排：afterIn 已是「含全部」語意，直接給 moveBlock。
-          rotationStore.moveBlock(draggingId, afterIn);
+          // 全域重排：afterIn 已是「含全部」語意。多選整組以鼠標錨點插入、相對順序不變。
+          if (isMulti) rotationStore.moveBlocks(draggingIds, afterIn);
+          else rotationStore.moveBlock(draggingId, afterIn);
         } else if (isOverDeleteZone) {
-          // 無合法落點且在可刪除區 → 刪除；禁止放置區一律彈回不刪
-          rotationStore.deleteBlock(draggingId);
+          // 無合法落點且在可刪除區 → 刪除（多選刪整組）；禁止放置區一律彈回不刪
+          if (isMulti) draggingIds.forEach((id) => rotationStore.deleteBlock(id));
+          else rotationStore.deleteBlock(draggingId);
         }
       } else if (sourceBlock && afterIn !== null && previewSlot !== null) {
         // 側邊欄來源落入泳道：再次角色校驗（雙重防線），用 previewSlot 決定歸屬泳道。

@@ -11,12 +11,12 @@ import type { CharacterElement } from '../types/character';
 
 /** 六屬性代表色（hex）。 */
 export const ELEMENT_COLORS: Record<CharacterElement, string> = {
-  氣動: '#10B981', // 翠綠
-  冷凝: '#38BDF8', // 冰藍
-  導電: '#A78BFA', // 紫
-  湮滅: '#F87171', // 暗紅
-  衍射: '#FBBF24', // 金黃
-  熱熔: '#FB923C', // 橘紅
+  氣動: '#55FFB5', // 翠綠
+  冷凝: '#41AEFB', // 冰藍
+  導電: '#B46BFF', // 紫
+  湮滅: '#E549A5', // 桃紅
+  衍射: '#EECC22', // 金黃
+  熱熔: '#F0744E', // 橘紅
 };
 
 /** 未選角 / 無屬性時的中性色。 */

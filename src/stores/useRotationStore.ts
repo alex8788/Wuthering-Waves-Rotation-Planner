@@ -237,6 +237,38 @@ export const useRotationStore = defineStore('rotation', () => {
   }
 
   /**
+   * moveBlocks：多選整組移動。把 ids 對應的區塊（依目前全域順序、相對順序不變）
+   * 一起移到 toInsertAfterIndex 之後（語意同 moveBlock 的「含全部 entries」after-index）。
+   * 行為近似「插隊解壓縮」：以鼠標錨點為插入點，被選中的區塊整批塞入，各自 slotIndex 不變。
+   */
+  function moveBlocks(ids: string[], toInsertAfterIndex: number): void {
+    const idSet = new Set(ids);
+    const ordered = entries.value.filter((entry) => idSet.has(entry.id)); // 保留相對順序
+    if (ordered.length === 0) return;
+
+    // 落點錨：從 toInsertAfterIndex 往前找第一個「不在選取集合」的區塊當基準
+    // （落點若落在被拖群組內，往前退到群組外的最近區塊，插在它之後）。
+    let anchorId: string | null = null;
+    const startIdx = Math.min(toInsertAfterIndex, entries.value.length - 1);
+    for (let i = startIdx; i >= 0; i--) {
+      if (!idSet.has(entries.value[i].id)) {
+        anchorId = entries.value[i].id;
+        break;
+      }
+    }
+
+    const remaining = entries.value.filter((entry) => !idSet.has(entry.id));
+    const insertAt =
+      anchorId === null ? 0 : remaining.findIndex((entry) => entry.id === anchorId) + 1;
+
+    entries.value = [
+      ...remaining.slice(0, insertAt),
+      ...ordered,
+      ...remaining.slice(insertAt),
+    ];
+  }
+
+  /**
    * deleteBlock：從主時間軸刪除單一區塊。
    */
   function deleteBlock(id: string): void {
@@ -310,6 +342,7 @@ export const useRotationStore = defineStore('rotation', () => {
     updateLabel,
     insertClonedBlocks,
     moveBlock,
+    moveBlocks,
     deleteBlock,
     deleteSelectedBlocks,
     selectBlock,
