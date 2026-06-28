@@ -76,6 +76,10 @@ watch(() => rotationStore.entries, remeasureAfterRender, { deep: true })
 
 const PREVIEW_PLACEHOLDER = '__preview_placeholder__'
 
+// 區塊間距（px），須與 Swimlane 的 --track-gap (0.375rem = 6px) 一致。
+// 用於把「欄序」換算成「像素 x 位移」（FLIP 平滑順延）。
+const TRACK_GAP = 6
+
 const isPreviewing = computed<boolean>(
   () => dragState.isDragging && dragState.previewInsertAfterIndex !== null,
 )
@@ -83,6 +87,9 @@ const isPreviewing = computed<boolean>(
 const previewLayout = computed<{
   template: string
   idToColumn: Map<string, number>
+  // id → 該欄左緣在共用 grid 內的 px 座標（三泳道共用 template，故全域一致）。
+  // 僅預覽時計算，供 FLIP 解析式位移用；非預覽時為 null（不做動畫）。
+  idToX: Map<string, number> | null
   placeholderColumn: number | null
   slotIndex: SlotIndex | null
 }>(() => {
@@ -90,6 +97,7 @@ const previewLayout = computed<{
     return {
       template: gridTemplate.value,
       idToColumn: idToColumnIndex.value,
+      idToX: null,
       placeholderColumn: null,
       slotIndex: null,
     }
@@ -101,7 +109,6 @@ const previewLayout = computed<{
   const draggingId = dragState.draggingId
   const isRotationSource = dragState.sourceType === 'rotation-instance'
 
-  const TRACK_GAP = 6
   const draggingIds = dragState.draggingIds
   const idSet = new Set<string>(draggingIds.length ? draggingIds : draggingId ? [draggingId] : [])
 
@@ -124,12 +131,19 @@ const previewLayout = computed<{
   const working = isRotationSource ? cols.filter((c) => !idSet.has(c.id)) : cols
 
   const idToColumn = new Map<string, number>()
-  working.forEach((c, i) => idToColumn.set(c.id, i))
+  const idToX = new Map<string, number>()
+  let x = 0
+  working.forEach((c, i) => {
+    idToColumn.set(c.id, i)
+    idToX.set(c.id, x)
+    x += c.width + TRACK_GAP
+  })
   const template = working.map((c) => `${c.width}px`).join(' ')
 
   return {
     template,
     idToColumn,
+    idToX,
     placeholderColumn: idToColumn.get(PREVIEW_PLACEHOLDER) ?? null,
     slotIndex: dragState.previewSlotIndex,
   }
@@ -137,6 +151,74 @@ const previewLayout = computed<{
 
 const previewGridTemplate = computed<string>(() => previewLayout.value.template)
 const previewIdToColumn = computed<Map<string, number>>(() => previewLayout.value.idToColumn)
+
+// ── 拖曳「平滑順延」FLIP（方案B）──────────────────────────────
+//
+// grid-column 是離散屬性，CSS 無法補間 → 落點變動時其他區塊原本「瞬移」到隔壁欄，
+// 拖快掠過多塊就像閃爍。此處於每次落點變動後，對欄序有變的區塊補一段 transform 滑動：
+//   位移量＝(舊欄左緣x − 新欄左緣x)，純用 idToX（欄寬解析式）算出，全程不量 DOM →
+//   不觸發 reflow，避開先前 TransitionGroup 的卡頓坑（見專案歷史）。
+// 只動「非被拖」區塊的 transform；被拖本體/多選組已被排除在 idToX 外，浮動分身在
+// <body> 而查詢範圍限定在 board 內 → 兩者都不會被碰到，不與 SortableJS 佔用的 transform 衝突。
+const FLIP_MS = 140
+let _flipPrevX: Map<string, number> | null = null
+const _reducedMotion =
+  typeof window !== 'undefined' &&
+  !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// 以目前「靜止」佈局（無落點空欄）建立 id→x 基準，供拖曳首幀動畫起點。
+function restingIdToX(): Map<string, number> {
+  const m = new Map<string, number>()
+  let x = 0
+  rotationStore.entries.forEach((e, i) => {
+    m.set(e.id, x)
+    x += (columnWidths.value[i] ?? 0) + TRACK_GAP
+  })
+  return m
+}
+
+function runFlip(newX: Map<string, number> | null): void {
+  if (_reducedMotion) return
+  if (!dragState.isDragging || !newX) {
+    _flipPrevX = null
+    return
+  }
+  const prev = _flipPrevX
+  _flipPrevX = newX
+  if (!prev) return // 拖曳首幀：只記基準，不動畫
+  const root = boardScrollRef.value
+  if (!root) return
+  for (const [id, nx] of newX) {
+    const ox = prev.get(id)
+    if (ox === undefined) continue // 新出現（落點/剛入軸）→ 無起點，不滑
+    const delta = ox - nx
+    if (Math.abs(delta) < 0.5) continue
+    // 限定 board 內查詢 → 自動排除 <body> 上的 SortableJS 浮動分身
+    const el = root.querySelector<HTMLElement>(`.rotation-block[data-entry-id="${id}"]`)
+    if (!el) continue
+    // FLIP：先瞬移回舊位（transition none），下一幀放手讓它滑回 0
+    el.style.transition = 'none'
+    el.style.transform = `translateX(${delta}px)`
+    requestAnimationFrame(() => {
+      el.style.transition = `transform ${FLIP_MS}ms ease-out`
+      el.style.transform = ''
+    })
+  }
+}
+
+// 拖曳結束後清掉殘留的 inline transform/transition，避免污染靜止樣式
+function clearFlipStyles(): void {
+  boardScrollRef.value
+    ?.querySelectorAll<HTMLElement>('.rotation-block')
+    .forEach((el) => {
+      if (el.style.transform || el.style.transition) {
+        el.style.transition = ''
+        el.style.transform = ''
+      }
+    })
+}
+
+watch(() => previewLayout.value, (layout) => runFlip(layout.idToX), { flush: 'post' })
 
 // ── 跨三泳道矩形框選（marquee）─────────────────────────────
 //
@@ -230,7 +312,16 @@ function stopAutoScroll(): void {
 
 watch(
   () => dragState.isDragging,
-  (now) => (now ? startAutoScroll() : stopAutoScroll()),
+  (now) => {
+    if (now) {
+      startAutoScroll()
+      _flipPrevX = restingIdToX() // 種下基準，讓首次落點變動就能從靜止位置滑出
+    } else {
+      stopAutoScroll()
+      _flipPrevX = null
+      setTimeout(clearFlipStyles, FLIP_MS + 40) // 等收尾動畫播完再清除殘留 inline 樣式
+    }
+  },
 )
 
 const marquee = ref<{ active: boolean; left: number; top: number; width: number; height: number }>({
