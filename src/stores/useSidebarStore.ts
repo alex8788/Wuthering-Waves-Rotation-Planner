@@ -15,6 +15,7 @@ import type { TemplateBlock, InstanceBlock } from '../types/block';
 import { DEFAULT_BLOCKS } from '../constants/defaultBlocks';
 import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
+import { showToast as showGlobalToast, type ToastVariant } from '../composables/useToast';
 
 /** LocalStorage 儲存鍵名 */
 const STORAGE_KEY = 'wuwa-rotation-templates';
@@ -48,12 +49,6 @@ export const useSidebarStore = defineStore('sidebar', () => {
    */
   const templates = ref<TemplateBlock[]>(loadTemplatesFromStorage());
 
-  /**
-   * toastMessage：「已新增至模板庫」的提示文字。
-   * 空字串代表不顯示 Toast；設為字串後顯示，由 ToastNotification 元件監聽。
-   */
-  const toastMessage = ref<string>('');
-
   // ──────────────────────────────────────────
   // LocalStorage 自動同步
   // ──────────────────────────────────────────
@@ -85,13 +80,14 @@ export const useSidebarStore = defineStore('sidebar', () => {
 
   /**
    * getTemplatesByCharacter：依角色 ID 篩選對應的自訂模板。
-   * 依建立時間由舊到新排序，讓最新加入的在下方。
+   * 依 label 字元數遞增排序（短的在前）；區塊寬度由字元數自動撐開，故等同寬度遞增，
+   * 且不需量測 DOM。字數相同時以建立時間（舊→新）為次序，維持穩定排列。
    */
   const getTemplatesByCharacter = computed(
     () => (characterId: string) =>
       templates.value
         .filter((t) => t.characterId === characterId)
-        .sort((a, b) => a.createdAt - b.createdAt)
+        .sort((a, b) => a.label.length - b.label.length || a.createdAt - b.createdAt)
   );
 
   // ──────────────────────────────────────────
@@ -102,9 +98,9 @@ export const useSidebarStore = defineStore('sidebar', () => {
    * serializeToTemplate：將主軸上的 InstanceBlock 序列化為模板，加入側邊欄。
    *
    * @param instance - 主軸上要序列化的 InstanceBlock
-   * @returns 建立完成的 TemplateBlock
+   * @returns 建立完成的 TemplateBlock；若同角色已有相同 label 的模板則不新增，回傳 null
    */
-  function serializeToTemplate(instance: InstanceBlock): TemplateBlock {
+  function serializeToTemplate(instance: InstanceBlock): TemplateBlock | null {
     // 確保 characterId 不為 null（自訂模板一定要綁定角色）
     if (!instance.characterId) {
       throw new Error('[useSidebarStore.serializeToTemplate] 區塊的 characterId 不可為 null');
@@ -112,6 +108,16 @@ export const useSidebarStore = defineStore('sidebar', () => {
 
     // 深拷貝，避免主軸上的資料與模板庫共用參考
     const clonedBlock = deepClone(instance);
+
+    // 去重：同角色內若已存在相同 label（trim 後完全相同）的模板，不重複新增，僅提示。
+    const label = clonedBlock.label.trim();
+    const isDuplicate = templates.value.some(
+      (t) => t.characterId === clonedBlock.characterId && t.label.trim() === label
+    );
+    if (isDuplicate) {
+      showToast('模板庫已有相同區塊', 'warning');
+      return null;
+    }
 
     // 精確組裝 TemplateBlock，不將 instance 專屬的 originId 屬性帶入
     const newTemplate: TemplateBlock = {
@@ -128,7 +134,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
     templates.value.push(newTemplate);
 
     // 觸發 Toast 提示
-    showToast(`已新增至模板庫`);
+    showToast('已新增至模板庫', 'success');
 
     return newTemplate;
   }
@@ -143,18 +149,15 @@ export const useSidebarStore = defineStore('sidebar', () => {
   }
 
   /**
-   * showToast：顯示右下角的提示框（2 秒後自動清除）。
+   * showToast：顯示右下角的提示框。
+   * 轉呼叫全域 useToast 單例（ToastNotification 唯一實際訂閱的來源）。
    */
-  function showToast(message: string): void {
-    toastMessage.value = message;
-    setTimeout(() => {
-      toastMessage.value = '';
-    }, 2000);
+  function showToast(message: string, variant: ToastVariant = 'info'): void {
+    showGlobalToast(message, variant);
   }
 
   return {
     templates,
-    toastMessage,
     defaultBlocks,
     getTemplatesByCharacter,
     serializeToTemplate,
