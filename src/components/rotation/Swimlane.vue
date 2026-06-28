@@ -7,7 +7,7 @@
 // 3. 拖曳結束後由 useBlockDrag 換算全域索引並更新 store，watch 再同步回 localEntries。
 
 import { ref, computed, watch, nextTick } from 'vue'
-import { VueDraggable } from 'vue-draggable-plus'
+import { useDraggable } from 'vue-draggable-plus'
 import RotationBlock from '@/components/rotation/RotationBlock.vue'
 import CharacterSelector from '@/components/character/CharacterSelector.vue'
 import { useRotationStore } from '@/stores/useRotationStore'
@@ -65,10 +65,37 @@ watch(
   }
 )
 
-// 取得本泳道專屬的 SortableJS 設定 (包含 group 角色匹配防護等)
+// 可拖曳容器 DOM 參照：useDraggable 把 SortableJS 掛在這個元素上（取代 <VueDraggable>）。
+const trackEl = ref<HTMLElement | null>(null)
+
+// SortableJS 設定 + 事件處理器。
+// 關鍵：刻意「不把 localEntries 當受管清單傳給 useDraggable」（用兩參數 el+options 形式）。
+// 本 app 自有單一真相流：handleDragEnd → store → watch(props.entries) → localEntries → Vue 重渲染，
+// SortableJS 僅負責「偵測拖曳 + 浮動分身視覺」。若把清單交給 useDraggable 受管，套件會在
+// 「原地放開」(SortableJS 眼中 oldIndex===newIndex) 時跑內部 replaceChild 還原 DOM，擾動容器
+// 子節點，導致尾端非 keyed 的 ＋按鈕 v-show 與 Vue vdom 脫鉤（放開後按鈕卡 display:none）。
+// 不傳清單 → 套件不安裝內部清單變動/還原處理器 → 不碰 DOM → Vue 維持唯一 DOM 真相。
 const dragOptions = computed(
-  (): Record<string, unknown> => getRotationSortableOptions(props.slotIndex)
+  (): Record<string, unknown> => ({
+    ...getRotationSortableOptions(props.slotIndex),
+    // 容器只在「已選角」時渲染（v-else 內），trackEl 初始為 null；關閉自動初始化，
+    // 改由下方 watch 在容器出現時手動 start，避免 SortableJS 收到 null 於 mounted 拋例外。
+    immediate: false,
+    onStart: handleDragStart,
+    onAdd: handleAdd,
+    onUpdate: handleUpdate,
+    onEnd: handleEnd,
+  })
 )
+
+// 兩參數形式：只掛拖曳行為，不交出清單管理權（見上方註解）。
+const { start: startDraggable, destroy: destroyDraggable } = useDraggable(trackEl, dragOptions)
+
+// 容器隨「選角/清空」動態出現或消失：出現時掛上拖曳、消失時銷毀，避免持有脫離 DOM 的實例。
+watch(trackEl, (el) => {
+  if (el) startDraggable(el)
+  else destroyDraggable()
+})
 
 // 每個區塊的定位樣式：
 //  - 被拖本體：隱藏並抽離 grid flow（forceFallback 分身在跟手；落點由預覽空欄表示）。
@@ -266,18 +293,11 @@ function handleSelectCharacter(characterId: string): void {
         </div>
 
         <template v-else>
-          <VueDraggable
-            v-model="localEntries"
-            item-key="id"
-            tag="div"
+          <div
+            ref="trackEl"
             class="track__draggable"
             :class="{ 'track__draggable--empty': localEntries.length === 0 }"
             :style="{ gridTemplateColumns: gridTemplate }"
-            v-bind="dragOptions"
-            @start="handleDragStart"
-            @add="handleAdd"
-            @update="handleUpdate"
-            @end="handleEnd"
           >
             <RotationBlock
               v-for="entry in localEntries"
@@ -317,7 +337,7 @@ function handleSelectCharacter(characterId: string): void {
             >
               ＋
             </button>
-          </VueDraggable>
+          </div>
 
           <div
             v-if="localEntries.length === 0 && idToColumnIndex.size === 0 && dragState.isDragging && dragState.sourceType !== 'rotation-instance'"
