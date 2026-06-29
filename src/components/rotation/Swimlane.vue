@@ -360,7 +360,7 @@ function handleSelectCharacter(characterId: string): void {
 /* ── CSS 自訂屬性 ────────────────────────────────────────── */
 .swimlane {
   --header-width: 8.5rem;
-  --lane-height: 3.5rem;
+  --lane-height: 4rem;
   --lane-color: rgba(255, 255, 255, 0.18);
   --track-gap: 0.375rem;
   --track-px: 0.75rem;
@@ -489,7 +489,7 @@ function handleSelectCharacter(characterId: string): void {
    高度貼齊區塊；不攔截滑鼠事件（hit-test 用 elementFromPoint 需穿透）。 */
 .track__preview-slot {
   align-self: center;
-  height: 2.5rem;
+  height: 3rem;
   border: 1.5px dashed rgba(125, 211, 252, 0.7);
   border-radius: 3px;
   background: rgba(125, 211, 252, 0.10);

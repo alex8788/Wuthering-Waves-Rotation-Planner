@@ -17,12 +17,15 @@ interface Props {
   isSelected?: boolean
   /** true 時疊加紅色斜條紋警告動畫（即將丟棄提示） */
   isDanger?: boolean
+  /** true 時用較小尺寸（側邊欄預設/模板庫，相對主軸略縮小） */
+  compact?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
   isHovered: false,
   isSelected: false,
   isDanger: false,
+  compact: false,
 })
 </script>
 
@@ -33,6 +36,7 @@ withDefaults(defineProps<Props>(), {
       'block-chip--hovered': isHovered && !isSelected && !isDanger,
       'block-chip--selected': isSelected && !isDanger,
       'block-chip--danger': isDanger,
+      'block-chip--compact': compact,
     }"
     :style="{ '--chip-bg': color }"
     role="presentation"
@@ -52,8 +56,8 @@ withDefaults(defineProps<Props>(), {
 /* ── CSS 自訂屬性（由 :style 注入） ─────────────────────── */
 .block-chip {
   --chip-bg: #22D3EE;            /* 由 Props color 覆寫 */
-  --chip-height: 2.5rem;         /* 40px 固定高度 */
-  --chip-px: 0.875rem;           /* 左右內距 */
+  --chip-height: 3rem;           /* 48px 固定高度（主軸；側邊欄 compact 為 44px） */
+  --chip-px: 1rem;               /* 左右內距 */
   --chip-radius: 3px;
   --cyan: #22D3EE;
   --danger-red: #EF4444;
@@ -103,7 +107,7 @@ withDefaults(defineProps<Props>(), {
      避免 fallback 字型在高字重下假粗(faux-bold)使筆畫糊成一團。 */
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
-  font-size: 0.9375rem;  /* 15px：加大文字在 chip 中的占比 */
+  font-size: 1rem;       /* 16px：主軸（側邊欄 compact 為 15px） */
   font-weight: 700;      /* 粗體；700 有真字模，中文不會假粗擠筆畫 */
   letter-spacing: 0.05em;
   /* 維持霓虹白風格，靠描邊與背景分離 → 淺色塊不刺眼、深色塊不低對比。
@@ -113,6 +117,17 @@ withDefaults(defineProps<Props>(), {
   -webkit-text-stroke: 0.7px rgba(8, 12, 24, 0.65);
   paint-order: stroke fill;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* ── 尺寸：精簡（compact）──────────────────────────────────────
+   側邊欄預設/模板庫用，相對主軸略縮小。覆蓋 --chip-height/--chip-px
+   與 label 字級（規則置於基底之後，等特異性下後者勝出）。 */
+.block-chip--compact {
+  --chip-height: 2.75rem;   /* 44px（主軸為 52px） */
+  --chip-px: 0.875rem;
+}
+.block-chip--compact .block-chip__label {
+  font-size: 0.9375rem;     /* 15px（主軸為 17px） */
 }
 
 /* ── 狀態：懸停（isHovered）────────────────────────────────── */

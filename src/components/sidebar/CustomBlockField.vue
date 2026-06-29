@@ -166,6 +166,7 @@ onUnmounted(() => {
               :label="template.label"
               :color="slot.character ? getElementColor(slot.character.element) : template.color"
               :is-selected="sidebarStore.isTemplateSelected(template.id)"
+              compact
             />
 
             <button

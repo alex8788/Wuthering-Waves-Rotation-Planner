@@ -181,8 +181,8 @@ function onKeydown(event: KeyboardEvent): void {
 .rotation-block__input {
   box-sizing: border-box;
   width: 100%;
-  height: 2.5rem;
-  padding: 0 0.875rem;
+  height: 3rem;
+  padding: 0 1rem;
   border: 1.5px solid rgba(125, 211, 252, 0.85);
   border-radius: 3px;
   background-color: var(--chip-bg, #1e293b);
@@ -192,7 +192,7 @@ function onKeydown(event: KeyboardEvent): void {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 700;
   text-align: center;
   letter-spacing: 0.05em;

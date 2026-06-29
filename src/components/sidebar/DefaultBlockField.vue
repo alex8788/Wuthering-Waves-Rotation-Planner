@@ -61,6 +61,7 @@ function handleDragStart(event: { oldIndex?: number }): void {
           :key="block.id"
           :label="block.label"
           :color="block.color"
+          compact
         />
       </VueDraggable>
     </div>
