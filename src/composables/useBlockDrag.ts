@@ -419,8 +419,12 @@ export function useBlockDrag() {
       if (sourceType === 'rotation-instance' && draggingId) {
         const isMulti = draggingIds.length > 1;
         if (isOverSidebar) {
-          const entry = rotationStore.entries.find((e) => e.id === draggingId);
-          if (entry) sidebarStore.serializeToTemplate(entry.block);
+          // 拖回模板庫：多選整組一起序列化（批量去重＋彙總 toast），單顆亦走同路徑。
+          const ids = isMulti ? draggingIds : [draggingId];
+          const blocks = ids
+            .map((id) => rotationStore.entries.find((e) => e.id === id)?.block)
+            .filter((b): b is NonNullable<typeof b> => !!b);
+          if (blocks.length) sidebarStore.serializeManyToTemplates(blocks);
         } else if (afterIn !== null) {
           // 全域重排：afterIn 已是「含全部」語意。多選整組以鼠標錨點插入、相對順序不變。
           if (isMulti) rotationStore.moveBlocks(draggingIds, afterIn);

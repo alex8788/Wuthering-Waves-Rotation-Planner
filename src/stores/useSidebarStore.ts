@@ -102,47 +102,71 @@ export const useSidebarStore = defineStore('sidebar', () => {
 
   /**
    * serializeToTemplate：將主軸上的 InstanceBlock 序列化為模板，加入側邊欄。
+   * 內部委派 serializeManyToTemplates 處理（單顆＝長度 1 的批量），確保去重與
+   * toast 行為與多選拖回完全一致。
    *
    * @param instance - 主軸上要序列化的 InstanceBlock
-   * @returns 建立完成的 TemplateBlock；若同角色已有相同 label 的模板則不新增，回傳 null
    */
-  function serializeToTemplate(instance: InstanceBlock): TemplateBlock | null {
-    // 確保 characterId 不為 null（自訂模板一定要綁定角色）
-    if (!instance.characterId) {
-      throw new Error('[useSidebarStore.serializeToTemplate] 區塊的 characterId 不可為 null');
+  function serializeToTemplate(instance: InstanceBlock): void {
+    serializeManyToTemplates([instance]);
+  }
+
+  /**
+   * serializeManyToTemplates：批量將主軸 InstanceBlock 序列化為模板（主軸多選拖回）。
+   *
+   * 自動擋下既有元素：略過「同角色＋同 label（trim 後相同）」已存在於模板庫者，
+   * 並一併對「本批內重複」去重（同一拖曳不會把同一個塊加兩次）。
+   * 最後依新增/略過數量發「一則」彙總 toast（單顆時沿用原本的單句訊息）。
+   *
+   * @param instances - 要序列化的 InstanceBlock 陣列（通常為主軸選取集合）
+   */
+  function serializeManyToTemplates(instances: InstanceBlock[]): void {
+    // 既有模板 + 本批已加入者，統一以 `characterId|label` 為去重鍵
+    const seen = new Set(templates.value.map((t) => `${t.characterId}|${t.label.trim()}`));
+    const newTemplates: TemplateBlock[] = [];
+    let skipped = 0;
+
+    for (const instance of instances) {
+      // 主軸實體一定綁角色；防禦性跳過無角色者（理論上不會發生）
+      if (!instance.characterId) {
+        skipped++;
+        continue;
+      }
+      const cloned = deepClone(instance);
+      const label = cloned.label.trim();
+      const key = `${cloned.characterId}|${label}`;
+      if (seen.has(key)) {
+        skipped++;
+        continue;
+      }
+      seen.add(key);
+      // 精確組裝 TemplateBlock，不將 instance 專屬的 originId 屬性帶入
+      newTemplates.push({
+        id: generateUUID(),
+        label: cloned.label,
+        color: cloned.color,
+        source: 'template',
+        characterId: cloned.characterId,
+        tags: cloned.tags,
+        createdAt: Date.now(),
+      });
     }
 
-    // 深拷貝，避免主軸上的資料與模板庫共用參考
-    const clonedBlock = deepClone(instance);
-
-    // 去重：同角色內若已存在相同 label（trim 後完全相同）的模板，不重複新增，僅提示。
-    const label = clonedBlock.label.trim();
-    const isDuplicate = templates.value.some(
-      (t) => t.characterId === clonedBlock.characterId && t.label.trim() === label
-    );
-    if (isDuplicate) {
-      showToast('模板庫已有相同區塊', 'warning');
-      return null;
+    const added = newTemplates.length;
+    if (added > 0) {
+      // 一次性接上，watch 只觸發一次持久化
+      templates.value = [...templates.value, ...newTemplates];
     }
 
-    // 精確組裝 TemplateBlock，不將 instance 專屬的 originId 屬性帶入
-    const newTemplate: TemplateBlock = {
-      id: generateUUID(), // 統一使用泛用 id
-      label: clonedBlock.label,
-      color: clonedBlock.color,
-      source: 'template',
-      characterId: clonedBlock.characterId,
-      tags: clonedBlock.tags,
-      createdAt: Date.now(),
-    };
-
-    // 推入模板陣列（watch 會自動持久化）
-    templates.value.push(newTemplate);
-
-    // 觸發 Toast 提示
-    showToast('已新增至模板庫', 'success');
-
-    return newTemplate;
+    // ── 依情況發一則彙總 toast ──────────────────────────────
+    if (added === 0) {
+      // 全數已存在（或無有效塊）
+      showToast(skipped === 1 ? '模板庫已有相同區塊' : '選取區塊皆已存在於模板庫', 'warning');
+    } else if (skipped === 0) {
+      showToast(added === 1 ? '已新增至模板庫' : `已新增 ${added} 個區塊至模板庫`, 'success');
+    } else {
+      showToast(`已新增 ${added} 個區塊至模板庫，${skipped} 個區塊已存在`, 'success');
+    }
   }
 
   /**
@@ -206,6 +230,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
     defaultBlocks,
     getTemplatesByCharacter,
     serializeToTemplate,
+    serializeManyToTemplates,
     deleteTemplate,
     toggleTemplateSelection,
     clearTemplateSelection,
