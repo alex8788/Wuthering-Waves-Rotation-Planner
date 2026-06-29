@@ -541,10 +541,17 @@ function handleSelectCharacter(characterId: string): void {
     background-color 0.15s ease;
 }
 
-.track__add-btn:hover {
+.track__add-btn:hover,
+.track__add-btn:focus-visible {
   border-color: rgba(255, 255, 255, 0.45);
   color: rgba(255, 255, 255, 0.75);
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* 移除瀏覽器預設 focus ring（橘/白外框，非本專案實作）；
+   改用與 hover 一致的回饋（focus-visible）保留鍵盤可視性。 */
+.track__add-btn:focus {
+  outline: none;
 }
 
 .track__add-btn:active {

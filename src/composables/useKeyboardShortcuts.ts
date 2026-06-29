@@ -14,15 +14,18 @@
 //   Ctrl+V              → 貼上剪貼簿內容
 //   Ctrl+D              → 向右複製選取的區塊
 //   Escape              → 清除所有選取
+//   Tab                 → 展開／收合側邊欄
 // ============================================================
 
 import { onMounted, onUnmounted } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useClipboard } from '@/composables/useClipboard';
+import { useSidebarCollapse } from '@/composables/useSidebarCollapse';
 
 export function useKeyboardShortcuts() {
   const rotationStore = useRotationStore();
   const clipboard = useClipboard();
+  const sidebarCollapse = useSidebarCollapse();
 
   // ──────────────────────────────────────────
   // 事件處理器
@@ -75,6 +78,15 @@ export function useKeyboardShortcuts() {
     // ── Escape：清除選取 ───────────────────────────────────
     if (key === 'Escape') {
       rotationStore.clearSelection();
+      return;
+    }
+
+    // ── Tab：展開／收合側邊欄 ───────────────────────────────
+    // preventDefault 攔下瀏覽器預設的焦點切換（_shouldIgnore 已排除輸入元素，
+    // 故在 input/textarea 內的 Tab 仍維持正常跳格）。
+    if (key === 'Tab' && !isCtrl) {
+      event.preventDefault();
+      sidebarCollapse.toggle();
       return;
     }
 

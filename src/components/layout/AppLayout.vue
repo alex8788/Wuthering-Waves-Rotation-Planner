@@ -8,7 +8,8 @@
 // 完全透過具名 slot（header / sidebar / main）由外部注入。
 // ============================================================
 
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useSidebarCollapse } from '@/composables/useSidebarCollapse'
 
 interface Props {
   /** 側邊欄固定寬度（px） */
@@ -25,15 +26,12 @@ const props = withDefaults(defineProps<Props>(), {
 // 側邊欄收合：收合時欄寬過渡成一條細「軌道」（仍保留切換鈕在側欄內，
 // 不越過側欄右緣去蓋到主軸的角色選擇器 header）。
 const COLLAPSED_RAIL_WIDTH = 44 // px，約 2.75rem，僅容納切換鈕
-const collapsed = ref(false)
+// 收合狀態抽到 module 單例 composable，與全域快捷鍵（Tab 切換）共用同一份。
+const { collapsed, toggle: toggleSidebar } = useSidebarCollapse()
 // 實際生效欄寬：展開＝prop 寬度；收合＝細軌道寬。
 const effectiveSidebarWidth = computed(() =>
   collapsed.value ? COLLAPSED_RAIL_WIDTH : props.sidebarWidth
 )
-
-function toggleSidebar(): void {
-  collapsed.value = !collapsed.value
-}
 </script>
 
 <template>
@@ -166,10 +164,17 @@ function toggleSidebar(): void {
     border-color 0.15s ease;
 }
 
-.sidebar-toggle:hover {
+.sidebar-toggle:hover,
+.sidebar-toggle:focus-visible {
   background-color: #1b2740;
   border-color: rgba(34, 211, 238, 0.55);
   color: rgba(34, 211, 238, 0.95);
+}
+
+/* 移除瀏覽器預設 focus ring（橘/白外框，非本專案實作）；
+   改用與 hover 一致的青色回饋（focus-visible）保留鍵盤可視性。 */
+.sidebar-toggle:focus {
+  outline: none;
 }
 
 .sidebar-toggle__icon {

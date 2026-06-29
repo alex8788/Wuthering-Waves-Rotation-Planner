@@ -94,9 +94,15 @@ const TABS: { id: TabId; label: string }[] = [
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.segment-btn:hover {
+.segment-btn:hover,
+.segment-btn:focus-visible {
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.65);
+}
+
+/* 移除瀏覽器預設 focus ring（橘/白外框，非本專案實作） */
+.segment-btn:focus {
+  outline: none;
 }
 
 .segment-btn--active {
