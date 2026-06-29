@@ -13,12 +13,14 @@
 // 且框選刻意與區塊拖曳完全隔離（見下方 marquee 區註解）。
 // ============================================================
 
-import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, nextTick, reactive, ref, watch } from 'vue'
 import Swimlane from '@/components/rotation/Swimlane.vue'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useRotationStore } from '@/stores/useRotationStore'
+import { useLaneOrder } from '@/composables/useLaneOrder'
 import { DELETE_ZONE_ATTRIBUTE, useBlockDrag } from '@/composables/useBlockDrag'
+import { getElementColor } from '@/constants/elements'
 import type { SlotIndex } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
@@ -26,7 +28,13 @@ import type { RotationEntry } from '@/types/rotation'
 
 const characterStore = useCharacterStore()
 const rotationStore = useRotationStore()
+const { laneOrder, setOrderByMove } = useLaneOrder()
 const { dragState, notifyAutoScroll } = useBlockDrag()
+
+// ── 泳道顯示順序 ─────────────────────────────────────────────
+// 依 laneOrder 把 slots 重新排成「上下顯示順序」。slots 以 slotIndex 為索引，
+// slots[si].slotIndex === si，故直接映射即可。entries / 欄位對齊全不受影響。
+const orderedSlots = computed(() => laneOrder.value.map((si) => characterStore.slots[si]))
 
 // ── 依 slotIndex 分配 entries ────────────────────────────────
 
@@ -470,6 +478,113 @@ function seedStoreWithStubData(): void {
   })
 }
 
+// ══════════════════════════════════════════════════════════════
+// 泳道垂直拖曳（自製）
+// 拖把手 → 來源泳道原位留空、浮起分身跟游標、即時插入提示線；放開時改
+// laneOrder，由 <TransitionGroup> 把各列平滑滑到新位。全程不動 entries /
+// slotIndex / 欄位對齊，故各泳道區塊資料零變動。
+// 拖曳期間「其餘泳道」位置固定（不即時 reflow），故起始量一次幾何即可。
+// ══════════════════════════════════════════════════════════════
+const rotationBoardRef = ref<HTMLElement | null>(null)
+
+interface LaneGeom { slotIndex: SlotIndex; top: number; height: number; mid: number }
+
+const laneDrag = reactive({
+  active: false,
+  slotIndex: null as SlotIndex | null,
+  cloneTop: 0, // 分身上緣（相對 board）
+  cloneWidth: 0,
+  cloneHeight: 0,
+  cloneColor: '#888888',
+  cloneName: '',
+  cloneElement: '',
+  lineTop: null as number | null, // 插入提示線 Y（相對 board）；null = 隱藏
+  targetIndex: 0, // 來源在「其餘泳道」中的最終插入位置
+})
+
+let _laneBoardTop = 0
+let _otherGeoms: LaneGeom[] = [] // 非來源泳道（顯示序），拖曳期間位置固定
+let _sourceDisplayIndex = 0
+let _pointerOffsetY = 0 // 抓取點到來源上緣的距離
+
+function _readLaneGeoms(): LaneGeom[] {
+  const boardEl = rotationBoardRef.value
+  if (!boardEl) return []
+  const boardRect = boardEl.getBoundingClientRect()
+  _laneBoardTop = boardRect.top
+  const out: LaneGeom[] = []
+  laneOrder.value.forEach((si) => {
+    const el = boardEl.querySelector<HTMLElement>(`.swimlane[data-slot-index="${si}"]`)
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const top = r.top - boardRect.top
+    out.push({ slotIndex: si, top, height: r.height, mid: top + r.height / 2 })
+  })
+  return out
+}
+
+function onLaneDragStart(payload: { slotIndex: SlotIndex; event: MouseEvent }): void {
+  const geoms = _readLaneGeoms()
+  const source = geoms.find((g) => g.slotIndex === payload.slotIndex)
+  if (!source) return
+  _sourceDisplayIndex = laneOrder.value.indexOf(payload.slotIndex)
+  _otherGeoms = geoms.filter((g) => g.slotIndex !== payload.slotIndex)
+  _pointerOffsetY = payload.event.clientY - (_laneBoardTop + source.top)
+
+  const char = characterStore.slots[payload.slotIndex].character
+  laneDrag.active = true
+  laneDrag.slotIndex = payload.slotIndex
+  laneDrag.cloneWidth = rotationBoardRef.value?.clientWidth ?? 0
+  laneDrag.cloneHeight = source.height
+  laneDrag.cloneColor = getElementColor(char?.element ?? null)
+  laneDrag.cloneName = char?.nameZh ?? `槽位 ${payload.slotIndex + 1}`
+  laneDrag.cloneElement = char?.element ?? ''
+  _updateLaneTarget(payload.event.clientY)
+
+  window.addEventListener('mousemove', onLaneDragMove)
+  window.addEventListener('mouseup', onLaneDragEnd)
+}
+
+function _updateLaneTarget(clientY: number): void {
+  const relY = clientY - _laneBoardTop
+  laneDrag.cloneTop = relY - _pointerOffsetY // 分身跟游標（扣抓取偏移）
+  // 來源在「其餘泳道」中的插入位置＝中點在游標之上的其餘泳道數
+  let idx = 0
+  for (const g of _otherGeoms) {
+    if (g.mid < relY) idx++
+    else break
+  }
+  laneDrag.targetIndex = idx
+  // 插入線 Y
+  if (_otherGeoms.length === 0) {
+    laneDrag.lineTop = null
+  } else if (idx <= 0) {
+    laneDrag.lineTop = _otherGeoms[0].top
+  } else if (idx >= _otherGeoms.length) {
+    const last = _otherGeoms[_otherGeoms.length - 1]
+    laneDrag.lineTop = last.top + last.height
+  } else {
+    laneDrag.lineTop = _otherGeoms[idx].top
+  }
+}
+
+function onLaneDragMove(event: MouseEvent): void {
+  if (!laneDrag.active) return
+  _updateLaneTarget(event.clientY)
+}
+
+function onLaneDragEnd(): void {
+  window.removeEventListener('mousemove', onLaneDragMove)
+  window.removeEventListener('mouseup', onLaneDragEnd)
+  if (laneDrag.active) {
+    // 來源在「其餘泳道」插到 targetIndex → 即最終顯示序索引
+    setOrderByMove(_sourceDisplayIndex, laneDrag.targetIndex)
+  }
+  laneDrag.active = false
+  laneDrag.slotIndex = null
+  laneDrag.lineTop = null
+}
+
 function handleResize(): void {
   void remeasureAfterRender()
 }
@@ -503,19 +618,25 @@ onBeforeUnmount(() => {
   stopAutoScroll()
   window.removeEventListener('mousemove', onMarqueeMove)
   window.removeEventListener('mouseup', onMarqueeUp)
+  window.removeEventListener('mousemove', onLaneDragMove)
+  window.removeEventListener('mouseup', onLaneDragEnd)
 })
 </script>
 
 <template>
   <section
+    ref="rotationBoardRef"
     class="rotation-board"
+    :class="{ 'rotation-board--lane-dragging': laneDrag.active }"
     :[DELETE_ZONE_ATTRIBUTE]="true"
     aria-label="輸出軸面板"
   >
     <div ref="boardScrollRef" class="board__scroll">
-      <div class="board__lanes">
+      <!-- 泳道依 orderedSlots（laneOrder）排列；TransitionGroup 讓放開後的
+           重排平滑滑動（move 過渡）。key 用 slotIndex（與 entries/欄位無關）。 -->
+      <TransitionGroup tag="div" class="board__lanes" name="lane">
         <Swimlane
-          v-for="slot in characterStore.slots"
+          v-for="slot in orderedSlots"
           :key="slot.slotIndex"
           :slot-index="slot.slotIndex"
           :character="slot.character"
@@ -524,9 +645,33 @@ onBeforeUnmount(() => {
           :id-to-column-index="previewIdToColumn"
           :placeholder-column="previewLayout.placeholderColumn"
           :preview-slot-index="previewLayout.slotIndex"
+          :dragging-as-source="laneDrag.active && laneDrag.slotIndex === slot.slotIndex"
+          @lane-drag-start="onLaneDragStart"
         />
-      </div>
+      </TransitionGroup>
     </div>
+
+    <!-- 泳道拖曳浮起分身：橫向滿版的帶狀，跟游標垂直移動 -->
+    <div
+      v-if="laneDrag.active"
+      class="lane-drag-clone"
+      :style="{ top: laneDrag.cloneTop + 'px', width: laneDrag.cloneWidth + 'px', height: laneDrag.cloneHeight + 'px' }"
+      aria-hidden="true"
+    >
+      <span class="lane-drag-clone__bar" :style="{ backgroundColor: laneDrag.cloneColor }" />
+      <span class="lane-drag-clone__name">{{ laneDrag.cloneName }}</span>
+      <span v-if="laneDrag.cloneElement" class="lane-drag-clone__el" :style="{ color: laneDrag.cloneColor }">
+        {{ laneDrag.cloneElement }}
+      </span>
+    </div>
+
+    <!-- 泳道落點插入提示線 -->
+    <div
+      v-if="laneDrag.active && laneDrag.lineTop != null"
+      class="lane-insert-line"
+      :style="{ top: laneDrag.lineTop + 'px' }"
+      aria-hidden="true"
+    />
 
     <div ref="measurerRef" class="board__measurer" aria-hidden="true">
       <BlockChip
@@ -590,6 +735,67 @@ onBeforeUnmount(() => {
   width: max-content;
   min-width: 100%;
   height: 100%;
+}
+
+/* 泳道拖曳進行中：整個面板游標呈抓取態 */
+.rotation-board--lane-dragging {
+  cursor: grabbing;
+}
+
+/* ── 泳道重排平滑滑動（TransitionGroup move）─────────────────── */
+.lane-move {
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ── 泳道拖曳浮起分身 ─────────────────────────────────────────
+   橫向滿版帶狀，跟游標垂直移動；半透明深底＋泳道色,左側色條＋角色名。 */
+.lane-drag-clone {
+  position: absolute;
+  left: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  pointer-events: none;
+  background: rgba(13, 19, 32, 0.88);
+  border: 1px solid rgba(34, 211, 238, 0.5);
+  border-radius: 4px;
+  box-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(1px);
+}
+.lane-drag-clone__bar {
+  width: 3px;
+  height: 1.25rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.lane-drag-clone__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+}
+.lane-drag-clone__el {
+  font-size: 0.5625rem;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+
+/* ── 泳道落點插入提示線 ───────────────────────────────────────
+   橫向滿版的發光細線，標示放開後來源泳道將插入的位置。 */
+.lane-insert-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* 必須高於浮起分身（z-index 60），否則分身飄到落點附近會蓋住提示線 */
+  z-index: 65;
+  height: 0;
+  border-top: 2px solid rgba(34, 211, 238, 0.95);
+  box-shadow: 0 0 8px 1px rgba(34, 211, 238, 0.7);
+  pointer-events: none;
+  transform: translateY(-1px);
+  transition: top 0.12s ease;
 }
 
 /* ── 隱藏量測列 ────────────────────────────────────────────── */

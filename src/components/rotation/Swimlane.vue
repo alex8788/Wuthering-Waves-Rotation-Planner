@@ -34,9 +34,24 @@ interface Props {
   placeholderColumn: number | null
   /** 落點所在泳道（只有此泳道畫單欄虛框） */
   previewSlotIndex: 0 | 1 | 2 | null
+  /** 泳道拖曳中且本泳道為來源 → 原位顯示為留空佔位 */
+  draggingAsSource?: boolean
 }
 
 const props = defineProps<Props>()
+
+// 泳道拖曳：把手按下時通知父層（RotationBoard）啟動自製垂直 reorder。
+// 帶上原生 MouseEvent 供父層取得起始游標座標。
+const emit = defineEmits<{
+  (e: 'lane-drag-start', payload: { slotIndex: 0 | 1 | 2; event: MouseEvent }): void
+}>()
+
+function handleLaneDragStart(event: MouseEvent): void {
+  // 阻止冒泡到 window：避免觸發 RotationBoard 的框選 marquee；並停掉文字選取。
+  event.stopPropagation()
+  event.preventDefault()
+  emit('lane-drag-start', { slotIndex: props.slotIndex, event })
+}
 
 // ── Store / Composable ──────────────────────────────────────
 
@@ -244,7 +259,7 @@ function handleSelectCharacter(characterId: string): void {
 <template>
   <div
     class="swimlane"
-    :class="`swimlane--slot-${slotIndex}`"
+    :class="[`swimlane--slot-${slotIndex}`, { 'swimlane--drag-source': draggingAsSource }]"
     :[DROP_ZONE_ATTRIBUTE]="true"
     :data-slot-index="slotIndex"
     :aria-label="character ? `${character.nameZh} 的輸出軸` : `槽位 ${slotIndex + 1}（未選角）`"
@@ -261,23 +276,43 @@ function handleSelectCharacter(characterId: string): void {
         aria-hidden="true"
       />
 
-      <div class="header__selector">
-        <CharacterSelector
-          :model-value="character?.id ?? null"
-          :options="characterStore.allCharacters"
-          placeholder="選擇角色"
-          @update:model-value="handleSelectCharacter"
-        />
-      </div>
-
-      <span
-        v-if="character"
-        class="header__element"
-        :style="{ color: laneColor }"
-        :aria-label="`屬性：${character.element}`"
+      <!-- 泳道拖曳把手：header 內最左欄、垂直置中；右側內容欄整體右推（略縮寬）。 -->
+      <button
+        class="header__drag-handle"
+        type="button"
+        aria-label="拖曳調整泳道順序"
+        title="拖曳調整泳道順序"
+        @mousedown="handleLaneDragStart"
       >
-        {{ character.element }}
-      </span>
+        <svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true">
+          <circle cx="2.5" cy="3" r="1.1" fill="currentColor" />
+          <circle cx="7.5" cy="3" r="1.1" fill="currentColor" />
+          <circle cx="2.5" cy="8" r="1.1" fill="currentColor" />
+          <circle cx="7.5" cy="8" r="1.1" fill="currentColor" />
+          <circle cx="2.5" cy="13" r="1.1" fill="currentColor" />
+          <circle cx="7.5" cy="13" r="1.1" fill="currentColor" />
+        </svg>
+      </button>
+
+      <div class="header__content">
+        <div class="header__selector">
+          <CharacterSelector
+            :model-value="character?.id ?? null"
+            :options="characterStore.allCharacters"
+            placeholder="選擇角色"
+            @update:model-value="handleSelectCharacter"
+          />
+        </div>
+
+        <span
+          v-if="character"
+          class="header__element"
+          :style="{ color: laneColor }"
+          :aria-label="`屬性：${character.element}`"
+        >
+          {{ character.element }}
+        </span>
+      </div>
     </div>
 
     <div
@@ -395,18 +430,29 @@ function handleSelectCharacter(characterId: string): void {
   flex-shrink: 0;
   width: var(--header-width);
 
+  /* 橫向：左欄為拖曳把手（垂直置中），右欄為內容（選單＋屬性，垂直堆疊）。 */
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.125rem;
-  padding: 0 0.625rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
 
   border-right: 1px solid rgba(255, 255, 255, 0.07);
 
   z-index: 5;
   /* 不透明底（面板深色），上面再疊各槽位細微色調 */
   background-color: #0b101d;
+}
+
+/* 右側內容欄：選單（上）＋屬性（下）垂直堆疊；佔滿把手以外的剩餘寬度。 */
+.header__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.125rem;
 }
 
 .header__color-bar {
@@ -443,6 +489,45 @@ function handleSelectCharacter(characterId: string): void {
   opacity: 0.65;
   user-select: none;
   line-height: 1;
+}
+
+/* 泳道拖曳把手：header 最左欄、垂直置中（靠左緣對齊） */
+.header__drag-handle {
+  flex-shrink: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.28);
+  cursor: grab;
+  transition: color 0.15s ease;
+}
+.header__drag-handle:hover {
+  color: rgba(34, 211, 238, 0.85);
+}
+.header__drag-handle:active {
+  cursor: grabbing;
+}
+.header__drag-handle:focus {
+  outline: none;
+}
+.header__drag-handle:focus-visible {
+  color: rgba(34, 211, 238, 0.85);
+}
+
+/* 泳道拖曳中：來源泳道原位留空（內容隱藏、保留高度、虛線佔位框） */
+.swimlane--drag-source {
+  background: rgba(125, 211, 252, 0.04);
+  outline: 1.5px dashed rgba(125, 211, 252, 0.35);
+  outline-offset: -4px;
+}
+.swimlane--drag-source > * {
+  visibility: hidden;
 }
 
 /* ══════════════════════════════════════════════════════════
