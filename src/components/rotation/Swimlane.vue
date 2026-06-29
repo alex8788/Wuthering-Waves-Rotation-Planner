@@ -188,8 +188,8 @@ const insertAfterIndex = computed<number>(() => {
   return globalEntries.length - 1
 })
 
-// 目前處於行內編輯的區塊 id（null = 無）。集中於泳道控管，RotationBlock 以 prop 接收。
-const editingId = ref<string | null>(null)
+// 行內編輯狀態集中於 rotationStore（editingId/editingDraft），讓 RotationBoard
+// 的量測列能即時讀到草稿、據以即時重算欄寬。本泳道只負責觸發與轉發。
 
 // 於本泳道末尾新增空白實體區塊，並立即進入行內編輯讓使用者輸入 label
 function handleAddBlock(): void {
@@ -203,19 +203,19 @@ function handleAddBlock(): void {
   )
   // 等 watch 把新區塊渲染進 localEntries 後再標記編輯（RotationBlock 會自動聚焦）
   void nextTick(() => {
-    editingId.value = newId
+    rotationStore.startEditing(newId)
   })
 }
 
 // 雙擊區塊 → 進入編輯
 function handleRequestEdit(entryId: string): void {
-  editingId.value = entryId
+  rotationStore.startEditing(entryId)
 }
 
 // 提交：寫入 store（空字串由 store.updateLabel 處理為刪除），結束編輯
 function handleCommitLabel(entryId: string, label: string): void {
   rotationStore.updateLabel(entryId, label)
-  if (editingId.value === entryId) editingId.value = null
+  if (rotationStore.editingId === entryId) rotationStore.stopEditing()
 }
 
 // 取消：不動 store，結束編輯。若是剛新增的空白區塊（label 仍為空），順手刪除避免殘留空塊。
@@ -224,7 +224,7 @@ function handleCancelEdit(entryId: string): void {
   if (entry && entry.block.label.trim() === '') {
     rotationStore.deleteBlock(entryId)
   }
-  if (editingId.value === entryId) editingId.value = null
+  if (rotationStore.editingId === entryId) rotationStore.stopEditing()
 }
 
 // 點擊軌道空白處時清除全域選取
@@ -306,11 +306,12 @@ function handleSelectCharacter(characterId: string): void {
               :label="entry.block.label"
               :color="laneColor"
               :is-selected="rotationStore.isSelected(entry.id)"
-              :is-editing="editingId === entry.id"
+              :is-editing="rotationStore.editingId === entry.id"
               :style="blockStyle(entry.id)"
               role="listitem"
               @select="(event) => handleBlockSelect(entry.id, event)"
               @request-edit="handleRequestEdit(entry.id)"
+              @draft-change="(text: string) => rotationStore.setEditingDraft(text)"
               @commit="(label) => handleCommitLabel(entry.id, label)"
               @cancel="handleCancelEdit(entry.id)"
             />

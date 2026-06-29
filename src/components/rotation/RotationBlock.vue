@@ -32,6 +32,8 @@ const emit = defineEmits<{
   select: [event: MouseEvent]
   /** 雙擊要求進入編輯 */
   'request-edit': []
+  /** 編輯框即時草稿變動（供量測列即時重算欄寬，達成編輯時即時變寬） */
+  'draft-change': [value: string]
   /** 提交新文字（trim 與空字串處理交給父層 / store） */
   commit: [label: string]
   /** 取消編輯 */
@@ -72,6 +74,11 @@ function handleClick(event: MouseEvent): void {
 function handleDblClick(event: MouseEvent): void {
   event.stopPropagation()
   emit('request-edit')
+}
+
+// 每次輸入即把草稿上拋，父層轉存 store → 量測列即時重算欄寬
+function onDraftInput(event: Event): void {
+  emit('draft-change', (event.target as HTMLInputElement).value)
 }
 
 function commit(): void {
@@ -115,6 +122,7 @@ function onKeydown(event: KeyboardEvent): void {
       class="rotation-block__input"
       type="text"
       :style="{ '--chip-bg': color }"
+      @input="onDraftInput"
       @keydown="onKeydown"
       @blur="commit"
       @click.stop
@@ -138,21 +146,24 @@ function onKeydown(event: KeyboardEvent): void {
   display: inline-flex;;
 }
 
-/* 行內編輯輸入框：盡量貼合 BlockChip 的視覺尺寸，避免進入/離開編輯時版面跳動 */
+/* 行內編輯輸入框：填滿由草稿即時驅動的欄寬（grid item 預設 stretch → 等於欄寬）。
+   padding / letter-spacing / 字型須與 BlockChip 對齊，使量測列（量 chip 草稿）算出的
+   欄寬恰好容納相同文字，輸入時不裁字、進出編輯不跳寬。box-sizing:border-box 讓
+   width:100% 含內距/邊框＝欄寬。 */
 .rotation-block__input {
-  width: 3.25rem;
-  min-width: 2.5rem;
+  box-sizing: border-box;
+  width: 100%;
   height: 2.5rem;
-  padding: 0 0.5rem;
+  padding: 0 0.875rem;
   border: 1.5px solid rgba(125, 211, 252, 0.85);
-  border-radius: 6px;
+  border-radius: 3px;
   background-color: var(--chip-bg, #1e293b);
   color: #fff;
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace, monospace;
   font-size: 0.8125rem;
   font-weight: 700;
   text-align: center;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   outline: none;
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2);
 }

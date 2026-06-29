@@ -50,6 +50,12 @@ function measurerColor(entry: RotationEntry): string {
   return characterStore.slotCharacters[entry.slotIndex]?.themeColor ?? '#888888'
 }
 
+// 量測列用的 label：編輯中的區塊改用「即時草稿」而非已提交 label，
+// 使欄寬隨輸入即時重算（編輯時區塊即時變寬、鄰塊即時順延）。
+function measurerLabel(entry: RotationEntry): string {
+  return entry.id === rotationStore.editingId ? rotationStore.editingDraft : entry.block.label
+}
+
 const measurerRef = ref<HTMLElement | null>(null)
 const columnWidths = ref<number[]>([])
 
@@ -71,6 +77,8 @@ async function remeasureAfterRender(): Promise<void> {
 }
 
 watch(() => rotationStore.entries, remeasureAfterRender, { deep: true })
+// 行內編輯草稿變動時也重新量測，讓編輯中的區塊即時變寬
+watch(() => rotationStore.editingDraft, remeasureAfterRender)
 
 // ── 拖曳落點預覽（single thread 跨泳道同步擠出，含多選）─────────
 
@@ -496,7 +504,7 @@ onBeforeUnmount(() => {
       <BlockChip
         v-for="entry in rotationStore.entries"
         :key="entry.id"
-        :label="entry.block.label"
+        :label="measurerLabel(entry)"
         :color="entry.block.color || measurerColor(entry)"
       />
     </div>

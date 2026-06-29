@@ -38,6 +38,15 @@ export const useRotationStore = defineStore('rotation', () => {
    */
   const selectedIds = ref<Set<string>>(new Set());
 
+  /**
+   * editingId / editingDraft：目前處於行內編輯的區塊 id 與其草稿文字。
+   * 集中於 store 是為了讓 RotationBoard 的隱藏量測列能即時「看到」尚未提交的
+   * 草稿文字，據以即時重算欄寬 → 編輯時區塊寬度隨輸入即時調整、鄰塊即時順延。
+   * editingId 為 null 代表目前無區塊在編輯。
+   */
+  const editingId = ref<string | null>(null);
+  const editingDraft = ref<string>('');
+
   // ──────────────────────────────────────────
   // Computed（衍生狀態）
   // ──────────────────────────────────────────
@@ -277,6 +286,26 @@ export const useRotationStore = defineStore('rotation', () => {
   }
 
   /**
+   * startEditing：標記某區塊進入行內編輯，並以其目前 label 初始化草稿
+   *（新增的空白區塊 label 為空字串）。
+   */
+  function startEditing(id: string): void {
+    editingId.value = id;
+    editingDraft.value = entries.value.find((e) => e.id === id)?.block.label ?? '';
+  }
+
+  /** setEditingDraft：同步行內編輯框的即時草稿文字（供量測列即時重算欄寬）。 */
+  function setEditingDraft(text: string): void {
+    editingDraft.value = text;
+  }
+
+  /** stopEditing：結束行內編輯，清掉草稿狀態。 */
+  function stopEditing(): void {
+    editingId.value = null;
+    editingDraft.value = '';
+  }
+
+  /**
    * deleteSelectedBlocks：批量刪除目前所有被選中的區塊。
    */
   function deleteSelectedBlocks(): void {
@@ -335,8 +364,13 @@ export const useRotationStore = defineStore('rotation', () => {
   return {
     entries,
     selectedIds,
+    editingId,
+    editingDraft,
     totalBlockCount,
     selectedEntries,
+    startEditing,
+    setEditingDraft,
+    stopEditing,
     instantiateBlock,
     addFreeformBlock,
     updateLabel,
