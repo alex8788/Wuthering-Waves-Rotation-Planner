@@ -21,6 +21,8 @@ interface Props {
   isEditing?: boolean
   /** 是否正在播放刪除消失動畫 */
   isLeaving?: boolean
+  /** 目前主軸選取總數（多選拖曳時，分身上顯示此數量徽章） */
+  multiSelectCount?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -28,6 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
   isDanger: false,
   isEditing: false,
   isLeaving: false,
+  multiSelectCount: 0,
 })
 
 const emit = defineEmits<{
@@ -141,6 +144,17 @@ function onKeydown(event: KeyboardEvent): void {
       :is-selected="isSelected"
       :is-danger="isDanger"
     />
+
+    <!-- 多選拖曳數量徽章：放在 chip 之外（不被 chip overflow 裁切），平時 display:none，
+         只在 SortableJS 浮動分身（.sortable-fallback）上顯示（規則在 style.css）。
+         右上角、部分溢出 chip，z-index 高於 chip。 -->
+    <span
+      v-if="isSelected && multiSelectCount > 1"
+      class="rotation-block__drag-count"
+      aria-hidden="true"
+    >
+      {{ multiSelectCount }}
+    </span>
   </div>
 </template>
 
@@ -148,6 +162,34 @@ function onKeydown(event: KeyboardEvent): void {
 /* 隱藏外層包裝盒模型，避免破壞 flex 排版 */
 .rotation-block {
   display: inline-flex;;
+  /* 作為數量徽章的定位基準（不影響 SortableJS 的 transform 浮動） */
+  position: relative;
+}
+
+/* 多選拖曳數量徽章：右上角圓點，部分溢出 chip；平時隱藏，
+   只在浮動分身（.sortable-fallback）上顯示（顯示規則見 style.css）。 */
+.rotation-block__drag-count {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 20; /* 高於 chip（label z-index 2、選中光暈等）*/
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background-color: #22d3ee;
+  color: #06121a;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1.5px solid rgba(6, 18, 26, 0.85);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 /* 刪除消失動畫：刻意只動內層 .block-chip 的 opacity/transform，不碰 .rotation-block

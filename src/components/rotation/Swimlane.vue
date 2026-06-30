@@ -341,6 +341,7 @@ function handleSelectCharacter(characterId: string): void {
               :label="entry.block.label"
               :color="laneColor"
               :is-selected="rotationStore.isSelected(entry.id)"
+              :multi-select-count="rotationStore.selectedIds.size"
               :is-editing="rotationStore.editingId === entry.id"
               :is-leaving="rotationStore.isLeaving(entry.id)"
               :style="blockStyle(entry.id)"

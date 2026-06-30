@@ -211,6 +211,14 @@
   opacity: 1 !important;
 }
 
+/* 多選拖曳：只有浮動分身（.sortable-fallback）顯示數量徽章。
+   徽章平時在 .rotation-block 內 display:none（見 RotationBlock scoped），
+   SortableJS 執行期才動態掛上 .sortable-fallback，原始碼掃不到，故此規則
+   須放在 @layer 之外避免被 Tailwind purge 誤刪（比照本檔其他 fallback 規則）。 */
+.sortable-fallback .rotation-block__drag-count {
+  display: flex !important;
+}
+
 /* ── n6：側邊欄拖曳時，原始 chip 不可消失 ──────────────────────────
    forceFallback 下，SortableJS 會把「拖曳來源的本物 DOM（dragEl）」掛上
    .sortable-ghost 當作佔位。但上方全域 .sortable-ghost 規則（為主軸吸附線
