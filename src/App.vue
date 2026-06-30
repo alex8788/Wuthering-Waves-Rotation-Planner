@@ -9,6 +9,7 @@ import ExportDialog from '@/components/ui/ExportDialog.vue'
 import SidebarPanel from '@/components/sidebar/SidebarPanel.vue'
 import RotationBoard from '@/components/rotation/RotationBoard.vue'
 import RotationAxisTabBar from '@/components/rotation/RotationAxisTabBar.vue'
+import RotationExportView from '@/components/rotation/RotationExportView.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useExportDialog } from '@/composables/useExportDialog'
 import { useRotationStore } from '@/stores/useRotationStore'
@@ -69,6 +70,11 @@ function clearAllSelection(): void {
     <ToastNotification />
     <DialogHost />
     <ExportDialog />
+
+    <!-- 階段二暫時:可視驗證匯出視圖版面,階段三改為離螢幕並由匯出流程驅動 -->
+    <div class="export-stage-preview">
+      <RotationExportView :axis="rotationStore.activeAxis" />
+    </div>
   </div>
 </template>
 
@@ -101,5 +107,18 @@ function clearAllSelection(): void {
   .export-trigger:focus-visible {
     outline: 1px solid rgba(34, 211, 238, 0.6);
     outline-offset: 1px;
+  }
+
+  /* 階段二暫時:把匯出視圖浮在右下角供視覺驗證(階段三移除) */
+  .export-stage-preview {
+    position: fixed;
+    right: 12px;
+    bottom: 48px;
+    z-index: 9999;
+    max-width: 70vw;
+    max-height: 70vh;
+    overflow: auto;
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
   }
 </style>
