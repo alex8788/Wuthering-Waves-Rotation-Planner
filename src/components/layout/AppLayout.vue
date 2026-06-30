@@ -61,6 +61,11 @@ const effectiveSidebarWidth = computed(() =>
       <slot name="main" />
     </div>
 
+    <!-- 底部輸出軸頁籤列：橫跨側欄＋主軸全寬，類似 Excel 工作表分頁 -->
+    <div class="app-layout__tabbar">
+      <slot name="tabbar" />
+    </div>
+
     <!-- 側邊欄收合切換鈕：釘在側邊欄右上角（側欄／主軸交界頂部），
          隨欄寬一起過渡位移。展開時為「<」收起，收合時為「>」展開。 -->
     <button
@@ -81,10 +86,11 @@ const effectiveSidebarWidth = computed(() =>
 .app-layout {
   display: grid;
   grid-template-columns: var(--app-sidebar-width) 1fr;
-  grid-template-rows: var(--app-header-height) 1fr;
+  grid-template-rows: var(--app-header-height) 1fr auto;
   grid-template-areas:
     'header header'
-    'sidebar main';
+    'sidebar main'
+    'tabbar tabbar';
 
   width: 100vw;
   height: 100vh;
@@ -203,6 +209,14 @@ const effectiveSidebarWidth = computed(() =>
   /* 主時間軸可能因區塊數量而超出視窗，需雙向捲動 */
   overflow: auto;
   background-color: #0A0F1E;
+}
+
+.app-layout__tabbar {
+  grid-area: tabbar;
+  min-width: 0;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: #0D1320;
 }
 
 /* ── 側邊欄 / 主軸共用：細緻科幻風格捲軸 ───────────────────── */

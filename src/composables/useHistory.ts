@@ -6,10 +6,11 @@
 // 退回的狀態。任一可記錄操作執行前，先把當下狀態壓入 past；undo 時把當下
 // 狀態壓入 future、再套用 past 頂端；redo 反向。past/future 上限各 30 步。
 //
-// 【範圍】納入三項使用者可感知的編輯狀態：
-//   - rotationStore.entries（時間軸增刪改移貼）
-//   - useLaneOrder.laneOrder（泳道上下顯示順序）
-//   - characterStore.slots（三槽選角；換角色連帶清空泳道區塊一併還原）
+// 【範圍】納入使用者可感知的編輯狀態（全軸共用單一歷史）：
+//   - rotationStore.axes（所有輸出軸的時間軸增刪改移貼，及輸出軸的增刪改名）
+//   - rotationStore.activeAxisId（作用中輸出軸；還原時自動聚焦回變更發生的頁面）
+//   - useLaneOrder.laneOrder（泳道上下顯示順序，全軸共用）
+//   - characterStore.slots（三槽選角；換角色連帶清空所有軸該泳道一併還原）
 //
 // 【合併同一批次】一個使用者操作可能觸發多次 store 寫入（例如一次拖曳落定
 // 在同一個同步 setTimeout 內連呼多次 instantiateBlock，或 updateLabel 內部
@@ -23,14 +24,15 @@ import { deepClone } from '@/utils/deepClone';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLaneOrder } from '@/composables/useLaneOrder';
-import type { RotationArray } from '@/types/rotation';
+import type { RotationAxis } from '@/types/rotation';
 import type { CharacterSlots, SlotIndex } from '@/types/character';
 
 /** past / future 各自的最大保存步數。 */
 const MAX_HISTORY = 30;
 
 interface Snapshot {
-  entries: RotationArray;
+  axes: RotationAxis[];
+  activeAxisId: string;
   laneOrder: SlotIndex[];
   slots: CharacterSlots;
 }
@@ -54,7 +56,8 @@ export function useHistory() {
     const characterStore = useCharacterStore();
     const { laneOrder } = useLaneOrder();
     return {
-      entries: deepClone(store.entries),
+      axes: deepClone(store.axes),
+      activeAxisId: store.activeAxisId,
       laneOrder: deepClone(laneOrder.value),
       slots: deepClone(characterStore.slots),
     };
@@ -65,7 +68,9 @@ export function useHistory() {
     const characterStore = useCharacterStore();
     const { laneOrder } = useLaneOrder();
     _applying = true;
-    store.entries = deepClone(snap.entries);
+    store.axes = deepClone(snap.axes);
+    // 還原作用中軸 → undo/redo 自動聚焦到變更發生的輸出軸頁面。
+    store.activeAxisId = snap.activeAxisId;
     laneOrder.value = deepClone(snap.laneOrder);
     characterStore.slots = deepClone(snap.slots);
     // 套用後選取／編輯態可能指向已不存在的 id，一律清空避免懸空參照。

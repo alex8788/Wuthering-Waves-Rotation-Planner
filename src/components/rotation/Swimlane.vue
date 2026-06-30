@@ -14,6 +14,7 @@ import { useRotationStore } from '@/stores/useRotationStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useBlockDrag, DROP_ZONE_ATTRIBUTE, type SortableEventLike } from '@/composables/useBlockDrag'
 import { useHistory } from '@/composables/useHistory'
+import { useDialog } from '@/composables/useDialog'
 import { getElementColor } from '@/constants/elements'
 import type { Character } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
@@ -59,6 +60,7 @@ function handleLaneDragStart(event: MouseEvent): void {
 const rotationStore = useRotationStore()
 const characterStore = useCharacterStore()
 const history = useHistory()
+const { confirm } = useDialog()
 const {
   dragState,
   onRotationDragStart,
@@ -257,11 +259,27 @@ function handleTrackClick(): void {
   rotationStore.clearSelection()
 }
 
-// header 選擇器變更角色 → 先清空本泳道既有區塊（換角色＝重開連招），再寫入 characterStore
-function handleSelectCharacter(characterId: string): void {
-  if (props.character?.id !== characterId) {
-    rotationStore.clearSlot(props.slotIndex)
+// header 選擇器變更角色 → 換角色＝跨所有輸出軸重開連招，故先清空所有軸該泳道。
+// 若該泳道在任一軸尚有區塊，先彈警告確認；取消則不換角色（選單因受控自動回退）。
+async function handleSelectCharacter(characterId: string): Promise<void> {
+  if (props.character?.id === characterId) return
+
+  const hasBlocks = rotationStore.axes.some((axis) =>
+    axis.entries.some((entry) => entry.slotIndex === props.slotIndex)
+  )
+  if (hasBlocks) {
+    const ok = await confirm({
+      title: '切換角色',
+      message: '將清空所有該角色的區塊，確定？',
+      confirmText: '切換',
+      danger: true,
+    })
+    if (!ok) return
   }
+
+  // clearSlot 與 setCharacter 為連續同步呼叫（await 後仍同一批次），
+  // microtask 合併為單一可復原步驟 → 一次 Undo 同時還原所有軸區塊與角色。
+  rotationStore.clearSlot(props.slotIndex)
   characterStore.setCharacter(props.slotIndex, characterId)
 }
 </script>

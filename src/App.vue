@@ -4,8 +4,10 @@
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import ToastNotification from '@/components/ui/ToastNotification.vue'
+import DialogHost from '@/components/ui/DialogHost.vue'
 import SidebarPanel from '@/components/sidebar/SidebarPanel.vue'
 import RotationBoard from '@/components/rotation/RotationBoard.vue'
+import RotationAxisTabBar from '@/components/rotation/RotationAxisTabBar.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useSidebarStore } from '@/stores/useSidebarStore'
@@ -38,9 +40,14 @@ function clearAllSelection(): void {
       <template #main>
         <RotationBoard />
       </template>
+
+      <template #tabbar>
+        <RotationAxisTabBar />
+      </template>
     </AppLayout>
 
     <ToastNotification />
+    <DialogHost />
   </div>
 </template>
 

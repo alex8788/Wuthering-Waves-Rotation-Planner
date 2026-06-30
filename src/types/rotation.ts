@@ -50,6 +50,24 @@ export interface RotationEntry {
 export type RotationArray = RotationEntry[];
 
 /**
+ * RotationAxis：單一「輸出軸」(類似 Excel 工作表分頁)。
+ *
+ * 【設計說明】
+ * 多開輸出軸時,每個輸出軸各自擁有一條獨立的 RotationArray;隊伍(角色槽)、
+ * 泳道顯示順序、Undo/Redo 歷史則跨所有輸出軸共用(見 useRotationStore /
+ * useHistory)。store 對外仍暴露一個名為 `entries` 的 writable computed,
+ * 代理到「作用中輸出軸」的 entries,使既有的時間軸操作零改動。
+ */
+export interface RotationAxis {
+  /** 輸出軸唯一識別碼。 */
+  id: string;
+  /** 顯示於底部頁籤的名稱。 */
+  name: string;
+  /** 此輸出軸自己的 1D 時間軸陣列。 */
+  entries: RotationArray;
+}
+
+/**
  * DragSource：描述拖曳動作的來源資訊。
  * 用於 useBlockDrag composable 中判斷拖曳行為的類型。
  */
