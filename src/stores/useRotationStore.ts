@@ -7,7 +7,7 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { RotationArray, RotationEntry } from '../types/rotation';
+import type { RotationArray, RotationEntry, RotationAxis } from '../types/rotation';
 import type { Block, AnyBlock, DefaultBlock, TemplateBlock } from '../types/block';
 import type { SlotIndex } from '../types/character';
 import { generateUUID } from '../utils/uuid';
@@ -35,10 +35,32 @@ export const useRotationStore = defineStore('rotation', () => {
   // ──────────────────────────────────────────
 
   /**
-   * entries：整個輸出軸的核心 1D 陣列。
-   * 所有對時間軸的操作都以更新此陣列為最終目標。
+   * axes：所有「輸出軸」(類似 Excel 工作表分頁),每個各自擁有一條 entries。
+   * 初始僅一條空白輸出軸。隊伍/泳道順序/歷史跨軸共用(見 useHistory)。
    */
-  const entries = ref<RotationArray>([]);
+  const axes = ref<RotationAxis[]>([
+    { id: generateUUID(), name: '輸出軸 1', entries: [] },
+  ]);
+
+  /** activeAxisId：目前作用中(畫面顯示)的輸出軸 id。 */
+  const activeAxisId = ref<string>(axes.value[0].id);
+
+  /** activeAxis：目前作用中的輸出軸物件(找不到時退回第一條,確保永不為空)。 */
+  const activeAxis = computed<RotationAxis>(
+    () => axes.value.find((a) => a.id === activeAxisId.value) ?? axes.value[0]
+  );
+
+  /**
+   * entries：對外暴露的核心 1D 陣列 —— 實為「作用中輸出軸 entries」的 writable
+   * computed 代理。讀寫都落到 activeAxis,使所有既有時間軸操作(及 RotationBoard
+   * 的量測/分流、useBlockDrag)零改動即可在多軸下運作。
+   */
+  const entries = computed<RotationArray>({
+    get: () => activeAxis.value.entries,
+    set: (val) => {
+      activeAxis.value.entries = val;
+    },
+  });
 
   /**
    * selectedIds：目前被選中的區塊 id 集合。
@@ -399,21 +421,84 @@ export const useRotationStore = defineStore('rotation', () => {
   }
 
   /**
-   * clearSlot：清空某條泳道（slotIndex）的所有區塊，並一併移除其選取狀態。
-   * 用於更換泳道角色時清掉舊角色殘留的區塊。
+   * clearSlot：清空某條泳道（slotIndex）在「所有輸出軸」的區塊，並一併移除選取狀態。
+   * 用於更換泳道角色時清掉舊角色殘留的區塊（換角色＝跨所有輸出軸重開連招）。
    */
   function clearSlot(slotIndex: SlotIndex): void {
     history.record();
-    entries.value = entries.value.filter((entry) => {
-      if (entry.slotIndex === slotIndex) {
-        selectedIds.value.delete(entry.id);
-        return false;
-      }
-      return true;
+    axes.value.forEach((axis) => {
+      axis.entries = axis.entries.filter((entry) => {
+        if (entry.slotIndex === slotIndex) {
+          selectedIds.value.delete(entry.id);
+          return false;
+        }
+        return true;
+      });
     });
   }
 
+  // ──────────────────────────────────────────
+  // 輸出軸（多分頁）管理
+  // ──────────────────────────────────────────
+
+  /**
+   * addAxis：新增一條空白輸出軸並切換為作用中，回傳新軸 id。
+   * 列入歷史：undo 會移除此軸並聚焦回原本作用中的軸。
+   */
+  function addAxis(name: string): string {
+    history.record();
+    const id = generateUUID();
+    axes.value = [...axes.value, { id, name, entries: [] }];
+    setActiveAxis(id);
+    return id;
+  }
+
+  /**
+   * deleteAxis：刪除指定輸出軸；至少保留一條（僅剩一條時為 no-op）。
+   * 刪到作用中軸時，作用中切換到相鄰軸。列入歷史（undo 可救回被刪的軸）。
+   */
+  function deleteAxis(id: string): void {
+    if (axes.value.length <= 1) return;
+    const index = axes.value.findIndex((a) => a.id === id);
+    if (index === -1) return;
+    history.record();
+    const wasActive = activeAxisId.value === id;
+    axes.value = axes.value.filter((a) => a.id !== id);
+    if (wasActive) {
+      // 切到原位置的相鄰軸（優先後一條，否則前一條）。
+      const next = axes.value[index] ?? axes.value[index - 1] ?? axes.value[0];
+      setActiveAxis(next.id);
+    }
+  }
+
+  /**
+   * renameAxis：更名輸出軸；名稱去頭尾空白後為空或未變更時不記錄歷史。
+   */
+  function renameAxis(id: string, name: string): void {
+    const trimmed = name.trim();
+    const target = axes.value.find((a) => a.id === id);
+    if (!target || trimmed === '' || target.name === trimmed) return;
+    history.record();
+    axes.value = axes.value.map((a) =>
+      a.id === id ? { ...a, name: trimmed } : a
+    );
+  }
+
+  /**
+   * setActiveAxis：切換作用中輸出軸（純檢視切換，不記錄歷史）。
+   * 切換時清掉選取與編輯態，避免懸空參照到另一條軸的區塊。
+   */
+  function setActiveAxis(id: string): void {
+    if (!axes.value.some((a) => a.id === id)) return;
+    activeAxisId.value = id;
+    clearSelection();
+    stopEditing();
+  }
+
   return {
+    axes,
+    activeAxisId,
+    activeAxis,
     entries,
     selectedIds,
     editingId,
@@ -439,5 +524,9 @@ export const useRotationStore = defineStore('rotation', () => {
     isSelected,
     clearRotation,
     clearSlot,
+    addAxis,
+    deleteAxis,
+    renameAxis,
+    setActiveAxis,
   };
 });
