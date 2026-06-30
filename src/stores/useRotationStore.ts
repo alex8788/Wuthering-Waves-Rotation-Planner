@@ -12,6 +12,7 @@ import type { Block, AnyBlock, DefaultBlock, TemplateBlock } from '../types/bloc
 import type { SlotIndex } from '../types/character';
 import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
+import { useHistory } from '../composables/useHistory';
 
 /** 刪除消失動畫時長(ms)，須與 RotationBlock 的 @keyframes block-leave 一致。 */
 const LEAVE_MS = 180;
@@ -60,6 +61,10 @@ export const useRotationStore = defineStore('rotation', () => {
    */
   const leavingIds = ref<Set<string>>(new Set());
 
+  // Undo/Redo 歷史：在每個會改動 entries 的 action 起手呼叫 history.record()
+  // 先封存「變更前」狀態（同一同步批次只記一步，邏輯見 useHistory）。
+  const history = useHistory();
+
   // ──────────────────────────────────────────
   // Computed（衍生狀態）
   // ──────────────────────────────────────────
@@ -99,6 +104,7 @@ export const useRotationStore = defineStore('rotation', () => {
     afterIndex: number = entries.value.length - 1,
     forcedId?: string
   ): void {
+    history.record();
     const clonedData = deepClone(sourceBlock);
 
     const newBlock: Block = {
@@ -141,6 +147,7 @@ export const useRotationStore = defineStore('rotation', () => {
     targetCharacterId: string,
     afterIndex: number = entries.value.length - 1
   ): string {
+    history.record();
     const newBlock: Block = {
       id: generateUUID(),
       label,
@@ -172,6 +179,7 @@ export const useRotationStore = defineStore('rotation', () => {
    * 若 trim 後為空字串，視為「放棄此區塊」並直接刪除（對應新增空白區塊後未輸入即失焦）。
    */
   function updateLabel(id: string, label: string): void {
+    history.record();
     const trimmed = label.trim();
     if (trimmed === '') {
       deleteBlock(id);
@@ -196,6 +204,7 @@ export const useRotationStore = defineStore('rotation', () => {
     clonedEntries: RotationEntry[],
     startInsertAfterIndex: number
   ): string[] {
+    history.record();
     let currentIndex = startInsertAfterIndex;
     let currentEntries = [...entries.value]; // 暫存目前的陣列，準備批次更新
     const newIds: string[] = []; // 回傳新插入區塊的 id（供貼上後捲動定位用）
@@ -242,6 +251,7 @@ export const useRotationStore = defineStore('rotation', () => {
       return;
     }
 
+    history.record();
     let newEntries = moveEntry(entries.value, fromIndex, toInsertAfterIndex);
 
     if (newSlotIndex !== undefined || newCharacterId !== undefined) {
@@ -270,6 +280,7 @@ export const useRotationStore = defineStore('rotation', () => {
     const idSet = new Set(ids);
     const ordered = entries.value.filter((entry) => idSet.has(entry.id)); // 保留相對順序
     if (ordered.length === 0) return;
+    history.record();
 
     // 落點錨：從 toInsertAfterIndex 往前找第一個「不在選取集合」的區塊當基準
     // （落點若落在被拖群組內，往前退到群組外的最近區塊，插在它之後）。
@@ -297,6 +308,7 @@ export const useRotationStore = defineStore('rotation', () => {
    * deleteBlock：從主時間軸刪除單一區塊。
    */
   function deleteBlock(id: string): void {
+    history.record();
     entries.value = removeEntryById(entries.value, id);
     selectedIds.value.delete(id);
   }
@@ -329,6 +341,7 @@ export const useRotationStore = defineStore('rotation', () => {
   function deleteSelectedBlocks(): void {
     const idsToDelete = [...selectedIds.value];
     if (idsToDelete.length === 0) return;
+    history.record();
     // 立即清除選取，讓區塊在消失動畫期間呈現未選取樣式
     selectedIds.value.clear();
 

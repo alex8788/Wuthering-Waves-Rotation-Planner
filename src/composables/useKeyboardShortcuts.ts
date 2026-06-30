@@ -13,6 +13,8 @@
 //   Ctrl+X              → 剪下選取的區塊
 //   Ctrl+V              → 貼上剪貼簿內容
 //   Ctrl+D              → 向右複製選取的區塊
+//   Ctrl+Z              → 復原（Undo）
+//   Ctrl+Shift+Z / Ctrl+Y → 重做（Redo）
 //   Escape              → 清除所有選取
 //   Tab                 → 展開／收合側邊欄
 // ============================================================
@@ -21,11 +23,13 @@ import { onMounted, onUnmounted } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useClipboard } from '@/composables/useClipboard';
 import { useSidebarCollapse } from '@/composables/useSidebarCollapse';
+import { useHistory } from '@/composables/useHistory';
 
 export function useKeyboardShortcuts() {
   const rotationStore = useRotationStore();
   const clipboard = useClipboard();
   const sidebarCollapse = useSidebarCollapse();
+  const history = useHistory();
 
   // ──────────────────────────────────────────
   // 事件處理器
@@ -94,6 +98,21 @@ export function useKeyboardShortcuts() {
     if (!isCtrl) return;
 
     switch (key.toLowerCase()) {
+      // Ctrl+Z：復原；Ctrl+Shift+Z：重做
+      case 'z': {
+        event.preventDefault();
+        if (event.shiftKey) history.redo();
+        else history.undo();
+        break;
+      }
+
+      // Ctrl+Y：重做（Windows 慣例）
+      case 'y': {
+        event.preventDefault();
+        history.redo();
+        break;
+      }
+
       // Ctrl+C：複製
       case 'c': {
         event.preventDefault();
