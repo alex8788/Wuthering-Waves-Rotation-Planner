@@ -13,6 +13,7 @@ import CharacterSelector from '@/components/character/CharacterSelector.vue'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useBlockDrag, DROP_ZONE_ATTRIBUTE, type SortableEventLike } from '@/composables/useBlockDrag'
+import { useHistory } from '@/composables/useHistory'
 import { getElementColor } from '@/constants/elements'
 import type { Character } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
@@ -57,6 +58,7 @@ function handleLaneDragStart(event: MouseEvent): void {
 
 const rotationStore = useRotationStore()
 const characterStore = useCharacterStore()
+const history = useHistory()
 const {
   dragState,
   onRotationDragStart,
@@ -209,6 +211,8 @@ const insertAfterIndex = computed<number>(() => {
 // 於本泳道末尾新增空白實體區塊，並立即進入行內編輯讓使用者輸入 label
 function handleAddBlock(): void {
   if (!props.character) return
+  // 開啟交易：新增＋首次命名（或放棄）合併為單一可復原步驟（見 useHistory）。
+  history.beginPending()
   const newId = rotationStore.addFreeformBlock(
     '',
     laneColor.value,
@@ -227,18 +231,24 @@ function handleRequestEdit(entryId: string): void {
   rotationStore.startEditing(entryId)
 }
 
-// 提交：寫入 store（空字串由 store.updateLabel 處理為刪除），結束編輯
+// 提交：寫入 store（空字串由 store.updateLabel 處理為刪除），結束編輯。
+// 若有進行中的新增交易：命名成功 → 提交成一步；命名為空（被刪）→ 整筆丟棄不留歷史。
+// （雙擊既有區塊的再編輯無交易，commit/cancelPending 皆為 no-op，由 updateLabel 自行記一步。）
 function handleCommitLabel(entryId: string, label: string): void {
   rotationStore.updateLabel(entryId, label)
+  if (label.trim() === '') history.cancelPending()
+  else history.commitPending()
   if (rotationStore.editingId === entryId) rotationStore.stopEditing()
 }
 
 // 取消：不動 store，結束編輯。若是剛新增的空白區塊（label 仍為空），順手刪除避免殘留空塊。
+// 取消一律丟棄進行中交易（既有區塊再編輯無交易則為 no-op）。
 function handleCancelEdit(entryId: string): void {
   const entry = rotationStore.entries.find((e) => e.id === entryId)
   if (entry && entry.block.label.trim() === '') {
     rotationStore.deleteBlock(entryId)
   }
+  history.cancelPending()
   if (rotationStore.editingId === entryId) rotationStore.stopEditing()
 }
 

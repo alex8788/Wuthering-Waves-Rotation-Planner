@@ -15,6 +15,7 @@
 
 import { ref } from 'vue';
 import type { SlotIndex } from '@/types/character';
+import { useHistory } from '@/composables/useHistory';
 
 // 模組層級單例：整個 App 共用同一份泳道顯示順序。
 const laneOrder = ref<SlotIndex[]>([0, 1, 2]);
@@ -28,6 +29,7 @@ export function useLaneOrder() {
     if (fromDisplayIndex === toDisplayIndex) return;
     const arr = [...laneOrder.value];
     if (fromDisplayIndex < 0 || fromDisplayIndex >= arr.length) return;
+    useHistory().record();
     const [moved] = arr.splice(fromDisplayIndex, 1);
     const clamped = Math.max(0, Math.min(toDisplayIndex, arr.length));
     arr.splice(clamped, 0, moved);

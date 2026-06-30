@@ -19,6 +19,7 @@ import BlockChip from '@/components/ui/BlockChip.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useLaneOrder } from '@/composables/useLaneOrder'
+import { useHistory } from '@/composables/useHistory'
 import { DELETE_ZONE_ATTRIBUTE, useBlockDrag } from '@/composables/useBlockDrag'
 import { getElementColor } from '@/constants/elements'
 import type { SlotIndex } from '@/types/character'
@@ -30,6 +31,7 @@ const characterStore = useCharacterStore()
 const rotationStore = useRotationStore()
 const { laneOrder, setOrderByMove } = useLaneOrder()
 const { dragState, notifyAutoScroll } = useBlockDrag()
+const history = useHistory()
 
 // ── 泳道顯示順序 ─────────────────────────────────────────────
 // 依 laneOrder 把 slots 重新排成「上下顯示順序」。slots 以 slotIndex 為索引，
@@ -596,6 +598,8 @@ onMounted(async () => {
     if (!slots[1].character) characterStore.setCharacter(1, 'verina')
     if (!slots[2].character) characterStore.setCharacter(2, 'shorekeeper')
     seedStoreWithStubData()
+    // 程式化初始填充不應成為可復原步驟（否則一次 Ctrl+Z 會清空整個主軸）。
+    history.clear()
   }
 
   await remeasureAfterRender()

@@ -7,6 +7,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Character, CharacterSlots, SlotIndex } from '../types/character';
 import { WUWA_CHARACTERS, CHARACTER_MAP } from '../constants/characters';
+import { useHistory } from '../composables/useHistory';
 
 export const useCharacterStore = defineStore('character', () => {
   // ──────────────────────────────────────────
@@ -22,6 +23,10 @@ export const useCharacterStore = defineStore('character', () => {
     { slotIndex: 1, character: null },
     { slotIndex: 2, character: null },
   ]);
+
+  // Undo/Redo：換角色（含連帶清空泳道）須可復原。setCharacter 起手記錄變更前快照，
+  // 與同批次的 rotationStore.clearSlot 合併為一步（見 useHistory）。
+  const history = useHistory();
 
   // ──────────────────────────────────────────
   // Computed
@@ -69,6 +74,7 @@ export const useCharacterStore = defineStore('character', () => {
       return;
     }
 
+    history.record();
     // 直接更新對應槽位的 character 欄位
     slots.value[slotIndex] = {
       slotIndex,
