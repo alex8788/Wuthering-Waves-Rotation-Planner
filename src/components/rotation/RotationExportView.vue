@@ -119,7 +119,7 @@ function laneColor(slot: SlotIndex): string {
 .export-view__lanes {
   display: grid;
   grid-template-columns: max-content repeat(var(--col-count), max-content);
-  column-gap: 6px;
+  column-gap: 4px;
   row-gap: 8px;
 }
 

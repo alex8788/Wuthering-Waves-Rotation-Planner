@@ -228,10 +228,16 @@ function onKeydown(event: KeyboardEvent): void {
   border: 1.5px solid rgba(125, 211, 252, 0.85);
   border-radius: 3px;
   background-color: var(--chip-bg, #1e293b);
-  color: rgba(255, 255, 255, 0.95);
-  -webkit-text-stroke: 0.7px rgba(8, 12, 24, 0.65);
+  /* 文字樣式須與 BlockChip label 對齊（純白 + 1px 加深描邊 + 雙層投影），
+     使進出編輯不變樣、亮色塊上同樣讀得清。 */
+  color: #ffffff;
+  -webkit-text-stroke: 1px rgba(8, 12, 24, 0.78);
   paint-order: stroke fill;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  text-shadow:
+    0 0 1px rgba(8, 12, 24, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.45);
+  /* 游標(caret)用青色，於各屬性色底上都顯眼好定位 */
+  caret-color: #22d3ee;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
   font-size: 1rem;

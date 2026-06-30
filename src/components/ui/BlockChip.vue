@@ -111,12 +111,16 @@ withDefaults(defineProps<Props>(), {
   font-weight: 700;      /* 粗體；700 有真字模，中文不會假粗擠筆畫 */
   letter-spacing: 0.05em;
   /* 維持霓虹白風格，靠描邊與背景分離 → 淺色塊不刺眼、深色塊不低對比。
-     微米白(0.95)削掉純白 glare；描邊加粗到 0.7px 讓最亮的氣動(#55FFB5)也讀得清；
-     paint-order 讓描邊在字下方使字緣乾淨不糊。 */
-  color: rgba(255, 255, 255, 0.95);
-  -webkit-text-stroke: 0.7px rgba(8, 12, 24, 0.65);
+     微米白(0.95)削掉純白 glare；描邊加粗到 1px 並加深(0.78)，讓最亮的氣動
+     (#55FFB5)、繞射等亮色塊也框得住白字；paint-order 讓描邊在字下方使字緣乾淨不糊。
+     投影採雙層：第一層 0 0 1px 貼邊硬陰影＝在亮底鑲一圈緊實暗緣使字緣跳出；
+     第二層 0 1px 3px 柔光暈＝深底下維持原本的厚度浮起感。 */
+  color: #ffffff;
+  -webkit-text-stroke: 1px rgba(8, 12, 24, 0.78);
   paint-order: stroke fill;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  text-shadow:
+    0 0 1px rgba(8, 12, 24, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 /* ── 尺寸：精簡（compact）──────────────────────────────────────

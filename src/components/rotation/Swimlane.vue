@@ -426,7 +426,7 @@ async function handleSelectCharacter(characterId: string): Promise<void> {
   --header-width: 8.5rem;
   --lane-height: 4rem;
   --lane-color: rgba(255, 255, 255, 0.18);
-  --track-gap: 0.375rem;
+  --track-gap: 0.2rem;
   --track-px: 0.75rem;
 
   display: flex;
