@@ -12,8 +12,12 @@ import RotationAxisTabBar from '@/components/rotation/RotationAxisTabBar.vue'
 import RotationExportView from '@/components/rotation/RotationExportView.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useExportDialog } from '@/composables/useExportDialog'
+import { nodeToPngBlob, savePng } from '@/composables/useImageExport'
+import { showToast } from '@/composables/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useSidebarStore } from '@/stores/useSidebarStore'
+import { nextTick, ref } from 'vue'
+import type { RotationAxis } from '@/types/rotation'
 
 const rotationStore = useRotationStore()
 const sidebarStore = useSidebarStore()
@@ -21,12 +25,41 @@ const exportDialog = useExportDialog()
 
 useKeyboardShortcuts()
 
-// 匯出流程入口：開設定視窗取得選項。實際出圖 / 存檔於後續階段接上。
+// 離螢幕匯出舞台:把要輸出的軸暫時掛上,點陣化後清空。
+const exportStageRef = ref<HTMLElement | null>(null)
+const renderAxis = ref<RotationAxis | null>(null)
+
+// 把指定軸渲染到離螢幕舞台,等繪製與字型就緒後截成 PNG Blob。
+async function renderAxisToBlob(axis: RotationAxis): Promise<Blob> {
+  renderAxis.value = axis
+  try {
+    await nextTick()
+    const node = exportStageRef.value?.querySelector<HTMLElement>('.export-view')
+    if (!node) throw new Error('找不到匯出視圖節點')
+    return await nodeToPngBlob(node)
+  } finally {
+    renderAxis.value = null
+  }
+}
+
+// 匯出流程入口：開設定視窗 → 取得選項 → 點陣化 → 存檔。
+// 階段三:單軸。多軸合併 / 分開(ZIP)於階段四接上。
 async function handleExport(): Promise<void> {
   const options = await exportDialog.open()
   if (!options) return
-  // 階段一：先確認選項正確,實際點陣化與存檔於階段三、四接上。
-  console.log('[export] options', options)
+
+  const axis = rotationStore.axes.find((a) => a.id === options.axisIds[0])
+  if (!axis) return
+
+  try {
+    const blob = await renderAxisToBlob(axis)
+    const saved = await savePng(blob, options.filename)
+    if (saved) showToast('已匯出圖片', 'success')
+  } catch (err) {
+    console.error('[export] 匯出失敗', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    showToast(`匯出失敗:${msg}`, 'danger', 6000)
+  }
 }
 
 // 點擊任何空白區域 → 一併清除主軸與模板庫的選取（共用同一入口）。
@@ -71,9 +104,9 @@ function clearAllSelection(): void {
     <DialogHost />
     <ExportDialog />
 
-    <!-- 階段二暫時:可視驗證匯出視圖版面,階段三改為離螢幕並由匯出流程驅動 -->
-    <div class="export-stage-preview">
-      <RotationExportView :axis="rotationStore.activeAxis" />
+    <!-- 離螢幕匯出舞台:平時不渲染任何軸,匯出時才暫時掛上要輸出的軸供截圖 -->
+    <div ref="exportStageRef" class="export-stage" aria-hidden="true">
+      <RotationExportView v-if="renderAxis" :axis="renderAxis" />
     </div>
   </div>
 </template>
@@ -109,16 +142,11 @@ function clearAllSelection(): void {
     outline-offset: 1px;
   }
 
-  /* 階段二暫時:把匯出視圖浮在右下角供視覺驗證(階段三移除) */
-  .export-stage-preview {
+  /* 離螢幕匯出舞台:移出可視範圍(不可用 display:none,否則量不到尺寸/截不到圖) */
+  .export-stage {
     position: fixed;
-    right: 12px;
-    bottom: 48px;
-    z-index: 9999;
-    max-width: 70vw;
-    max-height: 70vh;
-    overflow: auto;
-    border: 1px solid rgba(34, 211, 238, 0.4);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    left: -99999px;
+    top: 0;
+    pointer-events: none;
   }
 </style>
