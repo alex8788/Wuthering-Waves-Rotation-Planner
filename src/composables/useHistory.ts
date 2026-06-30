@@ -43,6 +43,10 @@ const future = ref<Snapshot[]>([]);
 let _coalescing = false;
 // 套用快照（undo/redo）期間抑制 record，避免把「還原動作」本身又記成歷史。
 let _applying = false;
+// 交易（pending transaction）：用於「新增空白區塊 → 首次命名 / 放棄」這種跨數個
+// tick 的複合操作。beginPending 先封存「操作前」快照暫存於此（尚未入 past），期間
+// 所有 record() 一律抑制；最後 commitPending 推入一步、或 cancelPending 整筆丟棄。
+let _pending: Snapshot | null = null;
 
 export function useHistory() {
   function _snapshot(): Snapshot {
@@ -73,6 +77,7 @@ export function useHistory() {
   /** record：在「變更發生前」呼叫，將當下狀態壓入 past（同批次只記一次）。 */
   function record(): void {
     if (_applying) return; // undo/redo 套用期間不記錄
+    if (_pending) return; // 交易進行中：建立／命名／放棄都不各自記錄
     if (_coalescing) return; // 同一同步批次已記過
     _coalescing = true;
     queueMicrotask(() => {
@@ -98,14 +103,39 @@ export function useHistory() {
     _apply(future.value.pop()!);
   }
 
+  /**
+   * beginPending：開啟一筆交易，封存「操作前」快照暫存（尚未入 past）。
+   * 期間所有 record() 被抑制，直到 commitPending / cancelPending 收尾。
+   */
+  function beginPending(): void {
+    // 理論上不會有殘留交易（行內編輯為焦點獨佔）；保險起見先提交避免遺失。
+    if (_pending) commitPending();
+    _pending = _snapshot();
+  }
+
+  /** commitPending：把暫存快照推入 past，成為單一可復原步驟。無交易則 no-op。 */
+  function commitPending(): void {
+    if (!_pending) return;
+    past.value.push(_pending);
+    if (past.value.length > MAX_HISTORY) past.value.shift();
+    future.value = []; // 新分支產生，清掉可重做的未來
+    _pending = null;
+  }
+
+  /** cancelPending：整筆丟棄暫存快照，不留任何歷史。無交易則 no-op。 */
+  function cancelPending(): void {
+    _pending = null;
+  }
+
   /** clear：清空全部歷史（例如載入新隊伍時）。 */
   function clear(): void {
     past.value = [];
     future.value = [];
+    _pending = null;
   }
 
   const canUndo = computed(() => past.value.length > 0);
   const canRedo = computed(() => future.value.length > 0);
 
-  return { record, undo, redo, clear, canUndo, canRedo };
+  return { record, beginPending, commitPending, cancelPending, undo, redo, clear, canUndo, canRedo };
 }

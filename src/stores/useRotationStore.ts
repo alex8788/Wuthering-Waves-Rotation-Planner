@@ -179,12 +179,15 @@ export const useRotationStore = defineStore('rotation', () => {
    * 若 trim 後為空字串，視為「放棄此區塊」並直接刪除（對應新增空白區塊後未輸入即失焦）。
    */
   function updateLabel(id: string, label: string): void {
-    history.record();
     const trimmed = label.trim();
     if (trimmed === '') {
-      deleteBlock(id);
+      deleteBlock(id); // deleteBlock 自身會 record（pending 中則被抑制）
       return;
     }
+    // 文字未變更：視為無操作，不記錄歷史（避免雙擊後原樣提交留下空步）。
+    const current = entries.value.find((entry) => entry.id === id);
+    if (current && current.block.label === trimmed) return;
+    history.record();
     entries.value = entries.value.map((entry) =>
       entry.id === id
         ? { ...entry, block: { ...entry.block, label: trimmed } }
