@@ -22,9 +22,7 @@ interface ScrollOptions {
 }
 
 export function useBoardScroll() {
-  /**
-   * scrollEntryIntoView：等 DOM 更新後，把指定區塊水平捲到主軸可視範圍「正中央」。
-   */
+  /** 等 DOM 更新後把指定區塊水平捲到可視軌道區中央（onlyIfNeeded 時已可見則不動）。 */
   function scrollEntryIntoView(
     entryId: string | undefined,
     options: ScrollOptions = {},

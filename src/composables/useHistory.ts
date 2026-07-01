@@ -1,22 +1,18 @@
 // ============================================================
-// useHistory.ts
-// Undo / Redo 歷史（module 單例）。
+// useHistory.ts — Undo / Redo 歷史（module 單例）。
 //
-// 【模型】past 堆疊保存「每次變更發生前」的狀態快照，future 保存被 undo
-// 退回的狀態。任一可記錄操作執行前，先把當下狀態壓入 past；undo 時把當下
-// 狀態壓入 future、再套用 past 頂端；redo 反向。past/future 上限各 30 步。
+// 模型：past 存「每次變更前」快照，future 存被 undo 退回的狀態；
+//       操作前壓入 past，undo 把當下壓入 future 再套 past 頂端，redo 反向。
+//       past/future 上限各 30 步。
 //
-// 【範圍】納入使用者可感知的編輯狀態（全軸共用單一歷史）：
-//   - rotationStore.axes（所有輸出軸的時間軸增刪改移貼，及輸出軸的增刪改名）
-//   - rotationStore.activeAxisId（作用中輸出軸；還原時自動聚焦回變更發生的頁面）
-//   - useLaneOrder.laneOrder（泳道上下顯示順序，全軸共用）
-//   - characterStore.slots（三槽選角；換角色連帶清空所有軸該泳道一併還原）
-//
-// 【合併同一批次】一個使用者操作可能觸發多次 store 寫入（例如一次拖曳落定
-// 在同一個同步 setTimeout 內連呼多次 instantiateBlock，或 updateLabel 內部
-// 再呼 deleteBlock）。以 microtask 旗標讓「同一同步批次」只記一步。
-//
-// 【不持久化】純 in-memory，未來「保存隊伍排軸」載入時會 clear()。
+// 設計原則：
+//   - 快照範圍（全軸共用單一歷史）：rotationStore.axes、activeAxisId、
+//     useLaneOrder.laneOrder、characterStore.slots。
+//   - 同一同步批次只記一步：以 microtask 旗標合併（一次拖曳/一次命名可能觸發
+//     多次 store 寫入）。
+//   - 交易（pending）：跨多 tick 的複合操作（新增空白區塊→首次命名/放棄）用
+//     beginPending 暫存、commit/cancel 收尾成單一步驟。
+//   - 純 in-memory，不持久化。
 // ============================================================
 
 import { ref, computed } from 'vue';
@@ -41,13 +37,11 @@ interface Snapshot {
 const past = ref<Snapshot[]>([]);
 const future = ref<Snapshot[]>([]);
 
-// 同一同步批次只記一步：第一次 record 後設旗標，排程於下個 microtask 復位。
+// 同批次合併旗標：第一次 record 後設，排程於下個 microtask 復位。
 let _coalescing = false;
-// 套用快照（undo/redo）期間抑制 record，避免把「還原動作」本身又記成歷史。
+// 套用快照期間抑制 record，避免把「還原動作」本身記成歷史。
 let _applying = false;
-// 交易（pending transaction）：用於「新增空白區塊 → 首次命名 / 放棄」這種跨數個
-// tick 的複合操作。beginPending 先封存「操作前」快照暫存於此（尚未入 past），期間
-// 所有 record() 一律抑制；最後 commitPending 推入一步、或 cancelPending 整筆丟棄。
+// 交易暫存快照（尚未入 past）；非 null 期間所有 record() 被抑制。
 let _pending: Snapshot | null = null;
 
 export function useHistory() {

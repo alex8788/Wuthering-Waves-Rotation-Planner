@@ -1,3 +1,16 @@
+// ============================================================
+// useBlockDrag.ts — 全域拖曳協調（module 單例）。
+//
+// 設計原則：
+//   - SortableJS 僅負責「偵測拖曳 + 浮動分身視覺」；落點/落地全由本檔自製，
+//     不依賴其 @add/@update index（跨全域排序時不可靠）。
+//   - forceFallback 模式：可見的是靜態浮動克隆 .sortable-fallback（拿不到 Vue
+//     響應式）→ 三區警告樣式改用 <body> 全域 class + CSS 套在克隆上。
+//   - 三區語意：合法落點(泳道) > 可刪除區(主軸面板內非泳道) > 禁止放置區(其餘)。
+//   - 落點 hit-test 全用即時 DOM（游標與區塊同幀讀取），捲動座標自動一致，
+//     免 baseline 補償。
+// ============================================================
+
 import { reactive, readonly, type DeepReadonly } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
@@ -74,15 +87,8 @@ const _dragState = reactive<DragState>({
   previewSlotIndex: null,
 });
 
-// forceFallback 模式下 SortableJS 不會觸發原生 dragover，改用 mousemove
-// 偵測游標是否在合法容器外（fallback 浮動分身預設 pointer-events: none，
-// 滑鼠事件會正常穿透到底下的真實元素）
-// forceFallback 模式下真正可見的被拖物件是 SortableJS 的靜態浮動克隆
-// .sortable-fallback，拿不到 Vue 響應式更新，因此改用 <body> 全域 class + CSS
-// 直接替浮動克隆上樣式。三區語意：
-//   - 合法落點(泳道)            → 無警告
-//   - 可刪除區(主軸面板內非泳道) → 主軸區塊：刪除紅紋；側邊欄區塊：禁止圖標(無法新增到空白處)
-//   - 禁止放置區(其餘)          → 一律禁止圖標(放開彈回)
+// 三區警告樣式的 <body> 全域 class（見檔頭設計原則）：
+//   刪除區→紅紋、禁止區→禁止圖標、側邊欄序列化區→拖回存模板樣式。
 const DELETE_ZONE_BODY_CLASS = 'dragging-over-delete';
 const FORBIDDEN_BODY_CLASS = 'dragging-forbidden';
 // 主軸區塊懸停於側邊欄序列化區（拖回存成模板）時的浮動分身樣式
@@ -98,8 +104,6 @@ let _lastClientX = 0;
 let _lastClientY = 0;
 
 // 即時讀各「非拖曳區塊」的中心 x（視窗座標），依全域順序回傳。
-// 改用即時 DOM（而非拖曳開始的靜態快照）→ 游標與區塊同幀讀取，捲動時兩者一起移動，
-// 不需 baseline 補償，邊緣捲動的座標偏移自然消失。
 function _liveCentersByGlobalIndex(): { gi: number; center: number }[] {
   const draggingSet = new Set<string>(
     _dragState.draggingIds.length
@@ -141,10 +145,8 @@ function _insertionPoints(): number[] {
   return [-1, ..._liveCentersByGlobalIndex().map((c) => c.gi)];
 }
 
-// 遲滯解析（核心）：維持當前落點的判斷以「左右鄰居的中心點」為界——
-// 游標仍落在 [左鄰中心, 右鄰中心] 之間就不變動；確實跨出鄰居中心才往該方向移動
-// （至少前進一格；大跳躍取即時定位結果）。判斷界線跟「正在跨越的鄰居中心」一致，
-// 不再依賴被拖物自身寬度（落點空欄／slot 寬度），解決窄拖寬／寬拖窄時的不對稱閃爍。
+// 遲滯解析：游標仍在 [左鄰中心, 右鄰中心] 之間就維持當前落點，跨出鄰居中心才換格。
+// 界線用鄰居中心（非被拖物寬度）→ 消除窄拖寬/寬拖窄的不對稱閃爍。
 function _resolveAfterIndex(clientX: number): number {
   if (_curAfter === null) {
     _curAfter = _liveAfterIndexFromX(clientX);

@@ -1,13 +1,8 @@
 // ============================================================
-// useImageExport.ts
-// 圖片匯出的底層工具：把 DOM 節點點陣化成 PNG，並存檔。
+// useImageExport.ts — 圖片匯出底層：DOM 節點點陣化成 PNG 並存檔。
 //
-//   - nodeToPngBlob(node)：以高像素密度(pixelRatio)把節點轉成 PNG Blob,
-//       放大不模糊。轉換前等字型載入完成,避免 foreignObject 缺字。
-//   - saveBlob(blob, filename)：優先用 File System Access API 的原生
-//       「另存新檔」對話框(可選資料夾+檔名);不支援時退回 <a download>。
-//
-// 多軸合併 / 分開(ZIP)的協調邏輯於階段四再加。
+//   - nodeToPngBlob：高 pixelRatio 轉 PNG Blob（放大不模糊），轉換前等字型就緒。
+//   - savePng / saveZip：優先用 File System Access API 原生另存，不支援退回 <a download>。
 // ============================================================
 
 import { toBlob } from 'html-to-image';
@@ -23,15 +18,9 @@ const MAX_CANVAS_DIM = 16384;
 
 /**
  * 把 DOM 節點點陣化成 PNG Blob。
- *
- * skipFonts:true —— 不嵌入遠端 web 字型。html-to-image 預設會去抓 Google Fonts
- * 的樣式表並內聯 @font-face,但該樣式表為跨來源(無 CORS),讀 cssRules 會丟
- * SecurityError 並卡住(且 Noto Sans TC 巨大,抓取/解析極慢)。改為跳過嵌入,
- * 由匯出視圖的字型 fallback 鏈(JetBrains Mono → Consolas / 系統黑體)在本機
- * 點陣化時自然命中,文字仍清楚,且不依賴匯出當下的網路。
- *
- * pixelRatio 依節點實際尺寸自動退讓:長連招會讓視圖很寬,width×3 可能超過
- * canvas 單邊上限而產生空白/壞圖 → 動態夾住倍率,確保不超界。
+ * skipFonts:true —— 不嵌入遠端字型（跨來源讀 cssRules 會 SecurityError 卡住，
+ *   且 Noto Sans TC 巨大）；改靠匯出視圖字型 fallback 鏈本機命中。
+ * pixelRatio 依節點尺寸動態夾住，避免超過 canvas 單邊上限而產生壞圖。
  */
 export async function nodeToPngBlob(node: HTMLElement): Promise<Blob> {
   await document.fonts.ready;
@@ -69,10 +58,7 @@ interface SaveSpec {
 const PNG_SPEC: SaveSpec = { ext: 'png', mime: 'image/png', description: 'PNG 圖片' };
 const ZIP_SPEC: SaveSpec = { ext: 'zip', mime: 'application/zip', description: 'ZIP 壓縮檔' };
 
-/**
- * 退回方案:不支援原生另存的瀏覽器,用 <a download> 觸發一般下載
- * (僅自訂檔名,存到瀏覽器預設下載資料夾)。
- */
+/** 退回方案：用 <a download> 觸發一般下載（存到瀏覽器預設下載資料夾）。 */
 function downloadBlob(blob: Blob, suggestedName: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -80,8 +66,7 @@ function downloadBlob(blob: Blob, suggestedName: string): void {
   a.download = suggestedName;
   document.body.appendChild(a);
   a.click();
-  // 重點:不可在 click() 後立刻 revoke / 移除 —— 瀏覽器可能尚未開始讀取
-  // blob 就被釋放,導致下載中斷、檔案毀損(0 byte / 截斷)。延後清理。
+  // 不可在 click() 後立刻 revoke/移除：瀏覽器可能尚未讀取 blob 就被釋放而毀損。延後清理。
   setTimeout(() => {
     a.remove();
     URL.revokeObjectURL(url);
@@ -89,12 +74,8 @@ function downloadBlob(blob: Blob, suggestedName: string): void {
 }
 
 /**
- * 存檔。filename 不含副檔名;依 spec 補上。
- * 回傳 true=已存檔,false=使用者取消原生對話框。
- *
- * 支援原生另存(Chrome / Edge 等一般瀏覽器)就跳原生對話框;否則退回一般下載。
- * 註:嵌入式瀏覽器(如 VS Code 內建 Simple Browser)的原生另存行為異常,
- *     請改用一般瀏覽器檢視 / 匯出。
+ * 存檔（filename 不含副檔名，依 spec 補上）；回傳 true=已存、false=使用者取消。
+ * 註：嵌入式瀏覽器（如 VS Code Simple Browser）原生另存行為異常，請用一般瀏覽器。
  */
 async function saveBlob(blob: Blob, filename: string, spec: SaveSpec): Promise<boolean> {
   const suggestedName = `${filename}.${spec.ext}`;

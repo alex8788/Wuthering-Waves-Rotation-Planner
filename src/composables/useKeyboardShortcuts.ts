@@ -1,11 +1,8 @@
 // ============================================================
-// useKeyboardShortcuts.ts
-// 全域鍵盤快捷鍵管理。
+// useKeyboardShortcuts.ts — 全域鍵盤快捷鍵管理。
 //
-// 【設計說明】
-// 使用 onMounted / onUnmounted 生命週期自動掛載與卸除監聽器。
-// 此 composable 應只在「根層級元件（App.vue）」呼叫一次，
-// 避免多個元件各自掛載而造成重複觸發。
+// 設計原則：onMounted/onUnmounted 自動掛/卸監聽器；只在根層級（App.vue）呼叫
+//           一次，避免多元件重複觸發。
 //
 // 快捷鍵一覽：
 //   A / D               → 區塊巡覽：逐塊向左／右循環選取（無選取時選最右／最左塊）
@@ -38,33 +35,15 @@ export function useKeyboardShortcuts() {
   // 事件處理器
   // ──────────────────────────────────────────
 
-  /**
-   * _shouldIgnore：判斷是否應該忽略此次鍵盤事件。
-   *
-   * 當焦點在 input 或 textarea 等可輸入元素上時，
-   * 快捷鍵不應該觸發（使用者正在輸入文字）。
-   */
+  /** 焦點在可輸入元素（input/textarea/select/contentEditable）時忽略快捷鍵。 */
   function _shouldIgnore(event: KeyboardEvent): boolean {
     const target = event.target as HTMLElement;
     const tag = target.tagName.toLowerCase();
-
-    // 常見的可輸入元素標籤
-    if (tag === 'input' || tag === 'textarea' || tag === 'select') {
-      return true;
-    }
-
-    // contentEditable 元素（日後若實作區塊標籤的行內編輯）
-    if (target.isContentEditable) {
-      return true;
-    }
-
-    return false;
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    return target.isContentEditable;
   }
 
-  /**
-   * _handleKeydown：keydown 事件的核心處理函式。
-   * 根據按鍵組合分派到對應的操作。
-   */
+  /** keydown 核心：依按鍵組合分派操作。 */
   function _handleKeydown(event: KeyboardEvent): void {
     if (_shouldIgnore(event)) return;
 
@@ -183,7 +162,6 @@ export function useKeyboardShortcuts() {
     window.removeEventListener('keydown', _handleKeydown);
   });
 
-  // 此 composable 不需要回傳任何狀態，副作用全部透過 store 反映
-  // 回傳空物件是為了讓呼叫端語意清晰（明確知道這是在「使用」快捷鍵）
+  // 副作用全透過 store 反映，回傳空物件僅為呼叫端語意清晰。
   return {};
 }
