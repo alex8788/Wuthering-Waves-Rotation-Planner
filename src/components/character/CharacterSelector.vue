@@ -6,19 +6,17 @@ let uidCounter = 0
 
 <script setup lang="ts">
 // ============================================================
-// CharacterSelector.vue
-// 角色選擇下拉選單。
+// CharacterSelector.vue — 角色選擇下拉選單。
 //
-// 設計決策（已與使用者確認）：
-// 1. options 直接使用 Character[] 型別，元件與角色領域耦合，
-//    顯示文字採用 nameZh。
-// 2. 自訂 div-based 下拉選單（非原生 <select>），以完全控制
-//    色點／發光樣式，確保跨瀏覽器呈現一致。
-// 3. 每個選項旁顯示對應角色 themeColor 色點，強化辨識度。
-//
-// 互動模式採用 ARIA combobox pattern：焦點始終停留在觸發按鈕，
-// 透過 aria-activedescendant 標示目前鍵盤高亮的選項，
-// 不將焦點移入 listbox 本身。
+// 設計原則：
+//   - options 用 Character[]，顯示 nameZh。
+//   - 自訂 div-based 下拉（非原生 <select>）以完全控制樣式、跨瀏覽器一致。
+//   - 選單內先依屬性分頁籤、再依星級分組（5★ 在 4★ 之前）；顏色一律由 element
+//     經 getElementColor 決定。
+//   - ARIA combobox pattern：焦點全程停在觸發按鈕，以 aria-activedescendant
+//     標示鍵盤高亮，不把焦點移入 listbox。
+//   - listbox Teleport 到 body 並 fixed 定位，脫離泳道 sticky header 的 overflow/
+//     transform 裁切；外層捲動/縮放時關閉。
 // ============================================================
 
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'

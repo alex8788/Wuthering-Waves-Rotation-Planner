@@ -58,7 +58,6 @@ interface DragState {
   isOverInvalidZone: boolean;
   // 游標在可刪除區（主軸面板內、泳道之外）：主軸區塊在此放開才會刪除
   isOverDeleteZone: boolean;
-  dropHandled: boolean;
   // ── 自製落點預覽（single thread 跨泳道同步擠出）──────────────
   // 全域 after-index：插在此索引之後（語意同 store moveBlock/instantiateBlock 的 afterIndex；
   // -1=最前、length-1=最後）。null = 目前無合法落點（游標在泳道外/禁止區/跨泳道）。
@@ -81,7 +80,6 @@ const _dragState = reactive<DragState>({
   isOverSidebar: false,
   isOverInvalidZone: false,
   isOverDeleteZone: false,
-  dropHandled: false,
   previewInsertAfterIndex: null,
   draggingWidth: 0,
   previewSlotIndex: null,
@@ -315,7 +313,6 @@ function _resetDragState(): void {
   _dragState.isOverSidebar = false;
   _dragState.isOverInvalidZone = false;
   _dragState.isOverDeleteZone = false;
-  _dragState.dropHandled = false;
   _dragState.previewInsertAfterIndex = null;
   _dragState.draggingWidth = 0;
   _dragState.previewSlotIndex = null;
@@ -362,7 +359,6 @@ export function useBlockDrag() {
     _dragState.draggingSourceBlock = block;
     _dragState.draggingSourceBlocks = blocks && blocks.length > 1 ? [...blocks] : [block];
     _dragState.draggingSlotIndex = null;
-    _dragState.dropHandled = false;
     _dragState.isOverSidebar = false;
     _dragState.isOverInvalidZone = false;
     _dragState.isOverDeleteZone = false;
@@ -380,7 +376,6 @@ export function useBlockDrag() {
     _dragState.draggingSourceBlock = null;
     _dragState.pendingInstanceId = null;
     _dragState.draggingSlotIndex = entry.slotIndex;
-    _dragState.dropHandled = false;
     _dragState.isOverSidebar = false;
     _dragState.isOverInvalidZone = false;
     _dragState.isOverDeleteZone = false;
@@ -405,18 +400,10 @@ export function useBlockDrag() {
     if (_dragState.isDragging) _dragState.isOverSidebar = val;
   }
 
-  // 側邊欄拖入與同泳道重排的落地都改由 handleDragEnd 統一處理（用自製全域落點）：
+  // 側邊欄拖入與同泳道重排的落地全由 handleDragEnd 統一處理（自製全域落點）：
   //  - 不依賴 SortableJS 的 @add/@update index（跨全域排序時 @update 不觸發＝p10-3）。
-  //  - 落地與 _resetDragState 放在同一個 setTimeout，使「store 更新」與「isDragging 轉 false」
-  //    在同一拍批次渲染，避免鬆手瞬間先 reset 回原始佈局、再寫 store 的中間幀閃爍（n9）。
-  function handleSidebarToLaneDrop(_event: SortableEventLike, _targetSlotIndex: SlotIndex): void {
-    _dragState.dropHandled = true;
-  }
-
-  function handleSameLaneDrop(_event: SortableEventLike, _slotIndex: SlotIndex): void {
-    _dragState.dropHandled = true;
-  }
-
+  //  - 落地與 _resetDragState 同一個 setTimeout，使 store 更新與 isDragging 轉 false 同拍
+  //    批次渲染，避免鬆手瞬間先 reset 回原佈局再寫 store 的中間幀閃爍（n9）。
   function handleDragEnd(_event?: SortableEventLike): void {
     if (!_dragState.isDragging) return;
     // 快照所有落地所需資料（setTimeout 內 _dragState 已被重置）
@@ -537,8 +524,6 @@ export function useBlockDrag() {
     onRotationDragStart,
     setOverSidebar,
     notifyAutoScroll,
-    handleSidebarToLaneDrop,
-    handleSameLaneDrop,
     handleDragEnd,
     getRotationSortableOptions,
     getSidebarSortableOptions,

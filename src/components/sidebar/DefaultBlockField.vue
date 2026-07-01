@@ -1,8 +1,6 @@
 <script setup lang="ts">
-// DefaultBlockField.vue
-// 側邊欄「預設區塊」展示區。
-// Phase 4.3：補上拖曳出去到主軸的功能。這份清單本身不能被排序、
-// 也不接受任何東西拖進來，只負責「被拖出去」。
+// DefaultBlockField.vue — 側邊欄「預設區塊」展示區。
+// 只負責「被拖出去」到主軸：清單本身不可排序、不接受拖入。
 import { ref, computed } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'

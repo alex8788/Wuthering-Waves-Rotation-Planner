@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// App.vue — 整體組裝入口
-// 待辦：角色選擇 UI（CharacterSelector）尚未串接，待決定放置位置後接上 useCharacterStore
+// App.vue — 整體組裝入口：版面殼層 + 各面板 + 全域快捷鍵 + 離螢幕匯出舞台。
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import ToastNotification from '@/components/ui/ToastNotification.vue'

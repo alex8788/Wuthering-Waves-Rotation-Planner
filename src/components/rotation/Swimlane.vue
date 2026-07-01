@@ -1,10 +1,10 @@
 <script setup lang="ts">
-// Swimlane.vue：單一角色的橫向時間軸軌道
-
-// 核心機制：
-// 1. 使用 VueDraggable 處理區塊拖曳。
-// 2. 綁定 localEntries 緩衝陣列，避免套件直接修改唯讀 props 導致 VDOM 脫鉤。
-// 3. 拖曳結束後由 useBlockDrag 換算全域索引並更新 store，watch 再同步回 localEntries。
+// Swimlane.vue — 單一角色的橫向時間軸軌道。
+//
+// 設計原則：
+//   - useDraggable 兩參數形式：只掛拖曳偵測，不把清單交給套件受管（避免其
+//     replaceChild 擾動 DOM）。單一真相流：handleDragEnd → store → watch → 重渲染。
+//   - localEntries 為緩衝陣列，避免套件直接改唯讀 props 導致 VDOM 脫鉤。
 
 import { ref, computed, watch, nextTick } from 'vue'
 import { useDraggable } from 'vue-draggable-plus'
@@ -64,8 +64,6 @@ const { confirm } = useDialog()
 const {
   dragState,
   onRotationDragStart,
-  handleSidebarToLaneDrop,
-  handleSameLaneDrop,
   handleDragEnd,
   getRotationSortableOptions,
 } = useBlockDrag()
@@ -87,13 +85,8 @@ watch(
 // 可拖曳容器 DOM 參照：useDraggable 把 SortableJS 掛在這個元素上（取代 <VueDraggable>）。
 const trackEl = ref<HTMLElement | null>(null)
 
-// SortableJS 設定 + 事件處理器。
-// 關鍵：刻意「不把 localEntries 當受管清單傳給 useDraggable」（用兩參數 el+options 形式）。
-// 本 app 自有單一真相流：handleDragEnd → store → watch(props.entries) → localEntries → Vue 重渲染，
-// SortableJS 僅負責「偵測拖曳 + 浮動分身視覺」。若把清單交給 useDraggable 受管，套件會在
-// 「原地放開」(SortableJS 眼中 oldIndex===newIndex) 時跑內部 replaceChild 還原 DOM，擾動容器
-// 子節點，導致尾端非 keyed 的 ＋按鈕 v-show 與 Vue vdom 脫鉤（放開後按鈕卡 display:none）。
-// 不傳清單 → 套件不安裝內部清單變動/還原處理器 → 不碰 DOM → Vue 維持唯一 DOM 真相。
+// SortableJS 設定。兩參數形式不交出清單（見檔頭原則）：若交管，套件會在原地放開
+// 時 replaceChild 還原 DOM，擾動子節點使尾端 ＋按鈕 v-show 與 vdom 脫鉤（卡 display:none）。
 const dragOptions = computed(
   (): Record<string, unknown> => ({
     ...getRotationSortableOptions(props.slotIndex),
@@ -101,8 +94,6 @@ const dragOptions = computed(
     // 改由下方 watch 在容器出現時手動 start，避免 SortableJS 收到 null 於 mounted 拋例外。
     immediate: false,
     onStart: handleDragStart,
-    onAdd: handleAdd,
-    onUpdate: handleUpdate,
     onEnd: handleEnd,
   })
 )
@@ -151,23 +142,8 @@ function handleDragStart(event: SortableEventLike): void {
   onRotationDragStart(entry, width)
 }
 
-// 側邊欄拖入本泳道 (onAdd)
-// SortableJS 在跨清單複製（pull:'clone' + forceFallback）時，會把一個克隆的
-// DOM 節點實際插入到本泳道清單裡。這個節點是側邊欄 chip 的克隆，結構與本泳道
-// 的 RotationBlock 不同；若放任它留下，Vue 會以相同 :key 嘗試接管這個外來節點，
-// 造成 VDOM 與 SortableJS 內部參照雙重脫鉤（下一次拖曳即失效）。
-// 依 SortableJS 官方建議：「自行管理資料時，於 onAdd 移除套件插入的節點」，
-// 改由 store 更新 → watch → Vue 重新渲染作為唯一的 DOM 來源。
-function handleAdd(event: SortableEventLike): void {
-  handleSidebarToLaneDrop(event, props.slotIndex)
-}
-
-// 本泳道內重新排序 (onUpdate)
-function handleUpdate(event: SortableEventLike): void {
-  handleSameLaneDrop(event, props.slotIndex)
-}
-
-// 拖曳結束
+// 拖曳結束：所有落地（側邊欄拖入、同泳道重排、跨泳道）統一在此處理，
+// 不綁 onAdd/onUpdate（其 index 在跨全域排序時不可靠，見 useBlockDrag）。
 function handleEnd(event: SortableEventLike): void {
   handleDragEnd(event)
 }

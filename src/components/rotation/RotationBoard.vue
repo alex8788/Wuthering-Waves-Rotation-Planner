@@ -1,16 +1,14 @@
 <script setup lang="ts">
 // ============================================================
-// RotationBoard.vue
-// 主時間軸面板：三條 Swimlane 的總容器。
+// RotationBoard.vue — 主時間軸面板：三條 Swimlane 的總容器。
 //
 // 職責：
-//   1. 讀 useCharacterStore 三個角色槽選角狀態。
-//   2. 讀 useRotationStore 1D 輸出軸陣列（entries），依 slotIndex 分配給三條泳道。
-//   3. 共用 CSS Grid 欄位對齊 + 拖曳落點預覽（含多選）。
-//   4. 跨三泳道矩形框選（marquee）。
+//   - 讀選角/entries，依 slotIndex 分流到三泳道。
+//   - 共用 CSS Grid 欄位對齊（隱藏量測列量欄寬）+ 拖曳落點預覽（含多選 FLIP）。
+//   - 跨三泳道矩形框選（marquee）、拖曳邊緣自動捲動、泳道垂直拖曳重排。
 //
-// 拖曳本身由各 Swimlane 內的 SortableJS 處理；本元件只負責框選，
-// 且框選刻意與區塊拖曳完全隔離（見下方 marquee 區註解）。
+// 設計原則：區塊拖曳由 Swimlane 內 SortableJS 處理；框選刻意與其完全隔離
+//           （掛 window bubble、按在區塊上讓位），避免互搶事件。
 // ============================================================
 
 import { computed, onMounted, onBeforeUnmount, nextTick, reactive, ref, watch } from 'vue'
@@ -119,8 +117,8 @@ watch(() => rotationStore.editingDraft, remeasureAfterRender)
 
 const PREVIEW_PLACEHOLDER = '__preview_placeholder__'
 
-// 區塊間距（px），須與 Swimlane 的 --track-gap (0.375rem = 6px) 一致。
-// 用於把「欄序」換算成「像素 x 位移」（FLIP 平滑順延）。
+// 區塊間距（px）：把「欄序」換算成像素 x 位移（FLIP 平滑順延、落點寬度加總）。
+// 注意：目前與 Swimlane 的 --track-gap(0.2rem) 不一致，待統一為單一來源（見重構清單 R1）。
 const TRACK_GAP = 6
 
 const isPreviewing = computed<boolean>(
@@ -199,14 +197,10 @@ const previewLayout = computed<{
 const previewGridTemplate = computed<string>(() => previewLayout.value.template)
 const previewIdToColumn = computed<Map<string, number>>(() => previewLayout.value.idToColumn)
 
-// ── 拖曳「平滑順延」FLIP（方案B）──────────────────────────────
-//
-// grid-column 是離散屬性，CSS 無法補間 → 落點變動時其他區塊原本「瞬移」到隔壁欄，
-// 拖快掠過多塊就像閃爍。此處於每次落點變動後，對欄序有變的區塊補一段 transform 滑動：
-//   位移量＝(舊欄左緣x − 新欄左緣x)，純用 idToX（欄寬解析式）算出，全程不量 DOM →
-//   不觸發 reflow，避開先前 TransitionGroup 的卡頓坑（見專案歷史）。
-// 只動「非被拖」區塊的 transform；被拖本體/多選組已被排除在 idToX 外，浮動分身在
-// <body> 而查詢範圍限定在 board 內 → 兩者都不會被碰到，不與 SortableJS 佔用的 transform 衝突。
+// ── 拖曳「平滑順延」FLIP ──────────────────────────────────────
+// grid-column 離散無法 CSS 補間 → 落點變動時鄰塊會瞬移閃爍。故每次落點變動後對欄序
+// 有變的區塊補一段 transform 滑動：位移＝舊欄左緣x−新欄左緣x，純用 idToX（欄寬解析式）
+// 算、不量 DOM → 不觸發 reflow。只動「非被拖」區塊，不與 SortableJS 佔用的 transform 衝突。
 const FLIP_MS = 140
 let _flipPrevX: Map<string, number> | null = null
 const _reducedMotion =
@@ -268,29 +262,16 @@ function clearFlipStyles(): void {
 watch(() => previewLayout.value, (layout) => runFlip(layout.idToX), { flush: 'post' })
 
 // ── 跨三泳道矩形框選（marquee）─────────────────────────────
-//
-// 與區塊拖曳徹底隔離，避免互搶事件：
-//   1. 起手只在 .board__scroll 上掛「冒泡階段」mousedown（非 window capture），
-//      不會搶在 SortableJS 之前；且區塊的 mousedown 一律先被 SortableJS 處理。
-//   2. 按在區塊/按鈕/輸入框/選單上 → 直接 return，完全不介入，由 SortableJS
-//      獨佔該次拖曳；空白處 SortableJS 本來就不啟動 → 兩者互不干擾。
-//   3. 左鍵按住後，位移超過閾值才真正啟動框選（單純點擊不框選）。
-//   4. 框選進行中才掛 window mousemove/mouseup，結束立即移除。
+// 與區塊拖曳徹底隔離：掛 window bubble mousedown（不搶 SortableJS）、按在互動元素上
+// 直接 return、位移超過閾值才啟動、進行中才掛 window mousemove/mouseup。
 
 const boardScrollRef = ref<HTMLElement | null>(null)
 
-// ── 拖曳邊緣自動捲動（4.4f）─────────────────────────────────
-//
-// 拖曳中游標「超出」.board__scroll 左/右邊緣時，RAF 迴圈持續修改 scrollLeft。
-// 只動 scrollLeft（不重開 SortableJS scroll、不動浮動分身）；落點正確性由
-// notifyAutoScroll(delta) 同步補償 _columnBaseline 並重算（見 useBlockDrag）。
-//
-// 觸發改為「游標抵達容器邊緣外緣」而非舊版邊緣內側 48px 寬帶（舊版游標還在泳道內就捲動）。
-// 兩側觸發位置不對稱，故速度模型也不同（但體感都是「慢→快」）：
-//   ‧ 右側：邊界＝視窗右緣（一道物理牆，游標被夾在 innerWidth-1）。EDGE_TOL 補償 off-by-one
-//     與子像素。游標頂著牆，採「時間式」二次方加速（停留越久越快）。
-//   ‧ 左側：邊界＝泳道 header 右緣，位於畫面中段、左方為開放空間（無牆）。改採「距離式」緩衝：
-//     剛越過 header 右緣最慢，游標越往左推（越接近畫面左緣）越快，LEFT_RAMP_PX 為加速到頂的距離。
+// ── 拖曳邊緣自動捲動 ─────────────────────────────────────────
+// 拖曳中游標超出 .board__scroll 左/右邊緣時，RAF 迴圈持續改 scrollLeft，並呼叫
+// notifyAutoScroll() 重算落點。兩側觸發位置不對稱 → 速度模型不同（體感皆「慢→快」）：
+//   ‧ 右側＝視窗右緣（物理牆）：時間式二次方加速（停留越久越快）。
+//   ‧ 左側＝泳道 header 右緣（開放空間）：距離式緩衝（越往畫面左緣越快，LEFT_RAMP_PX 為到頂距離）。
 const EDGE_TOL = 4        // 右側視為「超出範圍」的容差（px）
 const LEFT_RAMP_PX = 140  // 左側：游標越過 header 右緣多遠時加速到頂（px）＝緩衝帶寬度
 const MIN_STEP = 4        // 剛進入觸發區的起始速度（px/幀）
@@ -481,13 +462,10 @@ function seedStoreWithStubData(): void {
   })
 }
 
-// ══════════════════════════════════════════════════════════════
-// 泳道垂直拖曳（自製）
-// 拖把手 → 來源泳道原位留空、浮起分身跟游標、即時插入提示線；放開時改
-// laneOrder，由 <TransitionGroup> 把各列平滑滑到新位。全程不動 entries /
-// slotIndex / 欄位對齊，故各泳道區塊資料零變動。
-// 拖曳期間「其餘泳道」位置固定（不即時 reflow），故起始量一次幾何即可。
-// ══════════════════════════════════════════════════════════════
+// ── 泳道垂直拖曳（自製）──────────────────────────────────────
+// 拖把手 → 來源泳道留空、浮起分身跟游標、插入提示線；放開改 laneOrder，由
+// TransitionGroup 平滑滑到新位。全程不動 entries/slotIndex/欄位對齊 → 區塊資料零變動。
+// 拖曳期間其餘泳道位置固定，故起始量一次幾何即可。
 const rotationBoardRef = ref<HTMLElement | null>(null)
 
 interface LaneGeom { slotIndex: SlotIndex; top: number; height: number; mid: number }
