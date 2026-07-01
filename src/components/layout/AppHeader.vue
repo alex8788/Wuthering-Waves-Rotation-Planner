@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // ============================================================
 // AppHeader.vue
-// 頂部導覽列。顯示專案名稱「鳴潮排軸工具」，搭配科幻裝飾元素
+// 頂部導覽列。顯示專案名稱「鳴潮排軸編輯器」，搭配科幻裝飾元素
 // （發光指示燈、漸層分隔線、底部光暈細線）。
 //
 // 純展示元件，不持有任何狀態。右側保留 actions slot，
@@ -16,7 +16,7 @@
       <span class="app-header__divider" aria-hidden="true" />
 
       <div class="app-header__titles">
-        <h1 class="app-header__title">鳴潮排軸工具</h1>
+        <h1 class="app-header__title">鳴潮排軸編輯器</h1>
         <span class="app-header__eyebrow">WUWA · ROTATION PLANNER</span>
       </div>
     </div>
