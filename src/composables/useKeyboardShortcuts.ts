@@ -8,6 +8,7 @@
 // 避免多個元件各自掛載而造成重複觸發。
 //
 // 快捷鍵一覽：
+//   A / D               → 區塊巡覽：逐塊向左／右循環選取（無選取時選最右／最左塊）
 //   Delete / Backspace  → 刪除選取的區塊
 //   Ctrl+C              → 複製選取的區塊
 //   Ctrl+X              → 剪下選取的區塊
@@ -22,12 +23,14 @@
 import { onMounted, onUnmounted } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useClipboard } from '@/composables/useClipboard';
+import { useBlockNavigation } from '@/composables/useBlockNavigation';
 import { useSidebarCollapse } from '@/composables/useSidebarCollapse';
 import { useHistory } from '@/composables/useHistory';
 
 export function useKeyboardShortcuts() {
   const rotationStore = useRotationStore();
   const clipboard = useClipboard();
+  const nav = useBlockNavigation();
   const sidebarCollapse = useSidebarCollapse();
   const history = useHistory();
 
@@ -91,6 +94,18 @@ export function useKeyboardShortcuts() {
     if (key === 'Tab' && !isCtrl) {
       event.preventDefault();
       sidebarCollapse.toggle();
+      return;
+    }
+
+    // ── 區塊巡覽 A / D（純鍵，無修飾鍵時才觸發；Ctrl+A/Ctrl+D 維持原行為）──
+    if (!isCtrl && !event.altKey && key.toLowerCase() === 'a') {
+      event.preventDefault();
+      nav.focusStep(-1);
+      return;
+    }
+    if (!isCtrl && !event.altKey && key.toLowerCase() === 'd') {
+      event.preventDefault();
+      nav.focusStep(1);
       return;
     }
 
