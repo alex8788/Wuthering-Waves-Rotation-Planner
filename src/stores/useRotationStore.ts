@@ -323,10 +323,16 @@ export const useRotationStore = defineStore('rotation', () => {
   }
 
   function selectBlock(id: string, isMultiSelect: boolean = false): void {
-    if (!isMultiSelect) {
-      selectedIds.value.clear();
+    if (isMultiSelect) {
+      // Ctrl/Cmd + 點擊：切換該區塊——已選則取消（多選中拔掉單顆），未選則加入。
+      if (selectedIds.value.has(id)) selectedIds.value.delete(id);
+      else selectedIds.value.add(id);
+      return;
     }
-    selectedIds.value.add(id);
+    // 一般點擊：若目前只選中這一顆 → 再點一次取消選取；否則清掉其他、只選這顆。
+    const onlyThis = selectedIds.value.size === 1 && selectedIds.value.has(id);
+    selectedIds.value.clear();
+    if (!onlyThis) selectedIds.value.add(id);
   }
 
   /** 批次選取一組區塊（框選用）；additive=false 先清空、true 累加。 */
