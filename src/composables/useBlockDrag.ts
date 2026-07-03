@@ -143,8 +143,9 @@ function _insertionPoints(): number[] {
   return [-1, ..._liveCentersByGlobalIndex().map((c) => c.gi)];
 }
 
-// 遲滯解析：游標仍在 [左鄰中心, 右鄰中心] 之間就維持當前落點，跨出鄰居中心才換格。
-// 界線用鄰居中心（非被拖物寬度）→ 消除窄拖寬/寬拖窄的不對稱閃爍。
+// 遲滯解析：游標仍在 [左鄰中心 - M, 右鄰中心 + M] 之間就維持當前落點，跨出才換格。
+// 界線用鄰居中心（非被拖物寬度）→ 消除窄拖寬/寬拖窄的不對稱閃爍；
+// 兩側再各留 M px 緩衝帶，吸收游標停在中心附近的手抖/次像素位移，避免臨界來回跳格閃爍。
 function _resolveAfterIndex(clientX: number): number {
   if (_curAfter === null) {
     _curAfter = _liveAfterIndexFromX(clientX);
@@ -161,12 +162,13 @@ function _resolveAfterIndex(clientX: number): number {
     _curAfter = _liveAfterIndexFromX(clientX);
     return _curAfter;
   }
-  // 維持區間 = [左鄰中心, 右鄰中心]：游標越過鄰居中心當下即換格（無額外遲滯邊距）。
-  // 因被拖區塊隱藏、落點空欄在當前間隙撐開，鄰居中心即天然的單點切換界，無重疊→不閃爍。
-  const okLeft = leftCenter === undefined || clientX >= leftCenter;
-  const okRight = rightCenter === undefined || clientX <= rightCenter;
+  // 維持區間 = [左鄰中心 - M, 右鄰中心 + M]：以鄰居中心為界、兩側各外擴 M px 緩衝帶。
+  // 換格後游標會安穩落在新區間內、不立即反向跳回 → 消除臨界閃爍。
+  const M = 2;
+  const okLeft = leftCenter === undefined || clientX >= leftCenter - M;
+  const okRight = rightCenter === undefined || clientX <= rightCenter + M;
   if (okLeft && okRight) {
-    return _curAfter; // 游標仍在左右鄰居中心之間 → 維持
+    return _curAfter; // 游標仍在緩衝區間內 → 維持
   }
   const cand = _liveAfterIndexFromX(clientX);
   const pts = _insertionPoints();
