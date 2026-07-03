@@ -1,0 +1,426 @@
+[
+  {
+    "id": "jiyan",
+    "nameZh": "忌炎",
+    "nameEn": "Jiyan",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/jiyan.webp"
+  },
+  {
+    "id": "jianxin",
+    "nameZh": "鑒心",
+    "nameEn": "Jianxin",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/jianxin.webp"
+  },
+  {
+    "id": "rover-aero",
+    "nameZh": "漂泊者·氣動",
+    "nameEn": "Rover: Aero",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/rover-aero.webp"
+  },
+  {
+    "id": "xiakong",
+    "nameZh": "夏空",
+    "nameEn": "Ciaccona",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/xiakong.webp"
+  },
+  {
+    "id": "katishia",
+    "nameZh": "卡提希婭",
+    "nameEn": "Cartethyia",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/katishia.webp"
+  },
+  {
+    "id": "yuno",
+    "nameZh": "尤諾",
+    "nameEn": "Iuno",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/yuno.webp"
+  },
+  {
+    "id": "qiuyuan",
+    "nameZh": "仇遠",
+    "nameEn": "Qiuyuan",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/qiuyuan.webp"
+  },
+  {
+    "id": "sigrika",
+    "nameZh": "西格莉卡",
+    "nameEn": "Sigrika",
+    "element": "氣動",
+    "rarity": 5,
+    "avatar": "/assets/characters/sigrika.webp"
+  },
+  {
+    "id": "yangyang",
+    "nameZh": "秧秧",
+    "nameEn": "Yangyang",
+    "element": "氣動",
+    "rarity": 4,
+    "avatar": "/assets/characters/yangyang.webp"
+  },
+  {
+    "id": "aalto",
+    "nameZh": "秋水",
+    "nameEn": "Aalto",
+    "element": "氣動",
+    "rarity": 4,
+    "avatar": "/assets/characters/aalto.webp"
+  },
+  {
+    "id": "lingyang",
+    "nameZh": "凌陽",
+    "nameEn": "Lingyang",
+    "element": "冷凝",
+    "rarity": 5,
+    "avatar": "/assets/characters/lingyang.webp"
+  },
+  {
+    "id": "zhezhi",
+    "nameZh": "折枝",
+    "nameEn": "Zhezhi",
+    "element": "冷凝",
+    "rarity": 5,
+    "avatar": "/assets/characters/zhezhi.webp"
+  },
+  {
+    "id": "carlotta",
+    "nameZh": "珂萊塔",
+    "nameEn": "Carlotta",
+    "element": "冷凝",
+    "rarity": 5,
+    "avatar": "/assets/characters/carlotta.webp"
+  },
+  {
+    "id": "hiyuki",
+    "nameZh": "緋雪",
+    "nameEn": "Hiyuki",
+    "element": "冷凝",
+    "rarity": 5,
+    "avatar": "/assets/characters/hiyuki.webp"
+  },
+  {
+    "id": "lucilla",
+    "nameZh": "洛瑟菈",
+    "nameEn": "Lucilla",
+    "element": "冷凝",
+    "rarity": 5,
+    "avatar": "/assets/characters/lucilla.webp"
+  },
+  {
+    "id": "sanhua",
+    "nameZh": "散華",
+    "nameEn": "Sanhua",
+    "element": "冷凝",
+    "rarity": 4,
+    "avatar": "/assets/characters/sanhua.webp"
+  },
+  {
+    "id": "baizhi",
+    "nameZh": "白芷",
+    "nameEn": "Baizhi",
+    "element": "冷凝",
+    "rarity": 4,
+    "avatar": "/assets/characters/baizhi.webp"
+  },
+  {
+    "id": "youhu",
+    "nameZh": "釉瑚",
+    "nameEn": "Youhu",
+    "element": "冷凝",
+    "rarity": 4,
+    "avatar": "/assets/characters/youhu.webp"
+  },
+  {
+    "id": "calcharo",
+    "nameZh": "卡卡羅",
+    "nameEn": "Calcharo",
+    "element": "導電",
+    "rarity": 5,
+    "avatar": "/assets/characters/calcharo.webp"
+  },
+  {
+    "id": "yinlin",
+    "nameZh": "吟霖",
+    "nameEn": "Yinlin",
+    "element": "導電",
+    "rarity": 5,
+    "avatar": "/assets/characters/yinlin.webp"
+  },
+  {
+    "id": "xiangli-yao",
+    "nameZh": "相里要",
+    "nameEn": "Xiangli Yao",
+    "element": "導電",
+    "rarity": 5,
+    "avatar": "/assets/characters/xiangli-yao.webp"
+  },
+  {
+    "id": "augusta",
+    "nameZh": "奧古斯塔",
+    "nameEn": "Augusta",
+    "element": "導電",
+    "rarity": 5,
+    "avatar": "/assets/characters/augusta.webp"
+  },
+  {
+    "id": "rebecca",
+    "nameZh": "蕾貝卡",
+    "nameEn": "Rebecca",
+    "element": "導電",
+    "rarity": 5,
+    "avatar": "/assets/characters/rebecca.webp"
+  },
+  {
+    "id": "yuanwu",
+    "nameZh": "淵武",
+    "nameEn": "Yuanwu",
+    "element": "導電",
+    "rarity": 4,
+    "avatar": "/assets/characters/yuanwu.webp"
+  },
+  {
+    "id": "buling",
+    "nameZh": "卜靈",
+    "nameEn": "Buling",
+    "element": "導電",
+    "rarity": 4,
+    "avatar": "/assets/characters/buling.webp"
+  },
+  {
+    "id": "lumi",
+    "nameZh": "燈燈",
+    "nameEn": "Lumi",
+    "element": "導電",
+    "rarity": 4,
+    "avatar": "/assets/characters/lumi.webp"
+  },
+  {
+    "id": "chisaki",
+    "nameZh": "千咲",
+    "nameEn": "Chisa",
+    "element": "湮滅",
+    "rarity": 5,
+    "avatar": "/assets/characters/chisaki.webp"
+  },
+  {
+    "id": "camellya",
+    "nameZh": "椿",
+    "nameEn": "Camellya",
+    "element": "湮滅",
+    "rarity": 5,
+    "avatar": "/assets/characters/camellya.webp"
+  },
+  {
+    "id": "rover-havoc",
+    "nameZh": "漂泊者·湮滅",
+    "nameEn": "Rover: Havoc",
+    "element": "湮滅",
+    "rarity": 5,
+    "avatar": "/assets/characters/rover-havoc.webp"
+  },
+  {
+    "id": "rococo",
+    "nameZh": "洛可可",
+    "nameEn": "Roccia",
+    "element": "湮滅",
+    "rarity": 5,
+    "avatar": "/assets/characters/rococo.webp"
+  },
+  {
+    "id": "cantarella",
+    "nameZh": "坎特蕾拉",
+    "nameEn": "Cantarella",
+    "element": "湮滅",
+    "rarity": 5,
+    "avatar": "/assets/characters/cantarella.webp"
+  },
+  {
+    "id": "phrolova",
+    "nameZh": "弗洛洛",
+    "nameEn": "Phrolova",
+    "element": "湮滅",
+    "rarity": 5,
+    "avatar": "/assets/characters/phrolova.webp"
+  },
+  {
+    "id": "taoqi",
+    "nameZh": "桃祈",
+    "nameEn": "Taoqi",
+    "element": "湮滅",
+    "rarity": 4,
+    "avatar": "/assets/characters/taoqi.webp"
+  },
+  {
+    "id": "danjin",
+    "nameZh": "丹瑾",
+    "nameEn": "Danjin",
+    "element": "湮滅",
+    "rarity": 4,
+    "avatar": "/assets/characters/danjin.webp"
+  },
+  {
+    "id": "jinhsi",
+    "nameZh": "今汐",
+    "nameEn": "Jinhsi",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/jinhsi.webp"
+  },
+  {
+    "id": "rover-spectro",
+    "nameZh": "漂泊者·衍射",
+    "nameEn": "Rover: Spectro",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/rover-spectro.webp"
+  },
+  {
+    "id": "verina",
+    "nameZh": "維里奈",
+    "nameEn": "Verina",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/verina.webp"
+  },
+  {
+    "id": "shorekeeper",
+    "nameZh": "守岸人",
+    "nameEn": "Shorekeeper",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/shorekeeper.webp"
+  },
+  {
+    "id": "phoebe",
+    "nameZh": "菲比",
+    "nameEn": "Phoebe",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/phoebe.webp"
+  },
+  {
+    "id": "zani",
+    "nameZh": "贊妮",
+    "nameEn": "Zani",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/zani.webp"
+  },
+  {
+    "id": "linnae",
+    "nameZh": "琳奈",
+    "nameEn": "Lynae",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/linnae.webp"
+  },
+  {
+    "id": "luuk",
+    "nameZh": "陸·赫斯",
+    "nameEn": "Luuk Herssen",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/luuk.webp"
+  },
+  {
+    "id": "lucy",
+    "nameZh": "露西",
+    "nameEn": "Lucy",
+    "element": "衍射",
+    "rarity": 5,
+    "avatar": "/assets/characters/lucy.webp"
+  },
+  {
+    "id": "encore",
+    "nameZh": "安可",
+    "nameEn": "Encore",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/encore.webp"
+  },
+  {
+    "id": "changli",
+    "nameZh": "長離",
+    "nameEn": "Changli",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/changli.webp"
+  },
+  {
+    "id": "brant",
+    "nameZh": "布蘭特",
+    "nameEn": "Brant",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/brant.webp"
+  },
+  {
+    "id": "lupa",
+    "nameZh": "露帕",
+    "nameEn": "Lupa",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/lupa.webp"
+  },
+  {
+    "id": "gabelina",
+    "nameZh": "嘉貝莉娜",
+    "nameEn": "Galbrena",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/gabelina.webp"
+  },
+  {
+    "id": "mornye",
+    "nameZh": "莫寧",
+    "nameEn": "Mornye",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/mornye.webp"
+  },
+  {
+    "id": "amis",
+    "nameZh": "愛彌斯",
+    "nameEn": "Aemeath",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/amis.webp"
+  },
+  {
+    "id": "denia",
+    "nameZh": "達妮婭",
+    "nameEn": "Denia",
+    "element": "熱熔",
+    "rarity": 5,
+    "avatar": "/assets/characters/denia.webp"
+  },
+  {
+    "id": "chixia",
+    "nameZh": "熾霞",
+    "nameEn": "Chixia",
+    "element": "熱熔",
+    "rarity": 4,
+    "avatar": "/assets/characters/chixia.webp"
+  },
+  {
+    "id": "mortefi",
+    "nameZh": "莫特斐",
+    "nameEn": "Mortefi",
+    "element": "熱熔",
+    "rarity": 4,
+    "avatar": "/assets/characters/mortefi.webp"
+  }
+]

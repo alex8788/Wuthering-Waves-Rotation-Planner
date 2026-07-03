@@ -13,10 +13,14 @@ export interface Character {
   id: string;
   /** 繁中顯示名稱。 */
   nameZh: string;
+  /** 英文顯示名稱（選填；由 encore API en 版帶入，MVP 尚未使用於 UI）。 */
+  nameEn?: string;
   /** 屬性（元素）。 */
   element: CharacterElement;
   /** 星級：5 或 4；角色選單各屬性頁籤內依此分組（5★ 在 4★ 之前）。 */
   rarity: CharacterRarity;
+  /** 頭像本地路徑（選填），如 '/assets/characters/jiyan.webp'；爬蟲下載自存後填入。 */
+  avatar?: string;
 }
 
 /** 角色星級。 */

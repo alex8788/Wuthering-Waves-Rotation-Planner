@@ -20,7 +20,7 @@ let uidCounter = 0
 // ============================================================
 
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { getElementColor } from '@/constants/elements'
+import { getElementColor, getElementIcon } from '@/constants/elements'
 import type { Character, CharacterElement } from '@/types/character'
 
 export interface Props {
@@ -283,19 +283,23 @@ onUnmounted(() => {
       @click="toggleDropdown"
       @keydown="onTriggerKeydown"
     >
-      <span
-        v-if="selectedCharacter"
-        class="char-selector__swatch"
-        :style="{ '--swatch-color': getElementColor(selectedCharacter.element) }"
-        aria-hidden="true"
-      />
-      <span
-        class="char-selector__value"
-        :class="{ 'char-selector__value--placeholder': !selectedCharacter }"
-      >
-        {{ selectedCharacter ? selectedCharacter.nameZh : placeholder }}
-      </span>
-      <span class="char-selector__chevron" aria-hidden="true">▾</span>
+      <!-- 可用 #trigger 插槽完全接管觸發器外觀（如把角色頭像當觸發框）；
+           未提供時退回預設：色點 + 名稱 + 三角。 -->
+      <slot name="trigger" :selected="selectedCharacter" :open="isOpen">
+        <span
+          v-if="selectedCharacter"
+          class="char-selector__swatch"
+          :style="{ '--swatch-color': getElementColor(selectedCharacter.element) }"
+          aria-hidden="true"
+        />
+        <span
+          class="char-selector__value"
+          :class="{ 'char-selector__value--placeholder': !selectedCharacter }"
+        >
+          {{ selectedCharacter ? selectedCharacter.nameZh : placeholder }}
+        </span>
+        <span class="char-selector__chevron" aria-hidden="true">▾</span>
+      </slot>
     </button>
 
     <Teleport to="body">
@@ -321,7 +325,14 @@ onUnmounted(() => {
               :aria-label="`屬性 ${el}`"
               @click="setActiveTab(el)"
             >
-              <span class="char-selector__tab-bar" aria-hidden="true" />
+              <img
+                v-if="getElementIcon(el)"
+                class="char-selector__tab-icon"
+                :src="getElementIcon(el)!"
+                alt=""
+                aria-hidden="true"
+              />
+              <span v-else class="char-selector__tab-bar" aria-hidden="true" />
               <span class="char-selector__tab-label">{{ el }}</span>
             </button>
           </li>
@@ -347,7 +358,15 @@ onUnmounted(() => {
               @mouseenter="highlightedIndex = index"
               @click="selectOption(char)"
             >
-              <span class="char-selector__avatar" aria-hidden="true" />
+              <span class="char-selector__avatar" aria-hidden="true">
+                <img
+                  v-if="char.avatar"
+                  class="char-selector__avatar-img"
+                  :src="char.avatar"
+                  alt=""
+                  loading="lazy"
+                />
+              </span>
               <span class="char-selector__option-name">{{ char.nameZh }}</span>
             </li>
           </template>
@@ -515,19 +534,45 @@ onUnmounted(() => {
   box-shadow: 0 0 6px var(--tab-color, transparent);
 }
 
+/* 屬性圖示（取代色條）：未選中偏暗，選中時全亮並帶屬性色光暈。 */
+.char-selector__tab-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  opacity: 0.65;
+  transition: opacity 0.12s ease, filter 0.12s ease;
+}
+
+.char-selector__tab:hover .char-selector__tab-icon {
+  opacity: 0.85;
+}
+
+.char-selector__tab--active .char-selector__tab-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px var(--tab-color));
+}
+
 .char-selector__tab-label {
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-/* 角色頭像佔位：暫以方塊呈現，未來換成角色頭像（取代原本的屬性色點） */
+/* 角色頭像：有 avatar 時放縮圖，無則維持灰方塊佔位（背景在 img 缺席時可見）。 */
 .char-selector__avatar {
   flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+}
+
+.char-selector__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* ── 星級分組小標題 ─────────────────────────────────────── */
@@ -545,7 +590,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  height: 2.25rem;
+  height: 3.25rem;
   padding: 0 0.625rem;
   border-radius: 3px;
   font-size: 0.8125rem;

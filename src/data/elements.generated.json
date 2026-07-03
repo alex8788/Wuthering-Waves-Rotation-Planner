@@ -1,0 +1,32 @@
+[
+  {
+    "name": "氣動",
+    "slug": "aero",
+    "icon": "/assets/elements/aero.webp"
+  },
+  {
+    "name": "冷凝",
+    "slug": "glacio",
+    "icon": "/assets/elements/glacio.webp"
+  },
+  {
+    "name": "導電",
+    "slug": "electro",
+    "icon": "/assets/elements/electro.webp"
+  },
+  {
+    "name": "湮滅",
+    "slug": "havoc",
+    "icon": "/assets/elements/havoc.webp"
+  },
+  {
+    "name": "衍射",
+    "slug": "spectro",
+    "icon": "/assets/elements/spectro.webp"
+  },
+  {
+    "name": "熱熔",
+    "slug": "fusion",
+    "icon": "/assets/elements/fusion.webp"
+  }
+]

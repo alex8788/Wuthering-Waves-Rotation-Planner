@@ -53,21 +53,25 @@ function laneColor(slot: SlotIndex): string {
         :key="slot"
         class="export-lane"
       >
-        <!-- 泳道 header:色條 + 角色名 + 屬性 -->
+        <!-- 泳道 header:左側色條 + 頭像(左) + 名稱(右)（對齊主面板版型） -->
         <div class="export-lane__header">
           <div
             class="export-lane__bar"
             :style="{ backgroundColor: laneCharacter(slot) ? laneColor(slot) : 'rgba(255,255,255,0.15)' }"
           />
-          <div class="export-lane__name" :class="{ 'export-lane__name--empty': !laneCharacter(slot) }">
-            {{ laneCharacter(slot)?.nameZh ?? '未選角' }}
-          </div>
-          <div
-            v-if="laneCharacter(slot)"
-            class="export-lane__element"
-            :style="{ color: laneColor(slot) }"
-          >
-            {{ laneCharacter(slot)?.element }}
+
+          <div class="export-lane__identity">
+            <template v-if="laneCharacter(slot)">
+              <img
+                v-if="laneCharacter(slot)?.avatar"
+                class="export-lane__avatar"
+                :src="laneCharacter(slot)!.avatar!"
+                :alt="laneCharacter(slot)?.nameZh"
+              />
+              <div v-else class="export-lane__avatar export-lane__avatar--placeholder" />
+              <span class="export-lane__name">{{ laneCharacter(slot)?.nameZh }}</span>
+            </template>
+            <span v-else class="export-lane__name export-lane__name--empty">未選角</span>
           </div>
         </div>
 
@@ -127,39 +131,60 @@ function laneColor(slot: SlotIndex): string {
   grid-column: 1;
   grid-row: 1;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.2rem;
-  width: 10rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  /* 寬度不再寫死：grid 欄 1 為 max-content，會依三泳道最長 header 自動撐寬（動態）。
+     設下限避免短名時過窄，上限避免長名把圖片撐爆。 */
+  min-width: 9rem;
+  max-width: 16rem;
   height: 100%;
-  padding: 0 0.75rem;
+  padding: 0 0.6rem 0 0.7rem; /* 左緣留空給垂直色條 */
   border-right: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+/* 左側垂直色條（對齊主面板）。 */
 .export-lane__bar {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  right: 0;
-  height: 2px;
-  border-radius: 4px 4px 0 0;
+  width: 3px;
+  border-radius: 4px 0 0 4px;
 }
 
+/* 角色欄：頭像（左）+ 名稱（右，靠右對齊）。 */
+.export-lane__identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+.export-lane__avatar {
+  flex-shrink: 0;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
 .export-lane__name {
-  font-size: 0.9375rem;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.1;
   color: rgba(240, 244, 248, 0.95);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
 .export-lane__name--empty {
   color: rgba(240, 244, 248, 0.4);
-}
-
-.export-lane__element {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
 }
 
 .export-lane__block {

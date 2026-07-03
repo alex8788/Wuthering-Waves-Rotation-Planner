@@ -1,0 +1,46 @@
+name: 更新角色資料
+
+# 半動態維護（P4）：定時爬 encore.moe → 更新 JSON + 頭像 → 自動提交。
+# 手動觸發（workflow_dispatch）供驗證整條流水線；排程正式週更。
+on:
+  schedule:
+    # cron 為 UTC。週六 20:00 UTC = 台北時間週日 04:00。
+    - cron: '0 20 * * 6'
+  workflow_dispatch: {}
+
+# 需要寫入權限才能 commit + push 回倉庫。
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取出程式碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # 爬蟲僅用 Node 內建模組（fs / fetch），毋須 npm install。
+
+      - name: 執行爬蟲
+        # 預設 shell 已開 -eo pipefail：爬蟲 schema 驗證失敗會讓此步失敗、不提交。
+        run: node scripts/crawl-characters.mjs | tee crawl-output.txt
+
+      - name: 提交變更
+        run: |
+          # 只看爬蟲會動到的路徑，避免其他雜項誤觸發提交。
+          CHANGED=$(git status --porcelain src/data public/assets/characters public/assets/elements scripts/id-map.json)
+          if [ -z "$CHANGED" ]; then
+            echo "資料無變更，跳過提交。"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data public/assets/characters public/assets/elements scripts/id-map.json
+          # 把爬蟲輸出的 diff 摘要塞進 commit body（可回滾、可人工核對）。
+          SUMMARY=$(sed 's/^/    /' crawl-output.txt)
+          git commit -m "chore(data): 自動更新角色資料" -m "$SUMMARY"
+          git push

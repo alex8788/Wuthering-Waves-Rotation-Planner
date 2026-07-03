@@ -299,13 +299,14 @@ async function handleDeselectCharacter(): Promise<void> {
       :style="{ '--lane-color': laneColor }"
       aria-hidden="false"
     >
+      <!-- 左側垂直色條：屬性色識別（未選角為灰）。 -->
       <div
         class="header__color-bar"
         :style="{ backgroundColor: character ? laneColor : 'rgba(255,255,255,0.15)' }"
         aria-hidden="true"
       />
 
-      <!-- 泳道拖曳把手：header 內最左欄、垂直置中；右側內容欄整體右推（略縮寬）。 -->
+      <!-- 泳道拖曳把手：色條之後、垂直置中。 -->
       <button
         class="header__drag-handle"
         type="button"
@@ -323,27 +324,41 @@ async function handleDeselectCharacter(): Promise<void> {
         </svg>
       </button>
 
-      <div class="header__content">
-        <div class="header__selector">
-          <CharacterSelector
-            :model-value="character?.id ?? null"
-            :options="characterStore.allCharacters"
-            placeholder="選擇角色"
-            @update:model-value="handleSelectCharacter"
-          />
-        </div>
-
-        <span
-          v-if="character"
-          class="header__element"
-          :style="{ color: laneColor }"
-          :aria-label="`屬性：${character.element}`"
+      <!-- 角色：頭像（左，兼作選單觸發框）＋ 名稱（右）。屬性色識別由左側色條承載。 -->
+      <div class="header__identity">
+        <CharacterSelector
+          class="header__portrait"
+          :model-value="character?.id ?? null"
+          :options="characterStore.allCharacters"
+          placeholder="選擇角色"
+          @update:model-value="handleSelectCharacter"
         >
-          {{ character.element }}
-        </span>
+          <template #trigger>
+            <!-- 頭像框即觸發器：hover 發光 + 原生 title 於游標旁提示。 -->
+            <span
+              class="header__portrait-frame"
+              :title="character ? `更換角色：${character.nameZh}` : '選擇角色'"
+            >
+              <img
+                v-if="character?.avatar"
+                class="header__avatar"
+                :src="character.avatar"
+                :alt="character.nameZh"
+              />
+              <span
+                v-else
+                class="header__avatar header__avatar--placeholder"
+                aria-hidden="true"
+              >＋</span>
+            </span>
+          </template>
+        </CharacterSelector>
+
+        <span v-if="character" class="header__name">{{ character.nameZh }}</span>
+        <span v-else class="header__name header__empty-name">選擇角色</span>
       </div>
 
-      <!-- 取消選角按鈕：header 右下角，滑鼠移入 header 時才浮現 -->
+      <!-- 取消選角：右下角小圓鈕，滑鼠移入 header 時才浮現。 -->
       <button
         v-if="character"
         class="header__deselect"
@@ -352,8 +367,8 @@ async function handleDeselectCharacter(): Promise<void> {
         title="取消選角"
         @click.stop="handleDeselectCharacter"
       >
-        <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
-          <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none" />
+        <svg viewBox="0 0 12 12" width="8" height="8" aria-hidden="true">
+          <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none" />
         </svg>
       </button>
     </div>
@@ -438,7 +453,8 @@ async function handleDeselectCharacter(): Promise<void> {
 <style scoped>
 /* ── CSS 自訂屬性 ────────────────────────────────────────── */
 .swimlane {
-  --header-width: 10rem;
+  /* header 寬度由 RotationBoard 依最長角色名動態下傳；獨立使用時回退 10.5rem。 */
+  --header-width: var(--board-header-width, 10.5rem);
   --lane-height: 4rem;
   --lane-color: rgba(255, 255, 255, 0.18);
   /* --track-gap 由 template :style 注入（單一來源＝constants/layout.ts 的 TRACK_GAP_PX） */
@@ -474,12 +490,12 @@ async function handleDeselectCharacter(): Promise<void> {
   flex-shrink: 0;
   width: var(--header-width);
 
-  /* 橫向：左欄為拖曳把手（垂直置中），右欄為內容（選單＋屬性，垂直堆疊）。 */
+  /* 橫向排列：色條 | 拖曳把手 | 屬性(圖示+文字) | 角色(頭像+名稱) | 右側控制。 */
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0 0.5rem;
+  gap: 0.35rem;
+  padding: 0 0.35rem 0 0.6rem; /* 左緣多留空給垂直色條 */
 
   border-right: 1px solid rgba(255, 255, 255, 0.07);
 
@@ -488,74 +504,118 @@ async function handleDeselectCharacter(): Promise<void> {
   background-color: #0b101d;
 }
 
-/* 右側內容欄：選單（上）＋屬性（下）垂直堆疊；佔滿把手以外的剩餘寬度。 */
-.header__content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.125rem;
-}
-
+/* 左側垂直色條：改為沿左緣的直條（原為頂部橫條）。 */
 .header__color-bar {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  right: 0;
-  height: 2px;
+  width: 3px;
   transition: background-color 0.25s ease;
 }
 
-.header__selector {
-  width: 100%;
+/* 角色欄：頭像（左，大）＋ 名稱（右，靠右對齊）。佔剩餘寬度。 */
+.header__identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+/* 頭像即選單觸發框：把 CharacterSelector 的觸發鈕還原成裸容器、尺寸貼齊頭像。 */
+.header__portrait {
+  flex-shrink: 0;
+  width: auto;
+  line-height: 0;
+}
+.header__portrait :deep(.char-selector__trigger) {
+  width: auto;
+  height: auto;
+  padding: 0;
+  gap: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.header__portrait :deep(.char-selector__trigger:focus) {
+  outline: none;
+}
+.header__portrait-frame {
+  display: inline-flex;
 }
 
-/* 泳道 header 空間有限，將共用的 CharacterSelector 觸發鈕壓成精簡尺寸 */
-.header__selector :deep(.char-selector__trigger) {
-  height: 1.75rem;
-  padding: 0 0.4rem;
-  gap: 0.3rem;
-  background-color: rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
+.header__avatar {
+  display: block;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
-
-.header__selector :deep(.char-selector__value) {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0; /* 取消字距，讓最長角色名（漂泊者・氣動）在窄 header 內完整顯示 */
-}
-
-.header__element {
-  font-size: 0.5625rem;
-  font-weight: 400;
-  letter-spacing: 0.08em;
-  opacity: 0.65;
-  user-select: none;
+/* 未選角：灰底方塊置中顯示「＋」提示可點選。 */
+.header__avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
   line-height: 1;
+  color: rgba(255, 255, 255, 0.35);
+}
+/* hover / 選單開啟：以屬性色（--lane-color）發出明顯光暈，凸顯可點選。 */
+.header__portrait :deep(.char-selector__trigger:hover) .header__avatar,
+.header__portrait :deep(.char-selector__trigger--open) .header__avatar {
+  border-color: var(--lane-color, rgba(34, 211, 238, 0.8));
+  box-shadow: 0 0 0 2px var(--lane-color, rgba(34, 211, 238, 0.5)),
+    0 0 12px var(--lane-color, rgba(34, 211, 238, 0.6));
+  transform: scale(1.04);
+}
+.header__portrait :deep(.char-selector__trigger:focus-visible) .header__avatar {
+  border-color: var(--lane-color, rgba(34, 211, 238, 0.8));
+  box-shadow: 0 0 0 2px var(--lane-color, rgba(34, 211, 238, 0.5));
 }
 
-/* 取消選角按鈕：絕對定位於 header 右下角；平時隱藏，header hover 時淡入。
-   sticky header 已建立定位脈絡，absolute 以其為基準。 */
+.header__name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: rgba(245, 249, 252, 0.98);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header__empty-name {
+  font-weight: 500;
+  color: rgba(240, 244, 248, 0.4);
+  user-select: none;
+}
+
+/* 取消選角：右下角小圓鈕；平時隱藏，header hover 才浮現。 */
 .header__deselect {
   position: absolute;
-  right: 0.3rem;
-  bottom: 0.25rem;
+  right: 0.28rem;
+  bottom: 0.22rem;
   z-index: 7;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1rem;
-  height: 1rem;
+  width: 0.95rem;
+  height: 0.95rem;
   padding: 0;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(11, 16, 29, 0.9);
+  color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 .swimlane__header:hover .header__deselect,
 .header__deselect:focus-visible {
@@ -563,6 +623,7 @@ async function handleDeselectCharacter(): Promise<void> {
 }
 .header__deselect:hover {
   color: #f87171;
+  border-color: rgba(248, 113, 113, 0.6);
   background: rgba(248, 113, 113, 0.14);
 }
 .header__deselect:focus {
@@ -585,7 +646,7 @@ async function handleDeselectCharacter(): Promise<void> {
   padding: 0;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.5);
   cursor: grab;
   transition: color 0.15s ease;
 }
@@ -735,8 +796,7 @@ async function handleDeselectCharacter(): Promise<void> {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .header__color-bar,
-  .header__dot {
+  .header__color-bar {
     transition: none;
   }
 }
