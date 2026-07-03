@@ -258,6 +258,29 @@ async function handleSelectCharacter(characterId: string): Promise<void> {
   rotationStore.clearSlot(props.slotIndex)
   characterStore.setCharacter(props.slotIndex, characterId)
 }
+
+// 取消選角：清空該泳道所有軸的區塊，並把角色重設為未選（null）。
+// 讓輸出軸可只用單人或雙人（空泳道呈現「請先選擇角色」提示）。
+// 有區塊時先確認；clearSlot + setCharacter(null) 同批次合併為單一可復原步驟。
+async function handleDeselectCharacter(): Promise<void> {
+  if (!props.character) return
+
+  const hasBlocks = rotationStore.axes.some((axis) =>
+    axis.entries.some((entry) => entry.slotIndex === props.slotIndex)
+  )
+  if (hasBlocks) {
+    const ok = await confirm({
+      title: '取消選角',
+      message: '將清空該角色的所有區塊，確定？',
+      confirmText: '取消選角',
+      danger: true,
+    })
+    if (!ok) return
+  }
+
+  rotationStore.clearSlot(props.slotIndex)
+  characterStore.setCharacter(props.slotIndex, null)
+}
 </script>
 
 <template>
@@ -317,6 +340,20 @@ async function handleSelectCharacter(characterId: string): Promise<void> {
           {{ character.element }}
         </span>
       </div>
+
+      <!-- 取消選角按鈕：header 右下角，滑鼠移入 header 時才浮現 -->
+      <button
+        v-if="character"
+        class="header__deselect"
+        type="button"
+        aria-label="取消選角"
+        title="取消選角"
+        @click.stop="handleDeselectCharacter"
+      >
+        <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+          <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none" />
+        </svg>
+      </button>
     </div>
 
     <div
@@ -495,6 +532,43 @@ async function handleSelectCharacter(characterId: string): Promise<void> {
   opacity: 0.65;
   user-select: none;
   line-height: 1;
+}
+
+/* 取消選角按鈕：絕對定位於 header 右下角；平時隱藏，header hover 時淡入。
+   sticky header 已建立定位脈絡，absolute 以其為基準。 */
+.header__deselect {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.25rem;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+.swimlane__header:hover .header__deselect,
+.header__deselect:focus-visible {
+  opacity: 1;
+}
+.header__deselect:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.14);
+}
+.header__deselect:focus {
+  outline: none;
+}
+.header__deselect:focus-visible {
+  outline: 1px solid rgba(248, 113, 113, 0.6);
+  outline-offset: 1px;
 }
 
 /* 泳道拖曳把手：header 最左欄、垂直置中（靠左緣對齊） */
