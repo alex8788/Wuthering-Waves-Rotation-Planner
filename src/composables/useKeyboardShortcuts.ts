@@ -11,6 +11,7 @@
 //   Ctrl+X              → 剪下選取的區塊
 //   Ctrl+V              → 貼上剪貼簿內容
 //   Ctrl+D              → 向右複製選取的區塊
+//   Ctrl+A              → 全選當前輸出軸的所有區塊
 //   Ctrl+Z              → 復原（Undo）
 //   Ctrl+Shift+Z / Ctrl+Y → 重做（Redo）
 //   Escape              → 清除所有選取
@@ -135,11 +136,10 @@ export function useKeyboardShortcuts() {
         break;
       }
 
-      // Ctrl+A：全選當前選取區塊所在泳道的所有區塊（保留供未來擴充）
-      // 目前版本僅清除選取，避免誤觸瀏覽器的「全選文字」行為
+      // Ctrl+A：全選當前輸出軸的所有區塊（entries 即作用中軸的全部區塊，含三條泳道）
       case 'a': {
         event.preventDefault();
-        // TODO Phase 4 後實作：全選同泳道區塊
+        rotationStore.selectBlocks(rotationStore.entries.map((e) => e.id));
         break;
       }
 

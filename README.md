@@ -15,11 +15,12 @@ https://wuthering-waves-rotation-planner.vercel.app/
 ## 快捷鍵一覽：
 - A / D：區塊巡覽：逐塊向左／右循環選取（無選取時選最右／最左塊）
 - Delete / Backspace：刪除選取的區塊
+- Ctrl+A：選取全部區塊
 - Ctrl+C：複製選取的區塊
 - Ctrl+X：剪下選取的區塊
 - Ctrl+V：貼上剪貼簿內容
 - Ctrl+D：向右複製選取的區塊
-- Ctrl+Z：復原（Undo）
-- Ctrl+Shift+Z / Ctrl+Y：重做（Redo）
+- Ctrl+Z：復原
+- Ctrl+Shift+Z / Ctrl+Y：重做
 - Escape：清除所有選取
 - Tab：展開／收合側邊欄
