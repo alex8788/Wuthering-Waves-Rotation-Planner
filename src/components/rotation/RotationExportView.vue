@@ -13,6 +13,7 @@ import BlockChip from '@/components/ui/BlockChip.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useLaneOrder } from '@/composables/state/useLaneOrder'
 import { useLaneLayout } from '@/composables/board/useLaneLayout'
+import { useHeaderWidth } from '@/composables/board/useHeaderWidth'
 import { getElementColor } from '@/constants/elements'
 import { TRACK_GAP_PX } from '@/constants/layout'
 import type { RotationAxis } from '@/types/rotation'
@@ -22,6 +23,8 @@ const props = defineProps<{ axis: RotationAxis }>()
 
 const characterStore = useCharacterStore()
 const { laneOrder } = useLaneOrder()
+// 與編輯面板共用同一套 header 寬度算法（依最長角色名），確保匯出圖一致、名稱不截斷。
+const { headerWidthPx } = useHeaderWidth()
 
 // 全域欄數＝該軸 1D 陣列長度(每個 entry 佔一欄,跨泳道共用同一時間軸)。
 const columnCount = computed<number>(() => props.axis.entries.length)
@@ -46,7 +49,7 @@ function laneColor(slot: SlotIndex): string {
 
     <div
       class="export-view__lanes"
-      :style="{ '--col-count': columnCount, '--track-gap': `${TRACK_GAP_PX}px` }"
+      :style="{ '--col-count': columnCount, '--track-gap': `${TRACK_GAP_PX}px`, '--header-width': `${headerWidthPx}px` }"
     >
       <div
         v-for="slot in orderedSlots"
@@ -105,11 +108,12 @@ function laneColor(slot: SlotIndex): string {
   color: rgba(34, 211, 238, 0.95);
 }
 
-/* 父格:欄 1 = header(max-content),其後 N 欄 = 時間欄(各自 max-content)。
+/* 父格:欄 1 = header(固定寬,來自 --header-width,與編輯面板共用算法),
+   其後 N 欄 = 時間欄(各自 max-content)。
    column-gap 用注入的 --track-gap（單一來源），與主面板泳道間距一致。 */
 .export-view__lanes {
   display: grid;
-  grid-template-columns: max-content repeat(var(--col-count), max-content);
+  grid-template-columns: var(--header-width, 10.5rem) repeat(var(--col-count), max-content);
   column-gap: var(--track-gap, 4px);
   row-gap: 8px;
 }
@@ -134,12 +138,11 @@ function laneColor(slot: SlotIndex): string {
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
-  /* 寬度不再寫死：grid 欄 1 為 max-content，會依三泳道最長 header 自動撐寬（動態）。
-     設下限避免短名時過窄，上限避免長名把圖片撐爆。 */
-  min-width: 9rem;
-  max-width: 16rem;
+  /* 寬度由 grid 欄 1（--header-width）決定，與編輯面板同一算法：依最長角色名動態夾在 [min,max]。
+     header 撐滿該欄，名稱不截斷、右側也不留過寬空白。 */
+  width: 100%;
   height: 100%;
-  padding: 0 0.6rem 0 0.7rem; /* 左緣留空給垂直色條 */
+  padding: 0 0.5rem 0 0.7rem; /* 左緣留空給垂直色條 */
   border-right: 1px solid rgba(255, 255, 255, 0.07);
 }
 

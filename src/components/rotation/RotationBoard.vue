@@ -21,6 +21,7 @@ import { useRotationStore } from '@/stores/useRotationStore'
 import { useLaneOrder } from '@/composables/state/useLaneOrder'
 import { useLaneLayout } from '@/composables/board/useLaneLayout'
 import { useColumnMeasure } from '@/composables/board/useColumnMeasure'
+import { useHeaderWidth } from '@/composables/board/useHeaderWidth'
 import { useEdgeAutoScroll } from '@/composables/board/useEdgeAutoScroll'
 import { useMarquee } from '@/composables/board/useMarquee'
 import { useLaneReorder } from '@/composables/board/useLaneReorder'
@@ -46,30 +47,9 @@ const history = useHistory()
 const orderedSlots = computed(() => laneOrder.value.map((si) => characterStore.slots[si]))
 
 // ── 動態 header 寬度：依三泳道「最長角色名」量出共用寬度 ─────────
-// 三泳道 header 必須等寬才能與時間欄對齊，故在此算一次、以 CSS 變數下傳。
-// 用 canvas measureText 量名字像素寬，加上頭像/按鈕/間距的固定基底，夾在 [min,max]。
-let _measureCanvas: HTMLCanvasElement | null = null
-function measureTextWidth(text: string, font: string): number {
-  if (!_measureCanvas) _measureCanvas = document.createElement('canvas')
-  const ctx = _measureCanvas.getContext('2d')
-  if (!ctx) return text.length * 12
-  ctx.font = font
-  return ctx.measureText(text).width
-}
-
-const headerWidthPx = computed<number>(() => {
-  // 候選＝已選角色名 + 占位字「選擇角色」（避免全空時 header 過窄）。
-  const candidates = characterStore.slotCharacters
-    .map((c) => c?.nameZh)
-    .filter((n): n is string => !!n)
-  candidates.push('選擇角色')
-  const font = '700 12px "Noto Sans TC", system-ui, sans-serif'
-  const maxName = candidates.reduce((m, n) => Math.max(m, measureTextWidth(n, font)), 0)
-  // 基底：左padding+拖曳把手+頭像+內外間距+右padding 的總和（選單鈕已移除，約 94px）＋緩衝。
-  // 縮到貼齊「頭像+最長名」→ 名稱與右緣間不留過大空白（item 2）。
-  const BASE = 94
-  return Math.round(Math.min(240, Math.max(132, BASE + maxName)))
-})
+// 三泳道 header 必須等寬才能與時間欄對齊，故算一次、以 CSS 變數下傳。
+// 算法抽到 useHeaderWidth，與匯出視圖（RotationExportView）共用，確保一致。
+const { headerWidthPx } = useHeaderWidth()
 
 // ── 依 slotIndex 分流 + 單線程欄位對齊（共用 useLaneLayout，R2）──
 

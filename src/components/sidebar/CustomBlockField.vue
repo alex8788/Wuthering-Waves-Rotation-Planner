@@ -7,12 +7,21 @@ import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { useSidebarStore } from '@/stores/useSidebarStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
+import { useLaneOrder } from '@/composables/state/useLaneOrder'
 import { useSidebarDragList } from '@/composables/blockDrag/useSidebarDragList'
 import { getElementColor } from '@/constants/elements'
 import type { TemplateBlock } from '@/types/block'
 
 const sidebarStore = useSidebarStore()
 const characterStore = useCharacterStore()
+const { laneOrder } = useLaneOrder()
+
+// 依泳道顯示順序（laneOrder）排列分組，與主面板/匯出視圖一致。
+const orderedSlots = computed(() =>
+  laneOrder.value
+    .map((slotIndex) => characterStore.slots[slotIndex])
+    .filter((s): s is (typeof characterStore.slots)[number] => !!s)
+)
 
 // 三個槽位各自的模板列表，未選角的槽位給空陣列
 const slotTemplates = computed(() =>
@@ -88,7 +97,7 @@ onUnmounted(() => {
 <template>
   <section class="custom-block-field">
     <div
-      v-for="(slot, idx) in characterStore.slots"
+      v-for="(slot, displayIdx) in orderedSlots"
       :key="slot.slotIndex"
       class="character-group"
     >
@@ -103,11 +112,11 @@ onUnmounted(() => {
         </span>
 
         <span
-          v-if="localTemplatesPerSlot[idx].length > 0"
+          v-if="localTemplatesPerSlot[slot.slotIndex].length > 0"
           class="group-count"
-          :aria-label="`共 ${localTemplatesPerSlot[idx].length} 個模板`"
+          :aria-label="`共 ${localTemplatesPerSlot[slot.slotIndex].length} 個模板`"
         >
-          {{ localTemplatesPerSlot[idx].length }}
+          {{ localTemplatesPerSlot[slot.slotIndex].length }}
         </span>
       </div>
 
@@ -116,7 +125,7 @@ onUnmounted(() => {
       </div>
 
       <div
-        v-else-if="localTemplatesPerSlot[idx].length === 0"
+        v-else-if="localTemplatesPerSlot[slot.slotIndex].length === 0"
         class="empty-placeholder empty-placeholder--hint"
         aria-label="此角色尚無自訂模板"
       >
@@ -125,17 +134,17 @@ onUnmounted(() => {
 
       <div v-else class="chip-row" :aria-label="`${slot.character.nameZh} 的自訂模板`">
         <VueDraggable
-          v-model="localTemplatesPerSlot[idx]"
+          v-model="localTemplatesPerSlot[slot.slotIndex]"
           item-key="id"
           tag="div"
           class="chip-row__draggable"
           :clone="cloneToPlaceholder"
           v-bind="dragOptions"
-          @start="(e: { oldIndex?: number }) => handleDragStart(idx, e)"
+          @start="(e: { oldIndex?: number }) => handleDragStart(slot.slotIndex, e)"
           @end="handleDragEnd"
         >
           <div
-            v-for="template in localTemplatesPerSlot[idx]"
+            v-for="template in localTemplatesPerSlot[slot.slotIndex]"
             :key="template.id"
             class="chip-wrapper"
             @click.stop="handleTemplateClick(template.id, $event)"
@@ -160,7 +169,7 @@ onUnmounted(() => {
         </VueDraggable>
       </div>
 
-      <div v-if="idx < characterStore.slots.length - 1" class="group-divider" aria-hidden="true" />
+      <div v-if="displayIdx < orderedSlots.length - 1" class="group-divider" aria-hidden="true" />
     </div>
   </section>
 </template>
