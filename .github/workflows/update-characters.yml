@@ -32,14 +32,14 @@ jobs:
       - name: 提交變更
         run: |
           # 只看爬蟲會動到的路徑，避免其他雜項誤觸發提交。
-          CHANGED=$(git status --porcelain src/data public/assets/characters scripts/id-map.json)
+          CHANGED=$(git status --porcelain src/data public/assets/characters public/assets/elements scripts/id-map.json)
           if [ -z "$CHANGED" ]; then
             echo "資料無變更，跳過提交。"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/data public/assets/characters scripts/id-map.json
+          git add src/data public/assets/characters public/assets/elements scripts/id-map.json
           # 把爬蟲輸出的 diff 摘要塞進 commit body（可回滾、可人工核對）。
           SUMMARY=$(sed 's/^/    /' crawl-output.txt)
           git commit -m "chore(data): 自動更新角色資料" -m "$SUMMARY"

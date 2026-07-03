@@ -23,11 +23,25 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API_BASE = 'https://api-v2.encore.moe/api'; // 官方 OpenAPI 確認的主 server
+// 遊戲資源代理台：Element.Icon 是「/Game/...」部分路徑，需前綴此 base 並補 .webp
+// （與角色 RoleHeadIcon 的完整網址同一台 https://api.encore.moe/resource/Data/Game/...）。
+const RESOURCE_BASE = 'https://api.encore.moe/resource/Data';
 const GENERATED_PATH = join(ROOT, 'src/data/characters.generated.json');
+const ELEMENTS_GENERATED_PATH = join(ROOT, 'src/data/elements.generated.json');
 const ID_MAP_PATH = join(ROOT, 'scripts/id-map.json');
 const AVATAR_DIR = join(ROOT, 'public/assets/characters');
+const ELEMENT_DIR = join(ROOT, 'public/assets/elements');
 
 const ELEMENTS = ['氣動', '冷凝', '導電', '湮滅', '衍射', '熱熔'];
+// 屬性中文名 → ASCII 檔名 slug（六屬性固定，對齊 encore 英文屬性名，供頭像檔名穩定）。
+const ELEMENT_SLUG = {
+  氣動: 'aero',
+  冷凝: 'glacio',
+  導電: 'electro',
+  湮滅: 'havoc',
+  衍射: 'spectro',
+  熱熔: 'fusion',
+};
 const SKIP_AVATARS = process.argv.includes('--skip-avatars');
 
 // ── 工具 ─────────────────────────────────────────────────────
@@ -54,6 +68,17 @@ async function fetchRoleList(lang) {
   const data = await res.json();
   if (!Array.isArray(data.roleList)) throw new Error(`${url} 回傳缺 roleList`);
   return data.roleList;
+}
+
+/** 下載圖片到 destPath（已存在則跳過）；回傳是否確實存在。禮貌間隔 150ms。 */
+async function downloadImage(url, destPath) {
+  if (existsSync(destPath)) return true;
+  mkdirSync(dirname(destPath), { recursive: true });
+  const res = await fetch(url);
+  if (!res.ok) return false;
+  writeFileSync(destPath, Buffer.from(await res.arrayBuffer()));
+  await new Promise((r) => setTimeout(r, 150));
+  return true;
 }
 
 // ── 主流程 ───────────────────────────────────────────────────
@@ -135,6 +160,36 @@ async function main() {
     characters.push(c);
   }
 
+  // 屬性（元素）資料 + 圖示：從 roleList 收集 6 個不重複 Element，下載 icon，
+  // 依 ELEMENTS 正典序產出（供角色選單頁籤顯示）。缺屬性或下載失敗計入 errors。
+  const elemByName = new Map();
+  for (const zh of zhList) {
+    const e = zh.Element;
+    if (e?.Name && !elemByName.has(e.Name)) elemByName.set(e.Name, e);
+  }
+  const oldElements = readJson(ELEMENTS_GENERATED_PATH, []);
+  const elementsOut = [];
+  for (const name of ELEMENTS) {
+    const e = elemByName.get(name);
+    if (!e) {
+      errors.push(`屬性缺漏：${name}`);
+      continue;
+    }
+    const slug = ELEMENT_SLUG[name];
+    const iconPath = join(ELEMENT_DIR, `${slug}.webp`);
+    const entry = { name, slug };
+    if (!SKIP_AVATARS && e.Icon) {
+      const ok = await downloadImage(`${RESOURCE_BASE}${e.Icon}.webp`, iconPath);
+      if (!ok) errors.push(`屬性 ${name}: 圖示下載失敗`);
+    }
+    if (existsSync(iconPath)) entry.icon = `/assets/elements/${slug}.webp`;
+    else {
+      const oldE = oldElements.find((x) => x.name === name);
+      if (oldE?.icon) entry.icon = oldE.icon; // skip 模式保留舊圖示欄位
+    }
+    elementsOut.push(entry);
+  }
+
   if (errors.length > 0) {
     console.error('❌ schema 驗證失敗，整批中止：');
     for (const e of errors) console.error('  - ' + e);
@@ -167,9 +222,10 @@ async function main() {
   for (const n of newChars) summary.push(`新角色 ${n}`);
 
   writeFileSync(GENERATED_PATH, JSON.stringify(output, null, 2) + '\n');
+  writeFileSync(ELEMENTS_GENERATED_PATH, JSON.stringify(elementsOut, null, 2) + '\n');
   writeFileSync(ID_MAP_PATH, JSON.stringify(idMap, null, 2) + '\n');
 
-  console.log(`✅ 共 ${output.length} 位角色 → characters.generated.json`);
+  console.log(`✅ 共 ${output.length} 位角色 + ${elementsOut.length} 屬性 → src/data/`);
   console.log(summary.length ? summary.map((s) => '  - ' + s).join('\n') : '  （資料無變更）');
 }
 

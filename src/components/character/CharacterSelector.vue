@@ -20,7 +20,7 @@ let uidCounter = 0
 // ============================================================
 
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { getElementColor } from '@/constants/elements'
+import { getElementColor, getElementIcon } from '@/constants/elements'
 import type { Character, CharacterElement } from '@/types/character'
 
 export interface Props {
@@ -321,7 +321,14 @@ onUnmounted(() => {
               :aria-label="`屬性 ${el}`"
               @click="setActiveTab(el)"
             >
-              <span class="char-selector__tab-bar" aria-hidden="true" />
+              <img
+                v-if="getElementIcon(el)"
+                class="char-selector__tab-icon"
+                :src="getElementIcon(el)!"
+                alt=""
+                aria-hidden="true"
+              />
+              <span v-else class="char-selector__tab-bar" aria-hidden="true" />
               <span class="char-selector__tab-label">{{ el }}</span>
             </button>
           </li>
@@ -521,6 +528,24 @@ onUnmounted(() => {
 .char-selector__tab--active .char-selector__tab-bar {
   opacity: 1;
   box-shadow: 0 0 6px var(--tab-color, transparent);
+}
+
+/* 屬性圖示（取代色條）：未選中偏暗，選中時全亮並帶屬性色光暈。 */
+.char-selector__tab-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  opacity: 0.65;
+  transition: opacity 0.12s ease, filter 0.12s ease;
+}
+
+.char-selector__tab:hover .char-selector__tab-icon {
+  opacity: 0.85;
+}
+
+.char-selector__tab--active .char-selector__tab-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px var(--tab-color));
 }
 
 .char-selector__tab-label {
