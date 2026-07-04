@@ -482,20 +482,33 @@ onUnmounted(() => {
 }
 
 /* ── 屬性頁籤列（2-1 / 2-2） ─────────────────────────────── */
+/* 單行不換行 + 水平捲動：屬性數為資料驅動（第 7 屬性自動多一個 tab），
+   超出寬度時左右捲動容納，細捲軸沿用選單深色風格。 */
 .char-selector__tabs {
   position: sticky;
   top: -0.25rem;
   z-index: 1;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 0.25rem;
   margin: -0.25rem -0.25rem 0.25rem;
   padding: 0.375rem;
   background-color: #111827;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
+}
+.char-selector__tabs::-webkit-scrollbar {
+  height: 4px;
+}
+.char-selector__tabs::-webkit-scrollbar-thumb {
+  background-color: rgba(34, 211, 238, 0.25);
+  border-radius: 3px;
 }
 
 .char-selector__tab {
+  flex-shrink: 0; /* 防壓縮：tab 保持內容寬，靠容器捲動容納 */
   display: inline-flex;
   flex-direction: column;
   align-items: center;

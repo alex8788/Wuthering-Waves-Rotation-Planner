@@ -7,8 +7,10 @@
 //      - 對照表沒有的 Id → 先用中文名比對現有 generated.json 認領舊 id；
 //        再沒有 → 由英文名轉 kebab-case 自動生成，並在摘要標記【新角色】。
 //      - 解析結果一律寫回 id-map.json 持久化。
-//   3. schema 驗證：element 必屬六屬性、rarity ∈ {4,5}、名稱非空；任一筆失敗
+//   3. schema 驗證：rarity ∈ {4,5}、名稱/屬性非空；任一筆失敗
 //      → 整批中止不落檔（避免髒資料入庫）。
+//      屬性「不驗白名單」：新屬性自動吸納（slug 由 en 名 kebab 化、圖示照常
+//      下載），摘要標記⚠提醒用 scripts/add-element.mjs 補色碼。
 //   4. 下載頭像 → public/assets/characters/<id>.webp（已存在即跳過）。
 //   5. 寫 src/data/characters.generated.json（屬性分組、5★ 在 4★ 前、組內依
 //      encore Id 升冪 → 輸出穩定、git diff 乾淨）。
@@ -32,16 +34,10 @@ const ID_MAP_PATH = join(ROOT, 'scripts/id-map.json');
 const AVATAR_DIR = join(ROOT, 'public/assets/characters');
 const ELEMENT_DIR = join(ROOT, 'public/assets/elements');
 
-const ELEMENTS = ['氣動', '冷凝', '導電', '湮滅', '衍射', '熱熔'];
-// 屬性中文名 → ASCII 檔名 slug（六屬性固定，對齊 encore 英文屬性名，供頭像檔名穩定）。
-const ELEMENT_SLUG = {
-  氣動: 'aero',
-  冷凝: 'glacio',
-  導電: 'electro',
-  湮滅: 'havoc',
-  衍射: 'spectro',
-  熱熔: 'fusion',
-};
+// 屬性清單不再硬編碼白名單：以舊 elements.generated.json 為「已知集合」，
+// roleList 出現的新屬性自動吸納（slug 由 en 屬性名 kebab 化），只在摘要
+// 標記⚠疑似新屬性提醒人工補色（scripts/add-element.mjs），不中止整批。
+const ELEMENTS_OVERRIDES_PATH = join(ROOT, 'src/data/elements.overrides.json');
 const SKIP_AVATARS = process.argv.includes('--skip-avatars');
 
 // ── 工具 ─────────────────────────────────────────────────────
@@ -134,9 +130,10 @@ async function main() {
       encoreId: zh.Id, // 排序用，落檔前移除
     };
 
-    // 3. schema 驗證（任一筆失敗 → 整批中止）
+    // 3. schema 驗證（任一筆失敗 → 整批中止）。
+    //    屬性只驗「非空」不驗白名單：新屬性走自動吸納（見屬性區塊），不中止。
     if (!c.id || !c.nameZh) errors.push(`Id ${zh.Id}: 名稱/id 為空`);
-    if (!ELEMENTS.includes(c.element)) errors.push(`${c.nameZh}: 未知屬性「${c.element}」`);
+    if (!c.element) errors.push(`${c.nameZh}: 屬性為空`);
     if (c.rarity !== 4 && c.rarity !== 5) errors.push(`${c.nameZh}: 星級異常 ${c.rarity}`);
 
     // 4. 頭像
@@ -160,22 +157,47 @@ async function main() {
     characters.push(c);
   }
 
-  // 屬性（元素）資料 + 圖示：從 roleList 收集 6 個不重複 Element，下載 icon，
-  // 依 ELEMENTS 正典序產出（供角色選單頁籤顯示）。缺屬性或下載失敗計入 errors。
-  const elemByName = new Map();
+  // 屬性（元素）資料 + 圖示：從 roleList 收集不重複 Element（不限 6 個），
+  // 順序＝舊 generated 檔順序在前、本次新發現的屬性依出現序 append 在後
+  // （輸出穩定、diff 乾淨）。新屬性自動吸納：slug 由 en 屬性名 kebab 化，
+  // 圖示照常下載，並在摘要標記⚠提醒補色（不中止整批）。
+  const elemByName = new Map(); // zh 屬性名 → zh Element 物件
+  const elemEnName = new Map(); // zh 屬性名 → en 屬性名（產 slug 用）
   for (const zh of zhList) {
     const e = zh.Element;
-    if (e?.Name && !elemByName.has(e.Name)) elemByName.set(e.Name, e);
+    if (!e?.Name) continue;
+    if (!elemByName.has(e.Name)) {
+      elemByName.set(e.Name, e);
+      const enElemName = enById.get(zh.Id)?.Element?.Name;
+      if (enElemName) elemEnName.set(e.Name, enElemName);
+    }
   }
   const oldElements = readJson(ELEMENTS_GENERATED_PATH, []);
+  const oldElemByName = new Map(oldElements.map((e) => [e.name, e]));
+  const elementOverrides = readJson(ELEMENTS_OVERRIDES_PATH, {});
+  const usedSlugs = new Set(oldElements.map((e) => e.slug));
+
+  // 順序：舊檔順序（僅保留本次仍存在者）＋ 新屬性依 roleList 出現序
+  const elementOrder = [
+    ...oldElements.map((e) => e.name).filter((n) => elemByName.has(n)),
+    ...[...elemByName.keys()].filter((n) => !oldElemByName.has(n)),
+  ];
+
+  const newElements = []; // 摘要用：本次新發現的屬性
   const elementsOut = [];
-  for (const name of ELEMENTS) {
+  for (const name of elementOrder) {
     const e = elemByName.get(name);
-    if (!e) {
-      errors.push(`屬性缺漏：${name}`);
-      continue;
+    const old = oldElemByName.get(name);
+
+    // slug：舊檔沿用；新屬性由 en 屬性名 kebab 化，取不到/撞名退 element-<n>
+    let slug = old?.slug;
+    if (!slug) {
+      slug = kebab(elemEnName.get(name) ?? '') || `element-${elementsOut.length + 1}`;
+      while (usedSlugs.has(slug)) slug = `${slug}-x`;
+      newElements.push(`${name}（slug: ${slug}）`);
     }
-    const slug = ELEMENT_SLUG[name];
+    usedSlugs.add(slug);
+
     const iconPath = join(ELEMENT_DIR, `${slug}.webp`);
     const entry = { name, slug };
     if (!SKIP_AVATARS && e.Icon) {
@@ -183,10 +205,7 @@ async function main() {
       if (!ok) errors.push(`屬性 ${name}: 圖示下載失敗`);
     }
     if (existsSync(iconPath)) entry.icon = `/assets/elements/${slug}.webp`;
-    else {
-      const oldE = oldElements.find((x) => x.name === name);
-      if (oldE?.icon) entry.icon = oldE.icon; // skip 模式保留舊圖示欄位
-    }
+    else if (old?.icon) entry.icon = old.icon; // skip 模式保留舊圖示欄位
     elementsOut.push(entry);
   }
 
@@ -196,10 +215,10 @@ async function main() {
     process.exit(1);
   }
 
-  // 5. 穩定排序：屬性順序 → 5★ 前 4★ 後 → encore Id 升冪
+  // 5. 穩定排序：屬性順序（舊檔序＋新屬性在後）→ 5★ 前 4★ 後 → encore Id 升冪
   characters.sort(
     (a, b) =>
-      ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element) ||
+      elementOrder.indexOf(a.element) - elementOrder.indexOf(b.element) ||
       b.rarity - a.rarity ||
       a.encoreId - b.encoreId,
   );
@@ -220,6 +239,15 @@ async function main() {
     if (!newIds.has(old.id)) summary.push(`移除 ${old.nameZh}（${old.id}）`);
   }
   for (const n of newChars) summary.push(`新角色 ${n}`);
+  // 疑似新屬性警示（進 CI commit 訊息）：新發現的屬性 + 缺色碼的屬性
+  for (const n of newElements) {
+    summary.push(`⚠ 疑似新屬性 ${n} — 已自動吸納，請執行 node scripts/add-element.mjs 補色碼`);
+  }
+  for (const e of elementsOut) {
+    if (!elementOverrides[e.name]?.color) {
+      summary.push(`⚠ 屬性「${e.name}」色碼未設定（UI 暫以中性灰顯示）— node scripts/add-element.mjs`);
+    }
+  }
 
   writeFileSync(GENERATED_PATH, JSON.stringify(output, null, 2) + '\n');
   writeFileSync(ELEMENTS_GENERATED_PATH, JSON.stringify(elementsOut, null, 2) + '\n');

@@ -26,14 +26,12 @@ export interface Character {
 /** 角色星級。 */
 export type CharacterRarity = 5 | 4;
 
-/** 鳴潮六屬性。 */
-export type CharacterElement =
-  | '氣動'
-  | '冷凝'
-  | '導電'
-  | '湮滅'
-  | '衍射'
-  | '熱熔';
+/** 屬性（元素）名稱。
+ *  改為 string 別名（原為六值 union）：屬性清單已資料驅動
+ *  （elements.generated.json + elements.overrides.json），遊戲新增屬性時
+ *  由爬蟲自動吸納、不需改型別；正確性驗證移至爬蟲與 runtime fallback
+ *  （未知屬性 getElementColor 回中性灰）。 */
+export type CharacterElement = string;
 
 /** 角色槽索引：三條泳道對應 0/1/2。 */
 export type SlotIndex = 0 | 1 | 2;
