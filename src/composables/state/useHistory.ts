@@ -20,11 +20,19 @@ import { deepClone } from '@/utils/deepClone';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLaneOrder } from '@/composables/state/useLaneOrder';
+import { useSettings } from '@/composables/state/useSettings';
 import type { RotationAxis } from '@/types/rotation';
 import type { CharacterSlots, SlotIndex } from '@/types/character';
 
-/** past / future 各自的最大保存步數。 */
-const MAX_HISTORY = 30;
+/** past / future 各自的最大保存步數（可由設定調整，見 useSettings.historyLimit）。 */
+function maxHistory(): number {
+  return useSettings().settings.value.historyLimit;
+}
+/** 把佇列裁到目前上限（上限調低時亦於下次入列自動收斂）。 */
+function trimHistory(queue: Snapshot[]): void {
+  const max = maxHistory();
+  while (queue.length > max) queue.shift();
+}
 
 interface Snapshot {
   axes: RotationAxis[];
@@ -84,21 +92,21 @@ export function useHistory() {
     });
 
     past.value.push(_snapshot());
-    if (past.value.length > MAX_HISTORY) past.value.shift();
+    trimHistory(past.value);
     future.value = []; // 新分支產生，清掉可重做的未來
   }
 
   function undo(): void {
     if (past.value.length === 0) return;
     future.value.push(_snapshot());
-    if (future.value.length > MAX_HISTORY) future.value.shift();
+    trimHistory(future.value);
     _apply(past.value.pop()!);
   }
 
   function redo(): void {
     if (future.value.length === 0) return;
     past.value.push(_snapshot());
-    if (past.value.length > MAX_HISTORY) past.value.shift();
+    trimHistory(past.value);
     _apply(future.value.pop()!);
   }
 
@@ -116,7 +124,7 @@ export function useHistory() {
   function commitPending(): void {
     if (!_pending) return;
     past.value.push(_pending);
-    if (past.value.length > MAX_HISTORY) past.value.shift();
+    trimHistory(past.value);
     future.value = []; // 新分支產生，清掉可重做的未來
     _pending = null;
   }

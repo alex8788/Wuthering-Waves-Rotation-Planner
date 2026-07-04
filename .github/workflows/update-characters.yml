@@ -22,7 +22,7 @@ jobs:
       - name: 安裝 Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       # 爬蟲僅用 Node 內建模組（fs / fetch），毋須 npm install。
 
       - name: 執行爬蟲

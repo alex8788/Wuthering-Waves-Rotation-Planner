@@ -15,7 +15,7 @@ import { useLaneOrder } from '@/composables/state/useLaneOrder'
 import { useLaneLayout } from '@/composables/board/useLaneLayout'
 import { useHeaderWidth } from '@/composables/board/useHeaderWidth'
 import { getElementColor } from '@/constants/elements'
-import { TRACK_GAP_PX } from '@/constants/layout'
+import { useSettings } from '@/composables/state/useSettings'
 import type { RotationAxis } from '@/types/rotation'
 import type { SlotIndex } from '@/types/character'
 
@@ -25,6 +25,9 @@ const characterStore = useCharacterStore()
 const { laneOrder } = useLaneOrder()
 // 與編輯面板共用同一套 header 寬度算法（依最長角色名），確保匯出圖一致、名稱不截斷。
 const { headerWidthPx } = useHeaderWidth()
+// 區塊間距（px）：讀設定 trackGapPx，使匯出圖間距與主面板一致。
+const { settings } = useSettings()
+const trackGapPx = computed<number>(() => settings.value.trackGapPx)
 
 // 全域欄數＝該軸 1D 陣列長度(每個 entry 佔一欄,跨泳道共用同一時間軸)。
 const columnCount = computed<number>(() => props.axis.entries.length)
@@ -49,7 +52,7 @@ function laneColor(slot: SlotIndex): string {
 
     <div
       class="export-view__lanes"
-      :style="{ '--col-count': columnCount, '--track-gap': `${TRACK_GAP_PX}px`, '--header-width': `${headerWidthPx}px` }"
+      :style="{ '--col-count': columnCount, '--track-gap': `${trackGapPx}px`, '--header-width': `${headerWidthPx}px` }"
     >
       <div
         v-for="slot in orderedSlots"

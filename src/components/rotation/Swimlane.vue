@@ -16,7 +16,7 @@ import { useBlockDrag, DROP_ZONE_ATTRIBUTE, type SortableEventLike } from '@/com
 import { useHistory } from '@/composables/state/useHistory'
 import { useDialog } from '@/composables/state/useDialog'
 import { getElementColor } from '@/constants/elements'
-import { TRACK_GAP_PX } from '@/constants/layout'
+import { useSettings } from '@/composables/state/useSettings'
 import type { Character } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
@@ -71,6 +71,10 @@ const {
 
 // 本泳道統一顏色＝角色屬性色（同屬性 header 色條/區塊顏色完全一致）。未選角給中性色。
 const laneColor = computed<string>(() => getElementColor(props.character?.element ?? null))
+
+// 區塊間距（px）：讀設定 trackGapPx（單一來源），注入 --track-gap。
+const { settings } = useSettings()
+const trackGapPx = computed<number>(() => settings.value.trackGapPx)
 
 // VueDraggable 操作的本地緩衝陣列，防止套件直接修改 prop 導致資料流脫鉤
 const localEntries = ref<RotationEntry[]>([...props.entries])
@@ -288,7 +292,7 @@ async function handleDeselectCharacter(): Promise<void> {
   <div
     class="swimlane"
     :class="[`swimlane--slot-${slotIndex}`, { 'swimlane--drag-source': draggingAsSource }]"
-    :style="{ '--track-gap': `${TRACK_GAP_PX}px` }"
+    :style="{ '--track-gap': `${trackGapPx}px` }"
     :[DROP_ZONE_ATTRIBUTE]="true"
     :data-slot-index="slotIndex"
     :aria-label="character ? `${character.nameZh} 的輸出軸` : `槽位 ${slotIndex + 1}（未選角）`"

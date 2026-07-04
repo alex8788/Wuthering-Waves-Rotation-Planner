@@ -13,26 +13,40 @@
 import { ref, watch } from 'vue'
 import { useExportDialog, type ExportMode } from '@/composables/state/useExportDialog'
 import { useRotationStore } from '@/stores/useRotationStore'
+import { useSettings } from '@/composables/state/useSettings'
 
 const { state, submit, cancel } = useExportDialog()
 const rotationStore = useRotationStore()
+const { settings } = useSettings()
 
 // ── 表單狀態 ────────────────────────────────────────────────
 const filename = ref('')
 const selectedIds = ref<Set<string>>(new Set())
 const mode = ref<ExportMode>('merge')
 
-// 視窗開啟時以「作用中軸」為預設：檔名取其名稱、僅勾選該軸。
+// 視窗開啟時的預設：一律僅勾選作用中軸（軸 id 不跨 session 持久化，避免懸空）。
+// 「記住匯出設定」開啟時，檔名/合併模式沿用上次；否則回預設（檔名＝軸名、合併）。
 watch(
   () => state.value.open,
   (open) => {
     if (!open) return
     const active = rotationStore.activeAxis
-    filename.value = active.name
     selectedIds.value = new Set([active.id])
-    mode.value = 'merge'
+    if (settings.value.rememberExport) {
+      filename.value = settings.value.exportPrefs.filename || active.name
+      mode.value = settings.value.exportPrefs.mode
+    } else {
+      filename.value = active.name
+      mode.value = 'merge'
+    }
   }
 )
+
+// 「記住匯出設定」開啟時，檔名/模式每次調整即寫回設定（→ 持久化到 localStorage）。
+watch([filename, mode], () => {
+  if (!state.value.open || !settings.value.rememberExport) return
+  settings.value.exportPrefs = { filename: filename.value, mode: mode.value }
+})
 
 function toggleAxis(id: string): void {
   const next = new Set(selectedIds.value)

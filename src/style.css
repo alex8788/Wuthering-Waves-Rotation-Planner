@@ -9,6 +9,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── 動畫效果總開關（設定）：關閉時 <html> 掛 force-reduce-motion（見 useSettings）──
+   全域壓掉所有 transition / animation / 平滑捲動，一處生效免逐元件改。
+   放 @layer 之外並用 !important，確保蓋過各元件樣式且不被 Tailwind purge 誤刪。 */
+html.force-reduce-motion *,
+html.force-reduce-motion *::before,
+html.force-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* ── 全域科幻風卷軸（取代瀏覽器原生樣式）─────────────────────────
    寫在 @layer 之外（全域、非分層），確保不被 Tailwind purge 影響；且優先序
    高於 @layer，作為全站預設。各元件若需更細的尺寸（如泳道 4px、下拉 6px）

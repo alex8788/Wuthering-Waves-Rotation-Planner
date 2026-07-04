@@ -28,7 +28,7 @@ import { useLaneReorder } from '@/composables/board/useLaneReorder'
 import { useHistory } from '@/composables/state/useHistory'
 import { DELETE_ZONE_ATTRIBUTE, useBlockDrag } from '@/composables/useBlockDrag'
 import { getElementColor } from '@/constants/elements'
-import { TRACK_GAP_PX } from '@/constants/layout'
+import { useSettings } from '@/composables/state/useSettings'
 import { prefersReducedMotion } from '@/utils/reducedMotion'
 import type { SlotIndex } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
@@ -84,7 +84,7 @@ function measureDraggingGroup(): void {
     return
   }
   const ws = Array.from(el.children).map((c) => (c as HTMLElement).getBoundingClientRect().width)
-  draggingGroupWidth.value = ws.reduce((a, b) => a + b, 0) + TRACK_GAP * (ws.length - 1)
+  draggingGroupWidth.value = ws.reduce((a, b) => a + b, 0) + TRACK_GAP.value * (ws.length - 1)
 }
 
 watch(
@@ -100,9 +100,11 @@ watch(
 
 const PREVIEW_PLACEHOLDER = '__preview_placeholder__'
 
-// 區塊間距：與 Swimlane 的 --track-gap / 匯出視圖共用單一常數（constants/layout.ts），
+// 區塊間距：與 Swimlane 的 --track-gap / 匯出視圖共用單一來源（設定 trackGapPx），
 // 把「欄序」換算成像素 x 位移（FLIP 平滑順延、落點寬度加總）時幾何模型與渲染一致。
-const TRACK_GAP = TRACK_GAP_PX
+// 設定改動時此 computed 更新 → previewLayout 等相依運算自動重算。
+const { settings } = useSettings()
+const TRACK_GAP = computed<number>(() => settings.value.trackGapPx)
 
 const isPreviewing = computed<boolean>(
   () => dragState.isDragging && dragState.previewInsertAfterIndex !== null,
@@ -150,7 +152,7 @@ const previewLayout = computed<{
         cnt++
       }
     })
-    if (cnt > 0) placeholderWidth = sum + TRACK_GAP * (cnt - 1)
+    if (cnt > 0) placeholderWidth = sum + TRACK_GAP.value * (cnt - 1)
   }
 
   const cols = entries.map((e, i) => ({ id: e.id, width: widths[i] ?? 0 }))
@@ -164,7 +166,7 @@ const previewLayout = computed<{
   working.forEach((c, i) => {
     idToColumn.set(c.id, i)
     idToX.set(c.id, x)
-    x += c.width + TRACK_GAP
+    x += c.width + TRACK_GAP.value
   })
   const template = working.map((c) => `${c.width}px`).join(' ')
 
@@ -193,7 +195,7 @@ function restingIdToX(): Map<string, number> {
   let x = 0
   rotationStore.entries.forEach((e, i) => {
     m.set(e.id, x)
-    x += (columnWidths.value[i] ?? 0) + TRACK_GAP
+    x += (columnWidths.value[i] ?? 0) + TRACK_GAP.value
   })
   return m
 }
