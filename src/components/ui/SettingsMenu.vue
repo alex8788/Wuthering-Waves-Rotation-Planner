@@ -1,0 +1,364 @@
+<script setup lang="ts">
+// ============================================================
+// SettingsMenu.vue — 標題列齒輪按鈕 + 設定下拉面板。
+//
+// 設定項：
+//   - 語言切換（佔位：僅繁中可選，英文標示即將推出）
+//   - 大寫鎖定（區塊文字提交時自動轉大寫）
+//   - 清除資料（自訂模板庫；紅色警示鈕 + danger confirm 二次確認）
+//
+// 自含觸發鈕與面板：外點/Escape 關閉；面板為 absolute 錨定於鈕右下。
+// ============================================================
+
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useSettings } from '@/composables/state/useSettings'
+import { useDialog } from '@/composables/state/useDialog'
+import { useSidebarStore } from '@/stores/useSidebarStore'
+import { showToast } from '@/composables/state/useToast'
+
+const { settings } = useSettings()
+const dialog = useDialog()
+const sidebarStore = useSidebarStore()
+
+const isOpen = ref(false)
+const rootRef = ref<HTMLElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
+// 面板 Teleport 到 body（避開標題列的 overflow:hidden 裁切與堆疊脈絡），
+// 以 fixed 定位；座標於開啟時由齒輪鈕的 rect 算出（貼齊鈕右下）。
+const panelStyle = ref<Record<string, string>>({})
+
+function toggle(): void {
+  if (!isOpen.value) {
+    const rect = rootRef.value?.getBoundingClientRect()
+    if (rect) {
+      panelStyle.value = {
+        top: `${rect.bottom + 8}px`,
+        right: `${window.innerWidth - rect.right}px`,
+      }
+    }
+  }
+  isOpen.value = !isOpen.value
+}
+
+// 外點關閉：點擊落在觸發鈕與面板兩者之外 → 收合。
+// 面板已 Teleport 到 body（不在 rootRef 內），故須一併排除 panelRef。
+function onDocClick(event: MouseEvent): void {
+  if (!isOpen.value) return
+  const target = event.target as Node
+  const inTrigger = rootRef.value?.contains(target)
+  const inPanel = panelRef.value?.contains(target)
+  if (!inTrigger && !inPanel) isOpen.value = false
+}
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && isOpen.value) isOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick, true)
+  window.addEventListener('keydown', onKeydown)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick, true)
+  window.removeEventListener('keydown', onKeydown)
+})
+
+// 清除資料：danger confirm 二次確認 → 清空自訂模板庫。
+async function handleClearData(): Promise<void> {
+  const count = sidebarStore.templates.length
+  const ok = await dialog.confirm({
+    title: '清除資料',
+    message:
+      count > 0
+        ? `將刪除全部 ${count} 個自訂模板（無法復原）。確定要清除嗎？`
+        : '自訂模板庫目前是空的，仍要執行清除嗎？',
+    confirmText: '清除',
+    cancelText: '取消',
+    danger: true,
+  })
+  if (!ok) return
+  const cleared = sidebarStore.clearAllTemplates()
+  showToast(cleared > 0 ? `已清除 ${cleared} 個自訂模板` : '已清除（模板庫原本為空）', 'success')
+  isOpen.value = false
+}
+</script>
+
+<template>
+  <div ref="rootRef" class="settings-menu">
+    <!-- 齒輪觸發鈕 -->
+    <button
+      type="button"
+      class="settings-menu__trigger"
+      :class="{ 'settings-menu__trigger--open': isOpen }"
+      title="設定"
+      aria-label="設定"
+      :aria-expanded="isOpen"
+      aria-haspopup="menu"
+      @click.stop="toggle"
+    >
+      <svg class="settings-menu__gear" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M11.49 2.17a1.5 1.5 0 0 0-2.98 0l-.1.86a1.5 1.5 0 0 1-2.1.87l-.78-.37a1.5 1.5 0 0 0-2.1 2.1l.36.78a1.5 1.5 0 0 1-.87 2.1l-.86.1a1.5 1.5 0 0 0 0 2.98l.86.1a1.5 1.5 0 0 1 .87 2.1l-.37.78a1.5 1.5 0 0 0 2.1 2.1l.78-.36a1.5 1.5 0 0 1 2.1.87l.1.86a1.5 1.5 0 0 0 2.98 0l.1-.86a1.5 1.5 0 0 1 2.1-.87l.78.37a1.5 1.5 0 0 0 2.1-2.1l-.36-.78a1.5 1.5 0 0 1 .87-2.1l.86-.1a1.5 1.5 0 0 0 0-2.98l-.86-.1a1.5 1.5 0 0 1-.87-2.1l.37-.78a1.5 1.5 0 0 0-2.1-2.1l-.78.36a1.5 1.5 0 0 1-2.1-.87l-.1-.86Z"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linejoin="round"
+        />
+        <circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.4" />
+      </svg>
+    </button>
+
+    <!-- 下拉面板：Teleport 到 body 避開標題列 overflow 裁切；fixed 定位 -->
+    <Teleport to="body">
+      <Transition name="settings-pop">
+        <div
+          v-if="isOpen"
+          ref="panelRef"
+          class="settings-menu__panel"
+          role="menu"
+          :style="panelStyle"
+          @click.stop
+        >
+          <div class="settings-menu__heading">設定</div>
+
+        <!-- 語言切換（佔位） -->
+        <label class="settings-menu__row">
+          <span class="settings-menu__label">介面語言</span>
+          <select v-model="settings.language" class="settings-menu__select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en" disabled>English（即將推出）</option>
+          </select>
+        </label>
+
+        <!-- 大寫鎖定 -->
+        <label class="settings-menu__row settings-menu__row--clickable">
+          <span class="settings-menu__label">
+            大寫鎖定
+            <span class="settings-menu__hint">區塊文字提交時自動轉大寫</span>
+          </span>
+          <input
+            v-model="settings.autoUppercase"
+            type="checkbox"
+            class="settings-menu__switch"
+            role="switch"
+            :aria-checked="settings.autoUppercase"
+          />
+        </label>
+
+        <div class="settings-menu__divider" aria-hidden="true" />
+
+        <!-- 清除資料（危險操作） -->
+        <div class="settings-menu__row settings-menu__row--column">
+          <span class="settings-menu__label">
+            清除資料
+            <span class="settings-menu__hint">刪除全部自訂模板（無法復原）</span>
+          </span>
+          <button type="button" class="settings-menu__danger-btn" @click="handleClearData">
+            清除自訂模板
+          </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+  </div>
+</template>
+
+<style scoped>
+.settings-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ── 齒輪觸發鈕：與匯出鈕同列，中性暗色（匯出為青色主行動，齒輪退居次要） ── */
+.settings-menu__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(240, 244, 248, 0.65);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.settings-menu__trigger:hover,
+.settings-menu__trigger--open {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: rgba(240, 244, 248, 0.95);
+}
+.settings-menu__trigger:focus {
+  outline: none;
+}
+.settings-menu__trigger:focus-visible {
+  border-color: rgba(34, 211, 238, 0.6);
+  color: rgba(34, 211, 238, 0.95);
+}
+.settings-menu__gear {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* ── 下拉面板 ─────────────────────────────────────────────── */
+.settings-menu__panel {
+  /* Teleport 到 body → fixed 定位；top/right 由 JS 依齒輪鈕 rect 注入。 */
+  position: fixed;
+  z-index: 200;
+  width: 15.5rem;
+  padding: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background-color: #111827;
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+.settings-menu__heading {
+  padding: 0 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(34, 211, 238, 0.75);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.5rem;
+}
+
+.settings-menu__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.25rem;
+}
+.settings-menu__row--clickable {
+  cursor: pointer;
+  border-radius: 4px;
+}
+.settings-menu__row--clickable:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.settings-menu__row--column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.settings-menu__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.8125rem;
+  color: rgba(240, 244, 248, 0.9);
+  user-select: none;
+}
+.settings-menu__hint {
+  font-size: 0.6563rem;
+  color: rgba(240, 244, 248, 0.45);
+  letter-spacing: 0.02em;
+}
+
+.settings-menu__select {
+  flex-shrink: 0;
+  max-width: 8rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background-color: #0d1320;
+  color: rgba(240, 244, 248, 0.9);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.settings-menu__select:focus-visible {
+  outline: 1px solid rgba(34, 211, 238, 0.6);
+  outline-offset: 1px;
+}
+
+/* 開關：以原生 checkbox 重繪為 pill 開關（無 JS） */
+.settings-menu__switch {
+  appearance: none;
+  flex-shrink: 0;
+  width: 2.125rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background-color: rgba(255, 255, 255, 0.08);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.settings-menu__switch::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  background-color: rgba(240, 244, 248, 0.75);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.settings-menu__switch:checked {
+  background-color: rgba(34, 211, 238, 0.35);
+  border-color: rgba(34, 211, 238, 0.7);
+}
+.settings-menu__switch:checked::after {
+  transform: translateX(1rem);
+  background-color: #22d3ee;
+}
+.settings-menu__switch:focus-visible {
+  outline: 1px solid rgba(34, 211, 238, 0.6);
+  outline-offset: 2px;
+}
+
+.settings-menu__divider {
+  height: 1px;
+  margin: 0.375rem 0;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 清除資料：紅色警示鈕 */
+.settings-menu__danger-btn {
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  border-radius: 4px;
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.settings-menu__danger-btn:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.8);
+  color: #fca5a5;
+}
+.settings-menu__danger-btn:focus-visible {
+  outline: 1px solid rgba(239, 68, 68, 0.7);
+  outline-offset: 1px;
+}
+
+/* 面板進出場：只動 opacity（transform 位移易與其他層互動出怪） */
+.settings-pop-enter-active,
+.settings-pop-leave-active {
+  transition: opacity 0.12s ease;
+}
+.settings-pop-enter-from,
+.settings-pop-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-pop-enter-active,
+  .settings-pop-leave-active,
+  .settings-menu__switch,
+  .settings-menu__switch::after {
+    transition: none;
+  }
+}
+</style>

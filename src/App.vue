@@ -5,6 +5,7 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import ToastNotification from '@/components/ui/ToastNotification.vue'
 import DialogHost from '@/components/ui/DialogHost.vue'
 import ExportDialog from '@/components/ui/ExportDialog.vue'
+import SettingsMenu from '@/components/ui/SettingsMenu.vue'
 import SidebarPanel from '@/components/sidebar/SidebarPanel.vue'
 import RotationBoard from '@/components/rotation/RotationBoard.vue'
 import RotationAxisTabBar from '@/components/rotation/RotationAxisTabBar.vue'
@@ -110,6 +111,7 @@ function clearAllSelection(): void {
               title="匯出輸出軸圖片"
               @click.stop="handleExport"
             >匯出</button>
+            <SettingsMenu />
           </template>
         </AppHeader>
       </template>

@@ -143,6 +143,14 @@ export const useSidebarStore = defineStore('sidebar', () => {
     return selectedTemplateIds.value.has(id);
   }
 
+  /** clearAllTemplates：清空整個自訂模板庫（設定選單「清除資料」用）；回傳清除筆數。 */
+  function clearAllTemplates(): number {
+    const count = templates.value.length;
+    templates.value = [];
+    selectedTemplateIds.value = new Set();
+    return count;
+  }
+
   /** deleteSelectedTemplates：批量刪除目前選取的模板，並清空選取。 */
   function deleteSelectedTemplates(): void {
     if (selectedTemplateIds.value.size === 0) return;
@@ -163,6 +171,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
     getTemplatesByCharacter,
     serializeManyToTemplates,
     deleteTemplate,
+    clearAllTemplates,
     toggleTemplateSelection,
     clearTemplateSelection,
     isTemplateSelected,

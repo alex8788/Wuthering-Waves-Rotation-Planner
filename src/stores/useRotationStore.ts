@@ -16,6 +16,7 @@ import type { SlotIndex } from '../types/character';
 import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
 import { useHistory } from '@/composables/state/useHistory';
+import { useSettings } from '@/composables/state/useSettings';
 
 /** 刪除消失動畫時長(ms)，須與 RotationBlock 的 @keyframes block-leave 一致。 */
 const LEAVE_MS = 180;
@@ -149,9 +150,11 @@ export const useRotationStore = defineStore('rotation', () => {
     return newBlock.id;
   }
 
-  /** 更新區塊文字（行內編輯提交）；trim 後為空則視為放棄並刪除該區塊。 */
+  /** 更新區塊文字（行內編輯提交）；trim 後為空則視為放棄並刪除該區塊。
+   *  大寫鎖定（設定）開啟時自動轉大寫（僅影響英文字母）。 */
   function updateLabel(id: string, label: string): void {
-    const trimmed = label.trim();
+    let trimmed = label.trim();
+    if (useSettings().settings.value.autoUppercase) trimmed = trimmed.toUpperCase();
     if (trimmed === '') {
       deleteBlock(id); // deleteBlock 自身會 record（pending 中則被抑制）
       return;
