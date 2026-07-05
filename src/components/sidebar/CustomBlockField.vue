@@ -5,7 +5,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'
-import { useSidebarStore } from '@/stores/useSidebarStore'
+import { useTemplateStore } from '@/stores/useTemplateStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useLaneOrder } from '@/composables/state/useLaneOrder'
 import { useSidebarDragList } from '@/composables/blockDrag/useSidebarDragList'
@@ -13,7 +13,7 @@ import { getElementColor } from '@/constants/elements'
 import { characterDisplayName } from '@/i18n'
 import type { TemplateBlock } from '@/types/block'
 
-const sidebarStore = useSidebarStore()
+const templateStore = useTemplateStore()
 const characterStore = useCharacterStore()
 const { laneOrder } = useLaneOrder()
 
@@ -27,7 +27,7 @@ const orderedSlots = computed(() =>
 // 三個槽位各自的模板列表，未選角的槽位給空陣列
 const slotTemplates = computed(() =>
   characterStore.slots.map((slot) =>
-    slot.character ? sidebarStore.getTemplatesByCharacter(slot.character.id) : []
+    slot.character ? templateStore.getTemplatesByCharacter(slot.character.id) : []
   )
 )
 
@@ -49,9 +49,9 @@ function handleDragStart(idx: number, event: { oldIndex?: number }): void {
   if (!template) return
   // 抓起的模板在多選集合且選取 >1 → 整組依「選取先後順序」(selectedTemplateIds
   // 為 Set，迭代序＝加入序) 一起拖；否則只拖這一個。
-  if (sidebarStore.isTemplateSelected(template.id) && sidebarStore.selectedTemplateIds.size > 1) {
-    const ordered = [...sidebarStore.selectedTemplateIds]
-      .map((id) => sidebarStore.templates.find((t) => t.id === id))
+  if (templateStore.isTemplateSelected(template.id) && templateStore.selectedTemplateIds.size > 1) {
+    const ordered = [...templateStore.selectedTemplateIds]
+      .map((id) => templateStore.templates.find((t) => t.id === id))
       .filter((t): t is TemplateBlock => !!t)
     onSidebarDragStart(template, ordered)
   } else {
@@ -60,7 +60,7 @@ function handleDragStart(idx: number, event: { oldIndex?: number }): void {
 }
 
 function handleDelete(templateId: string): void {
-  sidebarStore.deleteTemplate(templateId)
+  templateStore.deleteTemplate(templateId)
 }
 
 // 點擊模板：Ctrl/Cmd 多選切換；純點擊單選/再點同一個則取消。
@@ -68,20 +68,20 @@ function handleDelete(templateId: string): void {
 // 影響僅止於選取狀態切換（無破壞性），可接受。
 function handleTemplateClick(templateId: string, event: MouseEvent): void {
   const additive = event.ctrlKey || event.metaKey
-  sidebarStore.toggleTemplateSelection(templateId, additive)
+  templateStore.toggleTemplateSelection(templateId, additive)
 }
 
 // 以 capture 階段攔截 Delete/Backspace：當模板庫有選取時優先刪模板，
 // 並 stopPropagation 阻止 window 上的全域快捷鍵（會誤刪主軸選取區塊）。
 function onKeydownCapture(event: KeyboardEvent): void {
   if (event.key !== 'Delete' && event.key !== 'Backspace') return
-  if (sidebarStore.selectedTemplateIds.size === 0) return
+  if (templateStore.selectedTemplateIds.size === 0) return
   const target = event.target as HTMLElement
   const tag = target?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return
   event.preventDefault()
   event.stopPropagation()
-  sidebarStore.deleteSelectedTemplates()
+  templateStore.deleteSelectedTemplates()
 }
 
 onMounted(() => {
@@ -91,7 +91,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydownCapture, true)
   // 元件卸除（切換頁籤離開自訂模板）時清掉殘留選取
-  sidebarStore.clearTemplateSelection()
+  templateStore.clearTemplateSelection()
 })
 </script>
 
@@ -153,7 +153,7 @@ onUnmounted(() => {
             <BlockChip
               :label="template.label"
               :color="slot.character ? getElementColor(slot.character.element) : template.color"
-              :is-selected="sidebarStore.isTemplateSelected(template.id)"
+              :is-selected="templateStore.isTemplateSelected(template.id)"
               compact
             />
 

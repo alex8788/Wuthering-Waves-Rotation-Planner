@@ -16,16 +16,16 @@ import { nodeToPngBlob, nodeToSvgBlob, savePng, saveSvg, saveZip } from '@/compo
 import type { ExportFormat } from '@/composables/state/useExportDialog'
 import { showToast } from '@/composables/state/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
-import { useSidebarStore } from '@/stores/useSidebarStore'
-import { useDefaultBlockStore } from '@/stores/useDefaultBlockStore'
+import { useTemplateStore } from '@/stores/useTemplateStore'
+import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JSZip from 'jszip'
 import type { RotationAxis } from '@/types/rotation'
 
 const rotationStore = useRotationStore()
-const sidebarStore = useSidebarStore()
-const defaultBlockStore = useDefaultBlockStore()
+const templateStore = useTemplateStore()
+const generalBlockStore = useGeneralBlockStore()
 const exportDialog = useExportDialog()
 const { t } = useI18n()
 
@@ -111,8 +111,8 @@ async function handleExport(): Promise<void> {
 // 的 window capture 攔截器會擋下這次 click，故不會誤清剛框選的內容。
 function clearAllSelection(): void {
   rotationStore.clearSelection()
-  sidebarStore.clearTemplateSelection()
-  defaultBlockStore.clearSelection()
+  templateStore.clearTemplateSelection()
+  generalBlockStore.clearSelection()
 }
 </script>
 

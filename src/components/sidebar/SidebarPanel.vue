@@ -1,19 +1,19 @@
 <script setup lang="ts">
-// SidebarPanel.vue：側邊欄主容器 (提供 Tab 切換並渲染 DefaultBlockField 或 CustomBlockField)
+// SidebarPanel.vue：側邊欄主容器 (提供 Tab 切換並渲染 GeneralBlockField 或 CustomBlockField)
 
 import { ref } from 'vue'
-import DefaultBlockField from '@/components/sidebar/DefaultBlockField.vue'
+import GeneralBlockField from '@/components/sidebar/GeneralBlockField.vue'
 import CustomBlockField from '@/components/sidebar/CustomBlockField.vue'
 import { SIDEBAR_ZONE_ATTRIBUTE } from '@/composables/useBlockDrag'
 
-type TabId = 'default' | 'custom'
+type TabId = 'general' | 'custom'
 
 // 目前顯示的 Tab
-const activeTab = ref<TabId>('default')
+const activeTab = ref<TabId>('general')
 
 // label 為 i18n key（渲染時 $t 查表，隨語言切換）
 const TABS: { id: TabId; labelKey: string }[] = [
-  { id: 'default', labelKey: 'sidebar.presetTab' },
+  { id: 'general', labelKey: 'sidebar.presetTab' },
   { id: 'custom',  labelKey: 'sidebar.customTab' },
 ]
 </script>
@@ -40,12 +40,12 @@ const TABS: { id: TabId; labelKey: string }[] = [
     <div class="tab-content">
       
       <div
-        v-show="activeTab === 'default'"
-        id="tabpanel-default"
+        v-show="activeTab === 'general'"
+        id="tabpanel-general"
         role="tabpanel"
-        aria-labelledby="tab-default"
+        aria-labelledby="tab-general"
       >
-        <DefaultBlockField />
+        <GeneralBlockField />
       </div>
 
       <div

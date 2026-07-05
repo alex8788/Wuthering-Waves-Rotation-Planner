@@ -229,8 +229,8 @@ html.force-reduce-motion *::after {
    關鍵：SortableJS 在浮動分身上「寫死 inline width/height（來源 rect 的 px）」
    （見 sortable _appendGhost），故必須用 !important 蓋過 inline，只改 CSS 變數無效。
    高度固定 3rem 對齊主軸；寬度改 auto 讓其依放大後的字級/內距重新貼齊內容寬。
-   DefaultBlockField 的 dragEl 即 .block-chip 本身；CustomBlockField 的 dragEl 為
-   .chip-wrapper（chip 為子孫）。放 @layer 之外避免執行期 class 被 Tailwind purge 誤刪。 */
+   GeneralBlockField 與 CustomBlockField 的 dragEl 皆為 .chip-wrapper（chip 為子孫）。
+   放 @layer 之外避免執行期 class 被 Tailwind purge 誤刪。 */
 .sortable-fallback.block-chip--compact {
   --chip-height: 3rem;   /* 48px，與主軸非 compact 一致 */
   --chip-px: 1rem;

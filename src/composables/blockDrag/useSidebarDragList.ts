@@ -1,7 +1,7 @@
 // ============================================================
 // useSidebarDragList.ts — 側邊欄拖曳清單的共用樣板（重構 R3）。
 //
-// DefaultBlockField / CustomBlockField 共用的三件事收斂於此：
+// GeneralBlockField / CustomBlockField 共用的三件事收斂於此：
 //   - dragOptions        ：SortableJS 側邊欄設定（clone 語意、禁排序）。
 //   - cloneToPlaceholder ：拖出瞬間把側邊欄區塊偽裝成主軸 entry 形狀的暫時資料，
 //                          id 用預生成的 pendingInstanceId（:key 全程穩定）。
@@ -11,7 +11,7 @@
 
 import { computed } from 'vue';
 import { useBlockDrag } from '@/composables/useBlockDrag';
-import type { DefaultBlock, TemplateBlock } from '@/types/block';
+import type { GeneralBlock, TemplateBlock } from '@/types/block';
 
 export function useSidebarDragList(options: {
   /** 拖曳結束時還原本地緩衝陣列（VueDraggable 綁的是可寫副本）。 */
@@ -30,7 +30,7 @@ export function useSidebarDragList(options: {
   // 避免畫面在正式寫入 store 前因資料形狀不符而報錯。
   // id 用預生成的 pendingInstanceId：與之後正式寫入 store 的 InstanceBlock
   // 共用同一 id，:key 全程不變（SortableJS 追蹤的 DOM 不被 Vue 中途重建）。
-  function cloneToPlaceholder(original: DefaultBlock | TemplateBlock) {
+  function cloneToPlaceholder(original: GeneralBlock | TemplateBlock) {
     return {
       id: getOrCreatePendingInstanceId(),
       slotIndex: 0,

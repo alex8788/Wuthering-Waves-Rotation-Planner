@@ -16,7 +16,7 @@ import { readonly, type DeepReadonly } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { generateUUID } from '@/utils/uuid';
-import type { DefaultBlock, TemplateBlock } from '@/types/block';
+import type { GeneralBlock, TemplateBlock } from '@/types/block';
 import type { RotationEntry } from '@/types/rotation';
 import type { SlotIndex } from '@/types/character';
 import {
@@ -196,12 +196,12 @@ export function useBlockDrag() {
    * @param blocks - 多選整組來源（依選取先後順序）；省略或單一時即視為單拖
    */
   function onSidebarDragStart(
-    block: DefaultBlock | TemplateBlock,
-    blocks?: (DefaultBlock | TemplateBlock)[]
+    block: GeneralBlock | TemplateBlock,
+    blocks?: (GeneralBlock | TemplateBlock)[]
   ): void {
     const pendingInstanceId = getOrCreatePendingInstanceId();
     _dragState.isDragging = true;
-    _dragState.sourceType = block.source === 'default' ? 'sidebar-default' : 'sidebar-template';
+    _dragState.sourceType = block.source === 'general' ? 'sidebar-general' : 'sidebar-template';
     _dragState.draggingId = pendingInstanceId;
     _dragState.draggingSourceBlock = block;
     _dragState.draggingSourceBlocks = blocks && blocks.length > 1 ? [...blocks] : [block];
@@ -310,7 +310,7 @@ export function useBlockDrag() {
     return {
       group: { name: 'sidebar', pull: 'clone', put: false },
       sort: false,
-      // 只有 .chip-wrapper 是可拖項：讓 DefaultBlockField 能把「＋新增鈕」等
+      // 只有 .chip-wrapper 是可拖項：讓 GeneralBlockField 能把「＋新增鈕」等
       // 非區塊節點放在同一拖曳容器內而不被當成可拖項（CustomBlockField 亦僅 .chip-wrapper）。
       draggable: '.chip-wrapper',
       animation: 0,

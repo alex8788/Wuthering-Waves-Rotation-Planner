@@ -6,7 +6,7 @@
 // ============================================================
 
 import { reactive } from 'vue';
-import type { DefaultBlock, TemplateBlock } from '@/types/block';
+import type { GeneralBlock, TemplateBlock } from '@/types/block';
 import type { DragSourceType } from '@/types/rotation';
 import type { SlotIndex } from '@/types/character';
 
@@ -39,10 +39,10 @@ export interface DragState {
   draggingId: string | null;
   // 多選拖曳：整組被拖曳的區塊 id（依全域順序）。單拖時為 [draggingId]。
   draggingIds: string[];
-  draggingSourceBlock: DefaultBlock | TemplateBlock | null;
+  draggingSourceBlock: GeneralBlock | TemplateBlock | null;
   // 側邊欄多選拖曳：整組來源模板，依「選取先後順序」排列（落地時由左而右解壓縮插入）。
   // 單拖時為 [draggingSourceBlock]。
-  draggingSourceBlocks: (DefaultBlock | TemplateBlock)[];
+  draggingSourceBlocks: (GeneralBlock | TemplateBlock)[];
   // 側邊欄拖曳開始時就先產生好的「未來實體 id」，讓拖曳預覽用的暫時物件
   // 與之後寫入 store 的正式 InstanceBlock 共用同一個 id（key 全程不變，
   // 避免 SortableJS 追蹤的 DOM 節點被 Vue 中途摧毀重建）

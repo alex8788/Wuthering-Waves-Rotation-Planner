@@ -1,13 +1,14 @@
 // ============================================================
-// useSidebarStore.ts — 側邊欄自訂模板區塊管理。
+// useTemplateStore.ts — 側邊欄「自訂模板」區塊管理。
 //
+// 側邊欄內容分兩類：通用區塊（見 useGeneralBlockStore）與此處的「自訂模板」
+// （綁角色、由主軸拖回序列化而來）。本 store 專責後者。
 // 職責：儲存各角色模板、主軸拖回時序列化為模板、刪除、LocalStorage 持久化。
 // ============================================================
 
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import type { TemplateBlock, InstanceBlock } from '../types/block';
-import { DEFAULT_BLOCKS } from '../constants/defaultBlocks';
 import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
 import { showToast as showGlobalToast, type ToastVariant } from '@/composables/state/useToast';
@@ -23,12 +24,12 @@ function loadTemplatesFromStorage(): TemplateBlock[] {
     if (!raw) return [];
     return JSON.parse(raw) as TemplateBlock[];
   } catch (e) {
-    console.warn('[useSidebarStore] LocalStorage 資料讀取失敗，使用空模板庫', e);
+    console.warn('[useTemplateStore] LocalStorage 資料讀取失敗，使用空模板庫', e);
     return [];
   }
 }
 
-export const useSidebarStore = defineStore('sidebar', () => {
+export const useTemplateStore = defineStore('templates', () => {
   /** 所有角色的自訂模板（以 characterId 區分歸屬）；從 LocalStorage 初始化。 */
   const templates = ref<TemplateBlock[]>(loadTemplatesFromStorage());
 
@@ -42,14 +43,11 @@ export const useSidebarStore = defineStore('sidebar', () => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newTemplates));
       } catch (e) {
-        console.warn('[useSidebarStore] LocalStorage 寫入失敗', e);
+        console.warn('[useTemplateStore] LocalStorage 寫入失敗', e);
       }
     },
     { deep: true }
   );
-
-  /** 系統預設基礎招式區塊。 */
-  const defaultBlocks = computed(() => DEFAULT_BLOCKS);
 
   // 依角色 id 篩模板，並依 label 字元數遞增排序（＝寬度遞增，免量 DOM）；
   // 字數相同時以建立時間為次序，維持穩定排列。
@@ -168,7 +166,6 @@ export const useSidebarStore = defineStore('sidebar', () => {
   return {
     templates,
     selectedTemplateIds,
-    defaultBlocks,
     getTemplatesByCharacter,
     serializeManyToTemplates,
     deleteTemplate,

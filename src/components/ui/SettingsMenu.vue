@@ -18,7 +18,7 @@ import {
   TRACK_GAP_BOUNDS,
 } from '@/composables/state/useSettings'
 import { useDialog } from '@/composables/state/useDialog'
-import { useSidebarStore } from '@/stores/useSidebarStore'
+import { useTemplateStore } from '@/stores/useTemplateStore'
 import { showToast } from '@/composables/state/useToast'
 import { useI18n } from 'vue-i18n'
 import { SUPPORTED_LOCALES } from '@/i18n'
@@ -47,7 +47,7 @@ function stepTrackGap(dir: number): void {
   )
 }
 const dialog = useDialog()
-const sidebarStore = useSidebarStore()
+const templateStore = useTemplateStore()
 
 const isOpen = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
@@ -93,7 +93,7 @@ onUnmounted(() => {
 
 // 清除資料：danger confirm 二次確認 → 清空自訂模板庫。
 async function handleClearData(): Promise<void> {
-  const count = sidebarStore.templates.length
+  const count = templateStore.templates.length
   const ok = await dialog.confirm({
     title: t('settings.clearConfirmTitle'),
     message:
@@ -105,7 +105,7 @@ async function handleClearData(): Promise<void> {
     danger: true,
   })
   if (!ok) return
-  const cleared = sidebarStore.clearAllTemplates()
+  const cleared = templateStore.clearAllTemplates()
   showToast(
     cleared > 0 ? t('toast.templatesCleared', { n: cleared }) : t('toast.templatesClearedEmpty'),
     'success',

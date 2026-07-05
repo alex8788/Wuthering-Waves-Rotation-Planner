@@ -1,19 +1,19 @@
 <script setup lang="ts">
-// DefaultBlockField.vue — 側邊欄「通用預設區塊」展示與管理區。
-// 資料改由 useDefaultBlockStore 提供（可增刪改、持久化，見 store 註解）。
+// GeneralBlockField.vue — 側邊欄「通用預設區塊」展示與管理區。
+// 資料改由 useGeneralBlockStore 提供（可增刪改、持久化，見 store 註解）。
 // 支援：拖到主軸、＋新增後即命名、雙擊重命名、點擊選取（Ctrl 多選）、
 //       刪除鈕 / Delete 鍵刪除、多選整組拖曳。顏色固定中性灰、不可改。
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'
-import { useDefaultBlockStore } from '@/stores/useDefaultBlockStore'
+import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
 import { useSidebarDragList } from '@/composables/blockDrag/useSidebarDragList'
-import type { DefaultBlock } from '@/types/block'
+import type { GeneralBlock } from '@/types/block'
 
-const store = useDefaultBlockStore()
+const store = useGeneralBlockStore()
 
 // VueDraggable 需綁一份可寫副本（pull:'clone' 不會排序原清單）；與 store 同步。
-const localBlocks = ref<DefaultBlock[]>([...store.blocks])
+const localBlocks = ref<GeneralBlock[]>([...store.blocks])
 watch(
   () => store.blocks,
   (next) => { localBlocks.value = [...next] },
@@ -31,7 +31,7 @@ function handleDragStart(event: { oldIndex?: number }): void {
   if (store.isSelected(block.id) && store.selectedIds.size > 1) {
     const ordered = [...store.selectedIds]
       .map((id) => store.blocks.find((b) => b.id === id))
-      .filter((b): b is DefaultBlock => !!b)
+      .filter((b): b is GeneralBlock => !!b)
     onSidebarDragStart(block, ordered)
   } else {
     onSidebarDragStart(block)
@@ -52,7 +52,7 @@ watch(editingId, (id) => {
   })
 })
 
-function startEdit(block: DefaultBlock): void {
+function startEdit(block: GeneralBlock): void {
   editingId.value = block.id
   draft.value = block.label
 }
@@ -88,7 +88,7 @@ function addAndEdit(): void {
 }
 
 // ── 點擊選取（Ctrl/Cmd 多選；再點同一個取消） ─────────────────
-function handleClick(block: DefaultBlock, event: MouseEvent): void {
+function handleClick(block: GeneralBlock, event: MouseEvent): void {
   if (editingId.value !== null) return
   store.toggleSelection(block.id, event.ctrlKey || event.metaKey)
 }
@@ -117,8 +117,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section ref="rootRef" class="default-block-field">
-    <h3 class="field-title">{{ $t('sidebar.defaultBlocks') }}</h3>
+  <section ref="rootRef" class="general-block-field">
+    <h3 class="field-title">{{ $t('sidebar.generalBlocks') }}</h3>
     <div class="chip-row">
       <VueDraggable
         v-model="localBlocks"
@@ -159,7 +159,7 @@ onUnmounted(() => {
             />
             <button
               class="delete-btn"
-              :aria-label="$t('sidebar.deleteDefaultBlock', { label: block.label })"
+              :aria-label="$t('sidebar.deleteGeneralBlock', { label: block.label })"
               @click.stop="handleDelete(block.id)"
               @mousedown.stop
               @pointerdown.stop
@@ -175,8 +175,8 @@ onUnmounted(() => {
         <button
           class="add-block-btn"
           type="button"
-          :aria-label="$t('sidebar.addDefaultBlock')"
-          :title="$t('sidebar.addDefaultBlock')"
+          :aria-label="$t('sidebar.addGeneralBlock')"
+          :title="$t('sidebar.addGeneralBlock')"
           @click.stop="addAndEdit"
         >
           ＋
@@ -187,7 +187,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.default-block-field {
+.general-block-field {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;         /* 標題與區塊列之間的間距 */

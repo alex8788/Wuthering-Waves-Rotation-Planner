@@ -35,7 +35,7 @@ export interface RotationAxis {
 
 /** 拖曳來源類型。 */
 export type DragSourceType =
-  | 'sidebar-default'    // 側邊欄預設區塊
+  | 'sidebar-general'    // 側邊欄通用區塊
   | 'sidebar-template'   // 側邊欄自訂模板
   | 'rotation-instance'; // 主軸現有實體
 

@@ -11,7 +11,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { RotationArray, RotationEntry, RotationAxis } from '../types/rotation';
-import type { Block, DefaultBlock, TemplateBlock } from '../types/block';
+import type { Block, GeneralBlock, TemplateBlock } from '../types/block';
 import type { SlotIndex } from '../types/character';
 import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
@@ -85,7 +85,7 @@ export const useRotationStore = defineStore('rotation', () => {
    * forcedId：沿用拖曳預覽已產生的 id 使 :key 穩定；未給則新產生 UUID。
    */
   function instantiateBlock(
-    sourceBlock: DefaultBlock | TemplateBlock,
+    sourceBlock: GeneralBlock | TemplateBlock,
     targetSlotIndex: SlotIndex,
     targetCharacterId: string,
     afterIndex: number = entries.value.length - 1,

@@ -6,9 +6,9 @@
 // ============================================================
 
 import { useRotationStore } from '@/stores/useRotationStore';
-import { useSidebarStore } from '@/stores/useSidebarStore';
+import { useTemplateStore } from '@/stores/useTemplateStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import type { DefaultBlock, TemplateBlock } from '@/types/block';
+import type { GeneralBlock, TemplateBlock } from '@/types/block';
 import type { DragSourceType } from '@/types/rotation';
 import type { SlotIndex } from '@/types/character';
 
@@ -17,8 +17,8 @@ export interface DropSnapshot {
   sourceType: DragSourceType | null;
   draggingId: string | null;
   draggingIds: string[];
-  sourceBlock: DefaultBlock | TemplateBlock | null;
-  sourceBlocks: (DefaultBlock | TemplateBlock)[];
+  sourceBlock: GeneralBlock | TemplateBlock | null;
+  sourceBlocks: (GeneralBlock | TemplateBlock)[];
   isOverSidebar: boolean;
   isOverDeleteZone: boolean;
   /** 含全部 entries 的全域 after-index；null = 無合法落點。 */
@@ -30,7 +30,7 @@ export interface DropSnapshot {
 /** 依快照把拖曳結果落地到 store（移動/刪除/序列化/實例化）。 */
 export function commitDrop(snap: DropSnapshot): void {
   const rotationStore = useRotationStore();
-  const sidebarStore = useSidebarStore();
+  const templateStore = useTemplateStore();
   const characterStore = useCharacterStore();
   const {
     sourceType, draggingId, draggingIds, sourceBlock, sourceBlocks,
@@ -45,7 +45,7 @@ export function commitDrop(snap: DropSnapshot): void {
       const blocks = ids
         .map((id) => rotationStore.entries.find((e) => e.id === id)?.block)
         .filter((b): b is NonNullable<typeof b> => !!b);
-      if (blocks.length) sidebarStore.serializeManyToTemplates(blocks);
+      if (blocks.length) templateStore.serializeManyToTemplates(blocks);
     } else if (afterIn !== null) {
       // 全域重排：afterIn 已是「含全部」語意。多選整組以鼠標錨點插入、相對順序不變。
       if (isMulti) rotationStore.moveBlocks(draggingIds, afterIn);
@@ -80,7 +80,7 @@ export function commitDrop(snap: DropSnapshot): void {
         rotationStore.instantiateBlock(b, slot, charId, insertAt);
         insertAt++;
       }
-      sidebarStore.clearTemplateSelection();
+      templateStore.clearTemplateSelection();
     } else if (
       sourceBlock.characterId === null ||
       sourceBlock.characterId === targetCharacterId
