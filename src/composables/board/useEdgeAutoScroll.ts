@@ -11,7 +11,10 @@
 
 import { onBeforeUnmount, type Ref } from 'vue';
 
-const EDGE_TOL = 4        // 右側視為「超出範圍」的容差（px）
+const EDGE_TOL = 4        // 容器左緣 fallback 的容差（px）
+const RIGHT_EDGE_PX = 44  // 右側觸發帶寬度：游標進入容器右緣內側此範圍即向右捲。
+                          // 原本僅 4px 幾乎踩不到，導致拖到泳道尾端不會自動捲、落點空欄
+                          // 露不全(issue3)；擴大成正常邊緣捲動帶（中段拖曳仍不會誤觸）。
 const LEFT_RAMP_PX = 140  // 左側：游標越過 header 右緣多遠時加速到頂（px）＝緩衝帶寬度
 const MIN_STEP = 4        // 剛進入觸發區的起始速度（px/幀）
 const MAX_STEP = 20       // 左側加速到頂的速度（px/幀）
@@ -50,7 +53,7 @@ export function useEdgeAutoScroll(
         _accelStart = 0; // 左側不用時間式，清掉右側殘留的計時，避免切換側時殘留加速
         const f = Math.min(1, (leftBound - _edgeClientX) / LEFT_RAMP_PX);
         step = MIN_STEP + (MAX_STEP - MIN_STEP) * f * f;
-      } else if (_edgeClientX >= rect.right - EDGE_TOL) {
+      } else if (_edgeClientX >= rect.right - RIGHT_EDGE_PX) {
         // 右側：時間式加速（游標頂著畫面右緣，靠停留時間計量）。
         dir = 1;
         const now = performance.now();

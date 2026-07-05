@@ -119,7 +119,16 @@ const previewLayout = computed<{
   placeholderColumn: number | null
   slotIndex: SlotIndex | null
 }>(() => {
-  if (!isPreviewing.value) {
+  const isRotationSource = dragState.sourceType === 'rotation-instance'
+  // 主軸區塊「已明確拖到三泳道外（無效區）」時，讓被拖區塊的原欄收合（不留空隙）。
+  // 只在 isOverInvalidZone 為真時才收合——不在剛抓起（尚未移動）或掠過邊界時觸發，
+  // 否則抓起瞬間整塊 board 立即重排＝畫面閃爍(issue1)、且 scrollWidth 縮短使 scrollLeft
+  // 被夾回而畫面往左跳(issue2)。真正拖出泳道才收合，對應原始「拖到泳道外原位誤展開」需求。
+  const collapsingDraggedOnly =
+    dragState.isDragging && isRotationSource && dragState.isOverInvalidZone && !isPreviewing.value
+
+  // 非拖曳、或（側邊欄來源且不在合法落點）：維持靜止佈局、不做動畫。
+  if (!isPreviewing.value && !collapsingDraggedOnly) {
     return {
       template: gridTemplate.value,
       idToColumn: idToColumnIndex.value,
@@ -131,33 +140,36 @@ const previewLayout = computed<{
 
   const entries = rotationStore.entries
   const widths = columnWidths.value
-  const afterIn = dragState.previewInsertAfterIndex as number
   const draggingId = dragState.draggingId
-  const isRotationSource = dragState.sourceType === 'rotation-instance'
 
   const draggingIds = dragState.draggingIds
   const idSet = new Set<string>(draggingIds.length ? draggingIds : draggingId ? [draggingId] : [])
 
-  let placeholderWidth = dragState.draggingWidth
-  // 側邊欄多選拖入：空欄寬＝整組來源模板量得的合計寬度（對齊主軸「自動調整寬度」落點）
-  if (!isRotationSource && dragState.draggingSourceBlocks.length > 1 && draggingGroupWidth.value > 0) {
-    placeholderWidth = draggingGroupWidth.value
-  }
-  if (isRotationSource && idSet.size > 0) {
-    let sum = 0
-    let cnt = 0
-    entries.forEach((e, i) => {
-      if (idSet.has(e.id)) {
-        sum += widths[i] ?? 0
-        cnt++
-      }
-    })
-    if (cnt > 0) placeholderWidth = sum + TRACK_GAP.value * (cnt - 1)
+  const cols = entries.map((e, i) => ({ id: e.id, width: widths[i] ?? 0 }))
+
+  // 只有在合法落點（isPreviewing）才插入落點空欄；拖到泳道外只收合被拖欄、不放空欄。
+  if (isPreviewing.value) {
+    let placeholderWidth = dragState.draggingWidth
+    // 側邊欄多選拖入：空欄寬＝整組來源模板量得的合計寬度（對齊主軸「自動調整寬度」落點）
+    if (!isRotationSource && dragState.draggingSourceBlocks.length > 1 && draggingGroupWidth.value > 0) {
+      placeholderWidth = draggingGroupWidth.value
+    }
+    if (isRotationSource && idSet.size > 0) {
+      let sum = 0
+      let cnt = 0
+      entries.forEach((e, i) => {
+        if (idSet.has(e.id)) {
+          sum += widths[i] ?? 0
+          cnt++
+        }
+      })
+      if (cnt > 0) placeholderWidth = sum + TRACK_GAP.value * (cnt - 1)
+    }
+    const afterIn = dragState.previewInsertAfterIndex as number
+    const insertAt = afterIn < 0 ? 0 : Math.min(afterIn + 1, cols.length)
+    cols.splice(insertAt, 0, { id: PREVIEW_PLACEHOLDER, width: placeholderWidth })
   }
 
-  const cols = entries.map((e, i) => ({ id: e.id, width: widths[i] ?? 0 }))
-  const insertAt = afterIn < 0 ? 0 : Math.min(afterIn + 1, cols.length)
-  cols.splice(insertAt, 0, { id: PREVIEW_PLACEHOLDER, width: placeholderWidth })
   const working = isRotationSource ? cols.filter((c) => !idSet.has(c.id)) : cols
 
   const idToColumn = new Map<string, number>()
@@ -173,9 +185,13 @@ const previewLayout = computed<{
   return {
     template,
     idToColumn,
-    idToX,
+    // 僅在合法落點（isPreviewing）時提供 idToX 給 FLIP 平滑動畫；拖到泳道外「僅收合」
+    // 時給 null＝不跑 FLIP，讓收合以瞬間貼合呈現。否則每次進出泳道右緣都會animate
+    // 一次落點空欄的增減，整塊 board 反覆滑動＝使用者回報的「晃動」。
+    idToX: isPreviewing.value ? idToX : null,
     placeholderColumn: idToColumn.get(PREVIEW_PLACEHOLDER) ?? null,
-    slotIndex: dragState.previewSlotIndex,
+    // 拖到泳道外（僅收合）時不指定 slot，落點空欄不顯示。
+    slotIndex: isPreviewing.value ? dragState.previewSlotIndex : null,
   }
 })
 
