@@ -206,16 +206,24 @@ function handleConfirm(): void {
   inset: 0;
   z-index: 10000;
   display: flex;
-  align-items: center;
+  /* 頂端對齊（非置中）：切換 PNG/SVG 使內容高度變動時，上緣與寬度不位移，
+     只往下伸長；超出視窗時由對話框自身內部捲動。 */
+  align-items: flex-start;
   justify-content: center;
+  padding: 8vh 1rem 1rem;
   background-color: rgba(5, 8, 16, 0.62);
   backdrop-filter: blur(2px);
   opacity: 1;
 }
 
 .export-dialog {
-  min-width: 320px;
-  max-width: 440px;
+  /* 固定寬度（不再隨內容在 320~440 間浮動）；窄視窗才退讓。 */
+  width: 400px;
+  max-width: 100%;
+  /* 內容過高時夾住高度並內部捲動，避免底部超出視窗。 */
+  max-height: calc(100vh - 8vh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1.125rem 1.25rem 1rem;
   background-color: #0D1526;
   border: 1px solid rgba(255, 255, 255, 0.10);
@@ -228,6 +236,16 @@ function handleConfirm(): void {
     0 16px 48px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
+}
+
+.export-dialog::-webkit-scrollbar {
+  width: 6px;
+}
+.export-dialog::-webkit-scrollbar-thumb {
+  background-color: rgba(34, 211, 238, 0.25);
+  border-radius: 3px;
 }
 
 .export-dialog__title {
