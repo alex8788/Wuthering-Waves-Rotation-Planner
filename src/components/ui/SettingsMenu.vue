@@ -35,6 +35,17 @@ function onTrackGapInput(e: Event): void {
   const v = Number((e.target as HTMLInputElement).value)
   settings.value.trackGapPx = clampSetting(v, TRACK_GAP_BOUNDS, settings.value.trackGapPx)
 }
+// 自製 ▲▼ 步進（取代原生 spin button：樣式不搭且與數字重疊）。夾回範圍。
+function stepHistory(dir: number): void {
+  settings.value.historyLimit = clampSetting(
+    settings.value.historyLimit + dir, HISTORY_LIMIT_BOUNDS, settings.value.historyLimit,
+  )
+}
+function stepTrackGap(dir: number): void {
+  settings.value.trackGapPx = clampSetting(
+    settings.value.trackGapPx + dir, TRACK_GAP_BOUNDS, settings.value.trackGapPx,
+  )
+}
 const dialog = useDialog()
 const sidebarStore = useSidebarStore()
 
@@ -188,14 +199,20 @@ async function handleClearData(): Promise<void> {
             {{ $t('settings.historyLimit') }}
             <span class="settings-menu__hint">{{ $t('settings.historyLimitHint', { min: HISTORY_LIMIT_BOUNDS.min, max: HISTORY_LIMIT_BOUNDS.max }) }}</span>
           </span>
-          <input
-            class="settings-menu__number"
-            type="number"
-            :min="HISTORY_LIMIT_BOUNDS.min"
-            :max="HISTORY_LIMIT_BOUNDS.max"
-            :value="settings.historyLimit"
-            @change="onHistoryInput"
-          />
+          <span class="settings-menu__number-field">
+            <input
+              class="settings-menu__number"
+              type="number"
+              :min="HISTORY_LIMIT_BOUNDS.min"
+              :max="HISTORY_LIMIT_BOUNDS.max"
+              :value="settings.historyLimit"
+              @change="onHistoryInput"
+            />
+            <span class="settings-menu__stepper" aria-hidden="true">
+              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepHistory(1)">▲</button>
+              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepHistory(-1)">▼</button>
+            </span>
+          </span>
         </label>
 
         <!-- 區塊間距 -->
@@ -204,14 +221,20 @@ async function handleClearData(): Promise<void> {
             {{ $t('settings.trackGap') }}
             <span class="settings-menu__hint">{{ $t('settings.trackGapHint', { min: TRACK_GAP_BOUNDS.min, max: TRACK_GAP_BOUNDS.max }) }}</span>
           </span>
-          <input
-            class="settings-menu__number"
-            type="number"
-            :min="TRACK_GAP_BOUNDS.min"
-            :max="TRACK_GAP_BOUNDS.max"
-            :value="settings.trackGapPx"
-            @change="onTrackGapInput"
-          />
+          <span class="settings-menu__number-field">
+            <input
+              class="settings-menu__number"
+              type="number"
+              :min="TRACK_GAP_BOUNDS.min"
+              :max="TRACK_GAP_BOUNDS.max"
+              :value="settings.trackGapPx"
+              @change="onTrackGapInput"
+            />
+            <span class="settings-menu__stepper" aria-hidden="true">
+              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(1)">▲</button>
+              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(-1)">▼</button>
+            </span>
+          </span>
         </label>
 
         <!-- 記住匯出設定 -->
@@ -376,21 +399,68 @@ async function handleClearData(): Promise<void> {
   outline-offset: 1px;
 }
 
-.settings-menu__number {
+/* 數字欄：輸入框 + 自製 ▲▼ 步進鈕（取代原生 spin button，樣式一致且不重疊）。 */
+.settings-menu__number-field {
   flex-shrink: 0;
-  width: 4rem;
-  padding: 0.25rem 0.4rem;
+  display: inline-flex;
+  align-items: stretch;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 4px;
   background-color: #0d1320;
+  overflow: hidden;
+}
+.settings-menu__number-field:focus-within {
+  border-color: rgba(34, 211, 238, 0.6);
+}
+
+.settings-menu__number {
+  width: 3rem;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  background: transparent;
   color: rgba(240, 244, 248, 0.9);
   font-family: inherit;
   font-size: 0.75rem;
   text-align: right;
+  outline: none;
 }
-.settings-menu__number:focus-visible {
-  outline: 1px solid rgba(34, 211, 238, 0.6);
-  outline-offset: 1px;
+/* 隱藏原生 spin button（Chromium/WebKit 與 Firefox）。 */
+.settings-menu__number::-webkit-outer-spin-button,
+.settings-menu__number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.settings-menu__number {
+  -moz-appearance: textfield;
+}
+
+/* 步進鈕直排 ▲▼，帶左分隔線，青色主題呼應全站。 */
+.settings-menu__stepper {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+.settings-menu__step {
+  flex: 1;
+  width: 1.1rem;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(240, 244, 248, 0.55);
+  font-size: 0.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.settings-menu__step:first-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+.settings-menu__step:hover {
+  background: rgba(34, 211, 238, 0.16);
+  color: rgba(34, 211, 238, 0.95);
+}
+.settings-menu__step:active {
+  background: rgba(34, 211, 238, 0.28);
 }
 
 /* 開關：以原生 checkbox 重繪為 pill 開關（無 JS） */
