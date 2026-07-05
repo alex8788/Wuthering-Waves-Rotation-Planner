@@ -11,6 +11,7 @@
 
 import { computed, type ComputedRef } from 'vue';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { t, characterDisplayName } from '@/i18n';
 
 // header 內名稱的實際字型（與 Swimlane / ExportView 的 .header__name 一致）。
 const HEADER_NAME_FONT = '700 12px "Noto Sans TC", system-ui, sans-serif';
@@ -18,8 +19,6 @@ const HEADER_NAME_FONT = '700 12px "Noto Sans TC", system-ui, sans-serif';
 const BASE_PX = 94;
 const MIN_PX = 132;
 const MAX_PX = 240;
-// 占位字：全空時避免 header 過窄。
-const PLACEHOLDER = '選擇角色';
 
 let _measureCanvas: HTMLCanvasElement | null = null;
 function measureTextWidth(text: string, font: string): number {
@@ -36,10 +35,12 @@ export function useHeaderWidth(): { headerWidthPx: ComputedRef<number> } {
   const characterStore = useCharacterStore();
 
   const headerWidthPx = computed<number>(() => {
+    // 量測候選＝依當前語言的「顯示名」＋占位字（i18n 響應式 → 切語言自動重算，
+    // 主面板與匯出圖共用本 computed，故兩者永遠同寬）。
     const candidates = characterStore.slotCharacters
-      .map((c) => c?.nameZh)
+      .map((c) => (c ? characterDisplayName(c) : ''))
       .filter((n): n is string => !!n);
-    candidates.push(PLACEHOLDER);
+    candidates.push(t('swimlane.selectCharacter'));
     const maxName = candidates.reduce(
       (m, n) => Math.max(m, measureTextWidth(n, HEADER_NAME_FONT)),
       0,

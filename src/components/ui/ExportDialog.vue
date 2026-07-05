@@ -85,26 +85,26 @@ function handleConfirm(): void {
           class="export-dialog"
           role="dialog"
           aria-modal="true"
-          aria-label="匯出設定"
+          :aria-label="$t('export.dialogLabel')"
           @keydown.esc.prevent="cancel"
         >
-          <h2 class="export-dialog__title">匯出輸出軸圖片</h2>
+          <h2 class="export-dialog__title">{{ $t('export.title') }}</h2>
 
           <!-- 檔名 -->
           <label class="export-dialog__field">
-            <span class="export-dialog__label">檔名</span>
+            <span class="export-dialog__label">{{ $t('export.filename') }}</span>
             <input
               v-model="filename"
               class="export-dialog__input"
               type="text"
-              placeholder="輸入檔名"
+              :placeholder="$t('export.filenamePlaceholder')"
               @keydown.enter.prevent="handleConfirm"
             />
           </label>
 
           <!-- 選軸 -->
           <div class="export-dialog__field">
-            <span class="export-dialog__label">要匯出的輸出軸</span>
+            <span class="export-dialog__label">{{ $t('export.axes') }}</span>
             <ul class="export-dialog__axes">
               <li v-for="axis in rotationStore.axes" :key="axis.id">
                 <label class="export-dialog__axis">
@@ -121,22 +121,22 @@ function handleConfirm(): void {
 
           <!-- 合併 / 分開（多軸才顯示） -->
           <div v-if="selectedIds.size > 1" class="export-dialog__field">
-            <span class="export-dialog__label">多軸輸出方式</span>
+            <span class="export-dialog__label">{{ $t('export.multiMode') }}</span>
             <div class="export-dialog__modes">
               <label class="export-dialog__mode">
                 <input type="radio" value="merge" v-model="mode" />
-                <span>合併成一張圖</span>
+                <span>{{ $t('export.merge') }}</span>
               </label>
               <label class="export-dialog__mode">
                 <input type="radio" value="separate" v-model="mode" />
-                <span>分開打包成 ZIP</span>
+                <span>{{ $t('export.zip') }}</span>
               </label>
             </div>
           </div>
 
           <div class="export-dialog__actions">
             <button type="button" class="export-dialog__btn export-dialog__btn--cancel" @click="cancel">
-              取消
+              {{ $t('dialog.cancel') }}
             </button>
             <button
               type="button"
@@ -144,7 +144,7 @@ function handleConfirm(): void {
               :disabled="!canConfirm()"
               @click="handleConfirm"
             >
-              匯出
+              {{ $t('export.action') }}
             </button>
           </div>
         </div>

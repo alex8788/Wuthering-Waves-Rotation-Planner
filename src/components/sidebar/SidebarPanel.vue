@@ -11,16 +11,17 @@ type TabId = 'default' | 'custom'
 // 目前顯示的 Tab
 const activeTab = ref<TabId>('default')
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'default', label: '預設' },
-  { id: 'custom',  label: '自訂' },
+// label 為 i18n key（渲染時 $t 查表，隨語言切換）
+const TABS: { id: TabId; labelKey: string }[] = [
+  { id: 'default', labelKey: 'sidebar.presetTab' },
+  { id: 'custom',  labelKey: 'sidebar.customTab' },
 ]
 </script>
 
 <template>
-  <aside class="sidebar-panel" :[SIDEBAR_ZONE_ATTRIBUTE]="true" aria-label="區塊側邊欄">
-    
-    <div class="segmented-control" role="tablist" aria-label="切換區塊類型">
+  <aside class="sidebar-panel" :[SIDEBAR_ZONE_ATTRIBUTE]="true" :aria-label="$t('sidebar.panelLabel')">
+
+    <div class="segmented-control" role="tablist" :aria-label="$t('sidebar.switchTabsLabel')">
       <button
         v-for="tab in TABS"
         :key="tab.id"
@@ -32,7 +33,7 @@ const TABS: { id: TabId; label: string }[] = [
         :id="`tab-${tab.id}`"
         @click="activeTab = tab.id"
       >
-        {{ tab.label }}
+        {{ $t(tab.labelKey) }}
       </button>
     </div>
 

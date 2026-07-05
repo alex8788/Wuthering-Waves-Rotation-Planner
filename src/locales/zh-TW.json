@@ -1,0 +1,113 @@
+{
+  "header": {
+    "title": "鳴潮排軸編輯器",
+    "export": "匯出",
+    "exportTooltip": "匯出輸出軸圖片"
+  },
+  "sidebar": {
+    "panelLabel": "區塊側邊欄",
+    "switchTabsLabel": "切換區塊類型",
+    "presetTab": "預設",
+    "customTab": "自訂",
+    "defaultBlocks": "基礎招式",
+    "collapse": "收合側邊欄",
+    "expand": "展開側邊欄",
+    "characterFallback": "角色 {n}",
+    "templateCount": "共 {n} 個模板",
+    "noCharacter": "尚未選角",
+    "noCharacterLabel": "尚未選角，無法顯示自訂模板",
+    "noTemplatesLabel": "此角色尚無自訂模板",
+    "emptyHint": "從主軸拖回區塊以新增模板",
+    "templatesOf": "{name} 的自訂模板",
+    "deleteTemplate": "刪除模板 {label}"
+  },
+  "swimlane": {
+    "selectCharacter": "選擇角色",
+    "changeCharacter": "更換角色：{name}",
+    "laneOf": "{name} 的輸出軸",
+    "laneEmpty": "槽位 {n}（未選角）",
+    "dragLane": "拖曳調整泳道順序",
+    "blockSeqOf": "{name} 的區塊序列",
+    "blockSeq": "區塊序列",
+    "pickFirstHint": "請先選擇角色",
+    "pickFirstLabel": "請先於上方選擇角色",
+    "dropHere": "拖放至此",
+    "addBlockLabel": "在 {name} 的輸出軸新增區塊",
+    "addBlockTitle": "新增區塊至 {name}",
+    "deselect": "取消選角",
+    "switchTitle": "切換角色",
+    "switchMessage": "將清空所有該角色的區塊，確定？",
+    "switchConfirm": "切換",
+    "deselectMessage": "將清空該角色的所有區塊，確定？",
+    "noCharacterExport": "未選角"
+  },
+  "selector": {
+    "elementTab": "屬性 {element}"
+  },
+  "board": {
+    "panelLabel": "輸出軸面板"
+  },
+  "axis": {
+    "defaultName": "輸出軸 {n}",
+    "tabsLabel": "輸出軸分頁",
+    "addTitle": "新增輸出軸",
+    "namePlaceholder": "輸出軸名稱",
+    "create": "建立",
+    "deleteTitle": "刪除輸出軸",
+    "deleteMessage": "確定刪除「{name}」？",
+    "delete": "刪除"
+  },
+  "export": {
+    "dialogLabel": "匯出設定",
+    "title": "匯出輸出軸圖片",
+    "filename": "檔名",
+    "filenamePlaceholder": "輸入檔名",
+    "axes": "要匯出的輸出軸",
+    "multiMode": "多軸輸出方式",
+    "merge": "合併成一張圖",
+    "zip": "分開打包成 ZIP",
+    "action": "匯出",
+    "nodeNotFound": "找不到匯出視圖節點"
+  },
+  "settings": {
+    "gearLabel": "設定",
+    "heading": "設定",
+    "language": "介面語言",
+    "capsLock": "大寫鎖定",
+    "capsLockHint": "區塊文字提交時自動轉大寫",
+    "animations": "動畫效果",
+    "animationsHint": "關閉可減少動態、提升效能",
+    "historyLimit": "復原步數上限",
+    "historyLimitHint": "{min}–{max} 步",
+    "trackGap": "區塊間距",
+    "trackGapHint": "{min}–{max} px",
+    "rememberExport": "記住匯出設定",
+    "rememberExportHint": "保留上次的檔名與合併方式",
+    "clearData": "清除資料",
+    "clearDataHint": "刪除全部自訂模板（無法復原）",
+    "clearBtn": "清除自訂模板",
+    "clearConfirmTitle": "清除資料",
+    "clearConfirmMessage": "將刪除全部 {n} 個自訂模板（無法復原）。確定要清除嗎？",
+    "clearConfirmEmpty": "自訂模板庫目前是空的，仍要執行清除嗎？",
+    "clearConfirm": "清除"
+  },
+  "dialog": {
+    "ok": "確定",
+    "cancel": "取消"
+  },
+  "toast": {
+    "exportedPng": "已匯出圖片",
+    "exportedZip": "已匯出 ZIP",
+    "exportFailed": "匯出失敗:{msg}",
+    "copied": "已複製",
+    "copiedN": "已複製 {n} 個區塊",
+    "templateExists": "模板庫已有相同區塊",
+    "templatesAllExist": "選取區塊皆已存在於模板庫",
+    "templateAdded": "已新增至模板庫",
+    "templatesAdded": "已新增 {n} 個區塊至模板庫",
+    "templatesAddedSkipped": "已新增 {added} 個區塊至模板庫，{skipped} 個區塊已存在",
+    "templatesCleared": "已清除 {n} 個自訂模板",
+    "templatesClearedEmpty": "已清除（模板庫原本為空）",
+    "closeLabel": "關閉提示"
+  }
+}

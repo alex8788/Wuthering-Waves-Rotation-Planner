@@ -71,7 +71,7 @@ const effectiveSidebarWidth = computed(() =>
     <button
       type="button"
       class="sidebar-toggle"
-      :aria-label="collapsed ? '展開側邊欄' : '收合側邊欄'"
+      :aria-label="collapsed ? $t('sidebar.expand') : $t('sidebar.collapse')"
       :aria-expanded="!collapsed"
       @click="toggleSidebar"
     >

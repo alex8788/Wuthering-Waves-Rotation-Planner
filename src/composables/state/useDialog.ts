@@ -9,6 +9,7 @@
 // ============================================================
 
 import { ref } from 'vue';
+import { t } from '@/i18n';
 
 type DialogKind = 'confirm' | 'prompt';
 
@@ -62,8 +63,8 @@ export function useDialog() {
         message: opts.message ?? '',
         inputValue: '',
         placeholder: '',
-        confirmText: opts.confirmText ?? '確定',
-        cancelText: opts.cancelText ?? '取消',
+        confirmText: opts.confirmText ?? t('dialog.ok'),
+        cancelText: opts.cancelText ?? t('dialog.cancel'),
         danger: opts.danger ?? false,
         _resolve: resolve as (v: boolean | string | null) => void,
       };
@@ -79,8 +80,8 @@ export function useDialog() {
         message: opts.message ?? '',
         inputValue: opts.defaultValue ?? '',
         placeholder: opts.placeholder ?? '',
-        confirmText: opts.confirmText ?? '確定',
-        cancelText: opts.cancelText ?? '取消',
+        confirmText: opts.confirmText ?? t('dialog.ok'),
+        cancelText: opts.cancelText ?? t('dialog.cancel'),
         danger: opts.danger ?? false,
         _resolve: resolve as (v: boolean | string | null) => void,
       };

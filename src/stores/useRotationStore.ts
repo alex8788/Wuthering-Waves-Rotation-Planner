@@ -17,6 +17,7 @@ import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
 import { useHistory } from '@/composables/state/useHistory';
 import { useSettings } from '@/composables/state/useSettings';
+import { t } from '@/i18n';
 
 /** 刪除消失動畫時長(ms)，須與 RotationBlock 的 @keyframes block-leave 一致。 */
 const LEAVE_MS = 180;
@@ -35,7 +36,7 @@ export const useRotationStore = defineStore('rotation', () => {
 
   /** 所有輸出軸（各持一條 entries）；初始一條空白軸。 */
   const axes = ref<RotationAxis[]>([
-    { id: generateUUID(), name: '輸出軸 1', entries: [] },
+    { id: generateUUID(), name: t('axis.defaultName', { n: 1 }), entries: [] },
   ]);
 
   /** 目前作用中的輸出軸 id。 */

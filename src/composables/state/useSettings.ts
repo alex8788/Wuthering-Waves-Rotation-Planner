@@ -47,7 +47,7 @@ export interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  language: 'zh-TW',
+  language: 'en',
   autoUppercase: false,
   animationsEnabled: true,
   historyLimit: 30,

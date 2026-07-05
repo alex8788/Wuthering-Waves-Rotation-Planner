@@ -51,7 +51,7 @@ const variantConfig = {
         <!-- 手動關閉按鈕 -->
         <button
           class="toast__close"
-          aria-label="關閉提示"
+          :aria-label="$t('toast.closeLabel')"
           @click="hideToast"
         >
           ✕

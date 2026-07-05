@@ -316,7 +316,7 @@ onMounted(() => {
     :class="{ 'rotation-board--lane-dragging': laneDrag.active }"
     :style="{ '--board-header-width': headerWidthPx + 'px' }"
     :[DELETE_ZONE_ATTRIBUTE]="true"
-    aria-label="輸出軸面板"
+    :aria-label="$t('board.panelLabel')"
   >
     <div ref="boardScrollRef" class="board__scroll">
       <!-- 泳道依 orderedSlots（laneOrder）排列；TransitionGroup 讓放開後的

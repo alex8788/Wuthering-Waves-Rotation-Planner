@@ -24,7 +24,7 @@ function handleDragStart(event: { oldIndex?: number }): void {
 
 <template>
   <section class="default-block-field">
-    <h3 class="field-title">基礎招式</h3>
+    <h3 class="field-title">{{ $t('sidebar.defaultBlocks') }}</h3>
     <div class="chip-row">
       <VueDraggable
         v-model="localBlocks"

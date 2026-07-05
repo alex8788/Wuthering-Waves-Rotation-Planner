@@ -16,6 +16,7 @@ import { useLaneLayout } from '@/composables/board/useLaneLayout'
 import { useHeaderWidth } from '@/composables/board/useHeaderWidth'
 import { getElementColor } from '@/constants/elements'
 import { useSettings } from '@/composables/state/useSettings'
+import { characterDisplayName } from '@/i18n'
 import type { RotationAxis } from '@/types/rotation'
 import type { SlotIndex } from '@/types/character'
 
@@ -72,12 +73,12 @@ function laneColor(slot: SlotIndex): string {
                 v-if="laneCharacter(slot)?.avatar"
                 class="export-lane__avatar"
                 :src="laneCharacter(slot)!.avatar!"
-                :alt="laneCharacter(slot)?.nameZh"
+                :alt="characterDisplayName(laneCharacter(slot))"
               />
               <div v-else class="export-lane__avatar export-lane__avatar--placeholder" />
-              <span class="export-lane__name">{{ laneCharacter(slot)?.nameZh }}</span>
+              <span class="export-lane__name">{{ characterDisplayName(laneCharacter(slot)) }}</span>
             </template>
-            <span v-else class="export-lane__name export-lane__name--empty">未選角</span>
+            <span v-else class="export-lane__name export-lane__name--empty">{{ $t('swimlane.noCharacterExport') }}</span>
           </div>
         </div>
 

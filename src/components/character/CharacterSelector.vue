@@ -20,7 +20,9 @@ let uidCounter = 0
 // ============================================================
 
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getElementColor, getElementIcon } from '@/constants/elements'
+import { characterDisplayName, elementDisplayName } from '@/i18n'
 import type { Character, CharacterElement } from '@/types/character'
 
 export interface Props {
@@ -28,13 +30,19 @@ export interface Props {
   modelValue: string | null
   /** 可選角色清單 */
   options: Character[]
-  /** 尚未選擇時顯示的提示文字 */
+  /** 尚未選擇時顯示的提示文字；未傳入時用 i18n 預設（隨語言切換） */
   placeholder?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '選擇角色',
+  placeholder: '',
 })
+
+const { t } = useI18n()
+// 佔位提示：props 優先，未傳入時查字典（prop default 無法響應語言切換，故用 computed）。
+const placeholderText = computed<string>(
+  () => props.placeholder || t('swimlane.selectCharacter'),
+)
 
 const emit = defineEmits<{
   /** 選中某個角色時觸發，value 一定是 options 中某個角色的 id */
@@ -64,13 +72,32 @@ function updateDropdownPosition(): void {
   const el = triggerRef.value
   if (!el) return
   const r = el.getBoundingClientRect()
-  dropdownStyle.value = {
+  const GAP = 6 // trigger 與選單間距
+  const MARGIN = 8 // 選單與視窗邊緣留白
+  const DESIRED = 320 // 選單理想高度（與 CSS max-height 一致）
+
+  // 依可用空間決定向下或向上展開，並夾住高度使其永不超出視窗
+  // （第三泳道在矮視窗如 VS Code 內嵌瀏覽器向下會被裁切 → 改向上或縮高）。
+  const spaceBelow = window.innerHeight - r.bottom - GAP - MARGIN
+  const spaceAbove = r.top - GAP - MARGIN
+  const openUp = spaceBelow < DESIRED && spaceAbove > spaceBelow
+  const maxH = Math.max(140, Math.min(DESIRED, openUp ? spaceAbove : spaceBelow))
+
+  const base: Record<string, string> = {
     position: 'fixed',
-    top: `${r.bottom + 6}px`,
     left: `${r.left}px`,
     // a3：至少與 trigger 同寬，但給較大下限讓較長角色名不被截斷
     minWidth: `${Math.max(r.width, 180)}px`,
+    maxHeight: `${maxH}px`, // 內聯覆蓋 CSS 固定 320，確保不超出視窗
   }
+  if (openUp) {
+    base.bottom = `${window.innerHeight - r.top + GAP}px`
+    base.transformOrigin = 'bottom'
+  } else {
+    base.top = `${r.bottom + GAP}px`
+    base.transformOrigin = 'top'
+  }
+  dropdownStyle.value = base
 }
 
 // a5：依鳴潮角色屬性（element）分組。每個選項保留其在 props.options 的扁平索引，
@@ -296,7 +323,7 @@ onUnmounted(() => {
           class="char-selector__value"
           :class="{ 'char-selector__value--placeholder': !selectedCharacter }"
         >
-          {{ selectedCharacter ? selectedCharacter.nameZh : placeholder }}
+          {{ selectedCharacter ? characterDisplayName(selectedCharacter) : placeholderText }}
         </span>
         <span class="char-selector__chevron" aria-hidden="true">▾</span>
       </slot>
@@ -322,7 +349,7 @@ onUnmounted(() => {
               class="char-selector__tab"
               :class="{ 'char-selector__tab--active': el === activeTabElement }"
               :style="{ '--tab-color': getElementColor(el) }"
-              :aria-label="`屬性 ${el}`"
+              :aria-label="$t('selector.elementTab', { element: elementDisplayName(el) })"
               @click="setActiveTab(el)"
             >
               <img
@@ -333,7 +360,7 @@ onUnmounted(() => {
                 aria-hidden="true"
               />
               <span v-else class="char-selector__tab-bar" aria-hidden="true" />
-              <span class="char-selector__tab-label">{{ el }}</span>
+              <span class="char-selector__tab-label">{{ elementDisplayName(el) }}</span>
             </button>
           </li>
 
@@ -367,7 +394,7 @@ onUnmounted(() => {
                   loading="lazy"
                 />
               </span>
-              <span class="char-selector__option-name">{{ char.nameZh }}</span>
+              <span class="char-selector__option-name">{{ characterDisplayName(char) }}</span>
             </li>
           </template>
         </ul>
