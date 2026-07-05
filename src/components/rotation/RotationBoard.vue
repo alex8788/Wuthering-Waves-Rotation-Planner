@@ -185,10 +185,10 @@ const previewLayout = computed<{
   return {
     template,
     idToColumn,
-    // 僅在合法落點（isPreviewing）時提供 idToX 給 FLIP 平滑動畫；拖到泳道外「僅收合」
-    // 時給 null＝不跑 FLIP，讓收合以瞬間貼合呈現。否則每次進出泳道右緣都會animate
-    // 一次落點空欄的增減，整塊 board 反覆滑動＝使用者回報的「晃動」。
-    idToX: isPreviewing.value ? idToX : null,
+    // 一律提供 idToX 給 FLIP：進出無效區的收合／展開都走平滑滑動，避免「從無效區拖回
+    // 泳道時 grid-column 瞬間展開」。收合已收窄到 isOverInvalidZone 才觸發（穩定區域、
+    // 非每幀切換），故不會像先前廣義 !isPreviewing 那樣反覆 toggle 造成整塊 board 晃動。
+    idToX,
     placeholderColumn: idToColumn.get(PREVIEW_PLACEHOLDER) ?? null,
     // 拖到泳道外（僅收合）時不指定 slot，落點空欄不顯示。
     slotIndex: isPreviewing.value ? dragState.previewSlotIndex : null,

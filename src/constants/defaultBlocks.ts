@@ -61,7 +61,7 @@ export const DEFAULT_BLOCKS: DefaultBlock[] = [
   },
   {
     id: 'default-SWAP',
-    label: 'QTE',
+    label: 'Outro',
     color: '#64748B',
     characterId: null,
     source: 'default',

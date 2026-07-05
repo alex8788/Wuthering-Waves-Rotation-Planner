@@ -433,8 +433,8 @@ async function handleDeselectCharacter(): Promise<void> {
                  被 SortableJS draggable:'.rotation-block' 選擇器排除，不會被當成可拖項。
                  拖曳預覽期間隱藏，避免與落點空欄搶欄、或造成 grid 欄數變動。 -->
             <button
-              v-show="!dragState.isDragging"
               class="track__add-btn"
+              :class="{ 'track__add-btn--drag-hidden': dragState.isDragging }"
               :style="{ gridColumn: String(addButtonColumn + 1) }"
               type="button"
               :aria-label="$t('swimlane.addBlockLabel', { name: charName })"
@@ -716,6 +716,14 @@ async function handleDeselectCharacter(): Promise<void> {
   width: max-content;
 }
 
+/* 本 grid 依設計恆為「單列」：所有子項（區塊/落點空欄/＋按鈕）一律釘第 1 列。
+   否則兩個子項落在同一欄時（如拖到尾端：落點空欄與 ＋ 的欄位重疊），grid
+   自動排版會把後者擠到第 2 列 → 固定 64px 的泳道被切成兩列、區塊整排上移。
+   同欄改為同格重疊（拖曳中 ＋ 已隱藏，無視覺衝突）。 */
+.track__draggable > * {
+  grid-row: 1;
+}
+
 /* 泳道本身為空時撐滿，讓 SortableJS 在任意位置都能命中此清單。
    但若全域序列非空（gridTemplate 有值），仍需保留 grid 欄位以維持對齊，
    故 flex 撐滿只在「全域也為空」時才套用（此時 gridTemplate 為空字串）。 */
@@ -757,6 +765,18 @@ async function handleDeselectCharacter(): Promise<void> {
 
 /* ＋ 按鈕現位於共用 grid 內，用 grid-column 釘在該泳道最後一個區塊之後。
    align-self/justify-self 控制其在欄內的對齊；空泳道（flex fallback）時自然靠左。 */
+/* 拖曳期間隱藏 ＋ 但保留其 grid 欄位（visibility 而非 display:none）：
+   display:none 會讓尾端隱式欄收合、scrollWidth 縮短，捲到最右時 scrollLeft 被夾回
+   而畫面往左跳（拖任何區塊皆抖動）。改 visibility 保留欄寬即不跳。
+   grid-row:1 必釘：＋ 的欄序是靜止版，拖曳預覽時落點空欄可能佔到同一欄，
+   若不釘列，grid 自動排版會把 ＋ 擠到第二列 → 泳道被撐高、整排區塊上移。
+   已隱藏故與空欄同格重疊無妨。 */
+.track__add-btn--drag-hidden {
+  visibility: hidden;
+  pointer-events: none;
+  grid-row: 1;
+}
+
 .track__add-btn {
   align-self: center;
   justify-self: start;
