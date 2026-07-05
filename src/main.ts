@@ -7,6 +7,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 
 import App from './App.vue';
+import { i18n } from './i18n';
 
 // 全域樣式（Tailwind base/components/utilities + 自訂樣式）
 import './style.css';
@@ -18,5 +19,8 @@ const app = createApp(App);
 //    必須在 app.mount() 之前呼叫，確保所有元件都能存取 store
 app.use(createPinia());
 
-// 3. 掛載到 index.html 的 #app 容器
+// 3. 掛載 i18n（介面語言由設定選單切換，字典見 src/locales/）
+app.use(i18n);
+
+// 4. 掛載到 index.html 的 #app 容器
 app.mount('#app');

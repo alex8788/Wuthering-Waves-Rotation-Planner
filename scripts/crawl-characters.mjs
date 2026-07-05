@@ -200,6 +200,9 @@ async function main() {
 
     const iconPath = join(ELEMENT_DIR, `${slug}.webp`);
     const entry = { name, slug };
+    // 屬性英文名（i18n 顯示用）：本次 en roleList 取得；取不到沿用舊檔。
+    const nameEn = elemEnName.get(name) ?? old?.nameEn;
+    if (nameEn) entry.nameEn = nameEn;
     if (!SKIP_AVATARS && e.Icon) {
       const ok = await downloadImage(`${RESOURCE_BASE}${e.Icon}.webp`, iconPath);
       if (!ok) errors.push(`屬性 ${name}: 圖示下載失敗`);

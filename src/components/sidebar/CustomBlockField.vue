@@ -10,6 +10,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useLaneOrder } from '@/composables/state/useLaneOrder'
 import { useSidebarDragList } from '@/composables/blockDrag/useSidebarDragList'
 import { getElementColor } from '@/constants/elements'
+import { characterDisplayName } from '@/i18n'
 import type { TemplateBlock } from '@/types/block'
 
 const sidebarStore = useSidebarStore()
@@ -108,31 +109,31 @@ onUnmounted(() => {
           aria-hidden="true"
         />
         <span class="group-label">
-          {{ slot.character?.nameZh ?? '角色 ' + (slot.slotIndex + 1) }}
+          {{ slot.character ? characterDisplayName(slot.character) : $t('sidebar.characterFallback', { n: slot.slotIndex + 1 }) }}
         </span>
 
         <span
           v-if="localTemplatesPerSlot[slot.slotIndex].length > 0"
           class="group-count"
-          :aria-label="`共 ${localTemplatesPerSlot[slot.slotIndex].length} 個模板`"
+          :aria-label="$t('sidebar.templateCount', { n: localTemplatesPerSlot[slot.slotIndex].length }, localTemplatesPerSlot[slot.slotIndex].length)"
         >
           {{ localTemplatesPerSlot[slot.slotIndex].length }}
         </span>
       </div>
 
-      <div v-if="!slot.character" class="empty-placeholder" aria-label="尚未選角，無法顯示自訂模板">
-        <span class="empty-text">尚未選角</span>
+      <div v-if="!slot.character" class="empty-placeholder" :aria-label="$t('sidebar.noCharacterLabel')">
+        <span class="empty-text">{{ $t('sidebar.noCharacter') }}</span>
       </div>
 
       <div
         v-else-if="localTemplatesPerSlot[slot.slotIndex].length === 0"
         class="empty-placeholder empty-placeholder--hint"
-        aria-label="此角色尚無自訂模板"
+        :aria-label="$t('sidebar.noTemplatesLabel')"
       >
-        <span class="empty-text">從主軸拖回區塊以新增模板</span>
+        <span class="empty-text">{{ $t('sidebar.emptyHint') }}</span>
       </div>
 
-      <div v-else class="chip-row" :aria-label="`${slot.character.nameZh} 的自訂模板`">
+      <div v-else class="chip-row" :aria-label="$t('sidebar.templatesOf', { name: characterDisplayName(slot.character) })">
         <VueDraggable
           v-model="localTemplatesPerSlot[slot.slotIndex]"
           item-key="id"
@@ -158,7 +159,7 @@ onUnmounted(() => {
 
             <button
               class="delete-btn"
-              :aria-label="`刪除模板 ${template.label}`"
+              :aria-label="$t('sidebar.deleteTemplate', { label: template.label })"
               @click.stop="handleDelete(template.id)"
             >
               <svg class="delete-icon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

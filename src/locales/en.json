@@ -1,0 +1,113 @@
+{
+  "header": {
+    "title": "WuWa Rotation Planner",
+    "export": "Export",
+    "exportTooltip": "Export rotation images"
+  },
+  "sidebar": {
+    "panelLabel": "Block sidebar",
+    "switchTabsLabel": "Switch block type",
+    "presetTab": "Preset",
+    "customTab": "Custom",
+    "defaultBlocks": "Basic Moves",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "characterFallback": "Character {n}",
+    "templateCount": "{n} template | {n} templates",
+    "noCharacter": "No character selected",
+    "noCharacterLabel": "No character selected; custom templates unavailable",
+    "noTemplatesLabel": "This character has no custom templates yet",
+    "emptyHint": "Drag blocks back from the timeline to save templates",
+    "templatesOf": "Custom templates of {name}",
+    "deleteTemplate": "Delete template {label}"
+  },
+  "swimlane": {
+    "selectCharacter": "Select character",
+    "changeCharacter": "Change character: {name}",
+    "laneOf": "{name}'s rotation lane",
+    "laneEmpty": "Slot {n} (empty)",
+    "dragLane": "Drag to reorder lanes",
+    "blockSeqOf": "{name}'s block sequence",
+    "blockSeq": "Block sequence",
+    "pickFirstHint": "Select a character first",
+    "pickFirstLabel": "Select a character above first",
+    "dropHere": "Drop here",
+    "addBlockLabel": "Add a block to {name}'s lane",
+    "addBlockTitle": "Add block to {name}",
+    "deselect": "Clear character",
+    "switchTitle": "Switch Character",
+    "switchMessage": "All blocks of this character will be cleared. Continue?",
+    "switchConfirm": "Switch",
+    "deselectMessage": "All blocks of this character will be cleared. Continue?",
+    "noCharacterExport": "No character"
+  },
+  "selector": {
+    "elementTab": "Element {element}"
+  },
+  "board": {
+    "panelLabel": "Rotation board"
+  },
+  "axis": {
+    "defaultName": "Rotation {n}",
+    "tabsLabel": "Rotation tabs",
+    "addTitle": "New Rotation",
+    "namePlaceholder": "Rotation name",
+    "create": "Create",
+    "deleteTitle": "Delete Rotation",
+    "deleteMessage": "Delete \"{name}\"?",
+    "delete": "Delete"
+  },
+  "export": {
+    "dialogLabel": "Export settings",
+    "title": "Export Rotation Images",
+    "filename": "Filename",
+    "filenamePlaceholder": "Enter filename",
+    "axes": "Rotations to export",
+    "multiMode": "Multi-rotation output",
+    "merge": "Merge into one image",
+    "zip": "Separate PNGs in a ZIP",
+    "action": "Export",
+    "nodeNotFound": "Export view node not found"
+  },
+  "settings": {
+    "gearLabel": "Settings",
+    "heading": "Settings",
+    "language": "Language",
+    "capsLock": "Caps Lock",
+    "capsLockHint": "Auto-uppercase block text on commit",
+    "animations": "Animations",
+    "animationsHint": "Turn off to reduce motion and improve performance",
+    "historyLimit": "Undo history limit",
+    "historyLimitHint": "{min}–{max} steps",
+    "trackGap": "Block spacing",
+    "trackGapHint": "{min}–{max} px",
+    "rememberExport": "Remember export settings",
+    "rememberExportHint": "Keep last filename and merge mode",
+    "clearData": "Clear Data",
+    "clearDataHint": "Delete all custom templates (cannot be undone)",
+    "clearBtn": "Clear custom templates",
+    "clearConfirmTitle": "Clear Data",
+    "clearConfirmMessage": "This will delete all {n} custom templates (cannot be undone). Continue?",
+    "clearConfirmEmpty": "The template library is already empty. Clear anyway?",
+    "clearConfirm": "Clear"
+  },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
+  "toast": {
+    "exportedPng": "Image exported",
+    "exportedZip": "ZIP exported",
+    "exportFailed": "Export failed: {msg}",
+    "copied": "Copied",
+    "copiedN": "Copied {n} blocks",
+    "templateExists": "An identical template already exists",
+    "templatesAllExist": "All selected blocks already exist in the library",
+    "templateAdded": "Added to template library",
+    "templatesAdded": "Added {n} blocks to template library",
+    "templatesAddedSkipped": "Added {added} blocks, {skipped} already existed",
+    "templatesCleared": "Cleared {n} custom templates",
+    "templatesClearedEmpty": "Cleared (library was already empty)",
+    "closeLabel": "Dismiss notification"
+  }
+}

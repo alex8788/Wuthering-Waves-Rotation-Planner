@@ -10,6 +10,7 @@ import { useRotationStore } from '@/stores/useRotationStore';
 import { useBoardScroll } from '@/composables/board/useBoardScroll';
 import { showToast } from '@/composables/state/useToast';
 import { deepClone } from '@/utils/deepClone';
+import { t } from '@/i18n';
 import type { RotationEntry } from '@/types/rotation';
 
 // 模組層級單例（非 composable 內部 ref），確保「單一剪貼簿」語意。
@@ -40,7 +41,7 @@ export function useClipboard() {
     _hasContent.value = _clipboardBuffer.value.length > 0;
 
     const n = _clipboardBuffer.value.length;
-    if (n > 0) showToast(n === 1 ? '已複製' : `已複製 ${n} 個區塊`, 'success');
+    if (n > 0) showToast(n === 1 ? t('toast.copied') : t('toast.copiedN', { n }), 'success');
   }
 
   /** 剪下選取（複製後刪除原區塊）；Ctrl+X。 */

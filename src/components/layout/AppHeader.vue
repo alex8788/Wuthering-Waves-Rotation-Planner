@@ -16,7 +16,7 @@
       <span class="app-header__divider" aria-hidden="true" />
 
       <div class="app-header__titles">
-        <h1 class="app-header__title">鳴潮排軸編輯器</h1>
+        <h1 class="app-header__title">{{ $t('header.title') }}</h1>
         <span class="app-header__eyebrow">WUWA · ROTATION PLANNER</span>
       </div>
     </div>

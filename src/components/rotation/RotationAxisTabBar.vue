@@ -12,9 +12,11 @@ import { nextTick, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useDialog } from '@/composables/state/useDialog'
+import { useI18n } from 'vue-i18n'
 
 const rotationStore = useRotationStore()
 const { confirm, prompt } = useDialog()
+const { t } = useI18n()
 
 // 行內改名狀態：editingId 指向正在改名的軸，draft 為輸入草稿。
 const editingId = ref<string | null>(null)
@@ -51,12 +53,12 @@ function cancelRename(): void {
 }
 
 async function addAxis(): Promise<void> {
-  const defaultName = `輸出軸 ${rotationStore.axes.length + 1}`
+  const defaultName = t('axis.defaultName', { n: rotationStore.axes.length + 1 })
   const name = await prompt({
-    title: '新增輸出軸',
-    placeholder: '輸出軸名稱',
+    title: t('axis.addTitle'),
+    placeholder: t('axis.namePlaceholder'),
     defaultValue: defaultName,
-    confirmText: '建立',
+    confirmText: t('axis.create'),
   })
   if (name === null) return // 取消
   const trimmed = name.trim()
@@ -65,9 +67,9 @@ async function addAxis(): Promise<void> {
 
 async function removeAxis(id: string, name: string): Promise<void> {
   const ok = await confirm({
-    title: '刪除輸出軸',
-    message: `確定刪除「${name}」？`,
-    confirmText: '刪除',
+    title: t('axis.deleteTitle'),
+    message: t('axis.deleteMessage', { name }),
+    confirmText: t('axis.delete'),
     danger: true,
   })
   if (ok) rotationStore.deleteAxis(id)
@@ -75,7 +77,7 @@ async function removeAxis(id: string, name: string): Promise<void> {
 </script>
 
 <template>
-  <div class="axis-tabbar" role="tablist" aria-label="輸出軸分頁">
+  <div class="axis-tabbar" role="tablist" :aria-label="$t('axis.tabsLabel')">
     <button
       v-for="axis in rotationStore.axes"
       :key="axis.id"
@@ -104,8 +106,8 @@ async function removeAxis(id: string, name: string): Promise<void> {
           v-if="rotationStore.axes.length > 1"
           class="axis-tab__close"
           role="button"
-          aria-label="刪除輸出軸"
-          title="刪除輸出軸"
+          :aria-label="$t('axis.deleteTitle')"
+          :title="$t('axis.deleteTitle')"
           @click.stop="removeAxis(axis.id, axis.name)"
         >×</span>
       </template>
@@ -114,8 +116,8 @@ async function removeAxis(id: string, name: string): Promise<void> {
     <button
       type="button"
       class="axis-tab axis-tab--add"
-      aria-label="新增輸出軸"
-      title="新增輸出軸"
+      :aria-label="$t('axis.addTitle')"
+      :title="$t('axis.addTitle')"
       @click="addAxis"
     >＋</button>
   </div>

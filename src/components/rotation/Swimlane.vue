@@ -17,6 +17,8 @@ import { useHistory } from '@/composables/state/useHistory'
 import { useDialog } from '@/composables/state/useDialog'
 import { getElementColor } from '@/constants/elements'
 import { useSettings } from '@/composables/state/useSettings'
+import { useI18n } from 'vue-i18n'
+import { characterDisplayName } from '@/i18n'
 import type { Character } from '@/types/character'
 import type { RotationEntry } from '@/types/rotation'
 
@@ -75,6 +77,10 @@ const laneColor = computed<string>(() => getElementColor(props.character?.elemen
 // 區塊間距（px）：讀設定 trackGapPx（單一來源），注入 --track-gap。
 const { settings } = useSettings()
 const trackGapPx = computed<number>(() => settings.value.trackGapPx)
+
+const { t } = useI18n()
+// 角色顯示名（依語言 nameZh/nameEn），模板與 aria 共用。
+const charName = computed<string>(() => characterDisplayName(props.character))
 
 // VueDraggable 操作的本地緩衝陣列，防止套件直接修改 prop 導致資料流脫鉤
 const localEntries = ref<RotationEntry[]>([...props.entries])
@@ -250,9 +256,9 @@ async function handleSelectCharacter(characterId: string): Promise<void> {
   )
   if (hasBlocks) {
     const ok = await confirm({
-      title: '切換角色',
-      message: '將清空所有該角色的區塊，確定？',
-      confirmText: '切換',
+      title: t('swimlane.switchTitle'),
+      message: t('swimlane.switchMessage'),
+      confirmText: t('swimlane.switchConfirm'),
       danger: true,
     })
     if (!ok) return
@@ -275,9 +281,9 @@ async function handleDeselectCharacter(): Promise<void> {
   )
   if (hasBlocks) {
     const ok = await confirm({
-      title: '取消選角',
-      message: '將清空該角色的所有區塊，確定？',
-      confirmText: '取消選角',
+      title: t('swimlane.deselect'),
+      message: t('swimlane.deselectMessage'),
+      confirmText: t('swimlane.deselect'),
       danger: true,
     })
     if (!ok) return
@@ -295,7 +301,7 @@ async function handleDeselectCharacter(): Promise<void> {
     :style="{ '--track-gap': `${trackGapPx}px` }"
     :[DROP_ZONE_ATTRIBUTE]="true"
     :data-slot-index="slotIndex"
-    :aria-label="character ? `${character.nameZh} 的輸出軸` : `槽位 ${slotIndex + 1}（未選角）`"
+    :aria-label="character ? $t('swimlane.laneOf', { name: charName }) : $t('swimlane.laneEmpty', { n: slotIndex + 1 })"
   >
 
     <div
@@ -314,8 +320,8 @@ async function handleDeselectCharacter(): Promise<void> {
       <button
         class="header__drag-handle"
         type="button"
-        aria-label="拖曳調整泳道順序"
-        title="拖曳調整泳道順序"
+        :aria-label="$t('swimlane.dragLane')"
+        :title="$t('swimlane.dragLane')"
         @mousedown="handleLaneDragStart"
       >
         <svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true">
@@ -334,20 +340,20 @@ async function handleDeselectCharacter(): Promise<void> {
           class="header__portrait"
           :model-value="character?.id ?? null"
           :options="characterStore.allCharacters"
-          placeholder="選擇角色"
+          :placeholder="$t('swimlane.selectCharacter')"
           @update:model-value="handleSelectCharacter"
         >
           <template #trigger>
             <!-- 頭像框即觸發器：hover 發光 + 原生 title 於游標旁提示。 -->
             <span
               class="header__portrait-frame"
-              :title="character ? `更換角色：${character.nameZh}` : '選擇角色'"
+              :title="character ? $t('swimlane.changeCharacter', { name: charName }) : $t('swimlane.selectCharacter')"
             >
               <img
                 v-if="character?.avatar"
                 class="header__avatar"
                 :src="character.avatar"
-                :alt="character.nameZh"
+                :alt="charName"
               />
               <span
                 v-else
@@ -358,8 +364,8 @@ async function handleDeselectCharacter(): Promise<void> {
           </template>
         </CharacterSelector>
 
-        <span v-if="character" class="header__name">{{ character.nameZh }}</span>
-        <span v-else class="header__name header__empty-name">選擇角色</span>
+        <span v-if="character" class="header__name">{{ charName }}</span>
+        <span v-else class="header__name header__empty-name">{{ $t('swimlane.selectCharacter') }}</span>
       </div>
 
       <!-- 取消選角：右下角小圓鈕，滑鼠移入 header 時才浮現。 -->
@@ -367,8 +373,8 @@ async function handleDeselectCharacter(): Promise<void> {
         v-if="character"
         class="header__deselect"
         type="button"
-        aria-label="取消選角"
-        title="取消選角"
+        :aria-label="$t('swimlane.deselect')"
+        :title="$t('swimlane.deselect')"
         @click.stop="handleDeselectCharacter"
       >
         <svg viewBox="0 0 12 12" width="8" height="8" aria-hidden="true">
@@ -380,13 +386,13 @@ async function handleDeselectCharacter(): Promise<void> {
     <div
       class="swimlane__track"
       role="list"
-      :aria-label="character ? `${character.nameZh} 的區塊序列` : '區塊序列'"
+      :aria-label="character ? $t('swimlane.blockSeqOf', { name: charName }) : $t('swimlane.blockSeq')"
       @click="handleTrackClick"
     >
       <div class="track__inner">
 
-        <div v-if="!character" class="track__empty-hint" aria-label="請先於上方選擇角色">
-          請先選擇角色
+        <div v-if="!character" class="track__empty-hint" :aria-label="$t('swimlane.pickFirstLabel')">
+          {{ $t('swimlane.pickFirstHint') }}
         </div>
 
         <template v-else>
@@ -431,8 +437,8 @@ async function handleDeselectCharacter(): Promise<void> {
               class="track__add-btn"
               :style="{ gridColumn: String(addButtonColumn + 1) }"
               type="button"
-              :aria-label="`在 ${character.nameZh} 的輸出軸新增區塊`"
-              :title="`新增區塊至 ${character.nameZh}`"
+              :aria-label="$t('swimlane.addBlockLabel', { name: charName })"
+              :title="$t('swimlane.addBlockTitle', { name: charName })"
               @click.stop="handleAddBlock"
             >
               ＋
@@ -444,7 +450,7 @@ async function handleDeselectCharacter(): Promise<void> {
             class="track__empty-dropzone"
             aria-hidden="true"
           >
-            拖放至此
+            {{ $t('swimlane.dropHere') }}
           </div>
         </template>
 

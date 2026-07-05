@@ -11,6 +11,7 @@ import { DEFAULT_BLOCKS } from '../constants/defaultBlocks';
 import { generateUUID } from '../utils/uuid';
 import { deepClone } from '../utils/deepClone';
 import { showToast as showGlobalToast, type ToastVariant } from '@/composables/state/useToast';
+import { t } from '@/i18n';
 
 /** LocalStorage 儲存鍵名 */
 const STORAGE_KEY = 'wuwa-rotation-templates';
@@ -104,11 +105,11 @@ export const useSidebarStore = defineStore('sidebar', () => {
     // ── 依情況發一則彙總 toast ──────────────────────────────
     if (added === 0) {
       // 全數已存在（或無有效塊）
-      showToast(skipped === 1 ? '模板庫已有相同區塊' : '選取區塊皆已存在於模板庫', 'warning');
+      showToast(skipped === 1 ? t('toast.templateExists') : t('toast.templatesAllExist'), 'warning');
     } else if (skipped === 0) {
-      showToast(added === 1 ? '已新增至模板庫' : `已新增 ${added} 個區塊至模板庫`, 'success');
+      showToast(added === 1 ? t('toast.templateAdded') : t('toast.templatesAdded', { n: added }), 'success');
     } else {
-      showToast(`已新增 ${added} 個區塊至模板庫，${skipped} 個區塊已存在`, 'success');
+      showToast(t('toast.templatesAddedSkipped', { added, skipped }), 'success');
     }
   }
 

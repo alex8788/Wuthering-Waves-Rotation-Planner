@@ -20,7 +20,9 @@ let uidCounter = 0
 // ============================================================
 
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getElementColor, getElementIcon } from '@/constants/elements'
+import { characterDisplayName, elementDisplayName } from '@/i18n'
 import type { Character, CharacterElement } from '@/types/character'
 
 export interface Props {
@@ -28,13 +30,19 @@ export interface Props {
   modelValue: string | null
   /** 可選角色清單 */
   options: Character[]
-  /** 尚未選擇時顯示的提示文字 */
+  /** 尚未選擇時顯示的提示文字；未傳入時用 i18n 預設（隨語言切換） */
   placeholder?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '選擇角色',
+  placeholder: '',
 })
+
+const { t } = useI18n()
+// 佔位提示：props 優先，未傳入時查字典（prop default 無法響應語言切換，故用 computed）。
+const placeholderText = computed<string>(
+  () => props.placeholder || t('swimlane.selectCharacter'),
+)
 
 const emit = defineEmits<{
   /** 選中某個角色時觸發，value 一定是 options 中某個角色的 id */
@@ -296,7 +304,7 @@ onUnmounted(() => {
           class="char-selector__value"
           :class="{ 'char-selector__value--placeholder': !selectedCharacter }"
         >
-          {{ selectedCharacter ? selectedCharacter.nameZh : placeholder }}
+          {{ selectedCharacter ? characterDisplayName(selectedCharacter) : placeholderText }}
         </span>
         <span class="char-selector__chevron" aria-hidden="true">▾</span>
       </slot>
@@ -322,7 +330,7 @@ onUnmounted(() => {
               class="char-selector__tab"
               :class="{ 'char-selector__tab--active': el === activeTabElement }"
               :style="{ '--tab-color': getElementColor(el) }"
-              :aria-label="`屬性 ${el}`"
+              :aria-label="$t('selector.elementTab', { element: elementDisplayName(el) })"
               @click="setActiveTab(el)"
             >
               <img
@@ -333,7 +341,7 @@ onUnmounted(() => {
                 aria-hidden="true"
               />
               <span v-else class="char-selector__tab-bar" aria-hidden="true" />
-              <span class="char-selector__tab-label">{{ el }}</span>
+              <span class="char-selector__tab-label">{{ elementDisplayName(el) }}</span>
             </button>
           </li>
 
@@ -367,7 +375,7 @@ onUnmounted(() => {
                   loading="lazy"
                 />
               </span>
-              <span class="char-selector__option-name">{{ char.nameZh }}</span>
+              <span class="char-selector__option-name">{{ characterDisplayName(char) }}</span>
             </li>
           </template>
         </ul>

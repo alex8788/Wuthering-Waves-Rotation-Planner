@@ -20,8 +20,11 @@ import {
 import { useDialog } from '@/composables/state/useDialog'
 import { useSidebarStore } from '@/stores/useSidebarStore'
 import { showToast } from '@/composables/state/useToast'
+import { useI18n } from 'vue-i18n'
+import { SUPPORTED_LOCALES } from '@/i18n'
 
 const { settings } = useSettings()
+const { t } = useI18n()
 
 // 數值設定：輸入後夾回範圍再寫入（防手打超界值）。
 function onHistoryInput(e: Event): void {
@@ -81,18 +84,21 @@ onUnmounted(() => {
 async function handleClearData(): Promise<void> {
   const count = sidebarStore.templates.length
   const ok = await dialog.confirm({
-    title: '清除資料',
+    title: t('settings.clearConfirmTitle'),
     message:
       count > 0
-        ? `將刪除全部 ${count} 個自訂模板（無法復原）。確定要清除嗎？`
-        : '自訂模板庫目前是空的，仍要執行清除嗎？',
-    confirmText: '清除',
-    cancelText: '取消',
+        ? t('settings.clearConfirmMessage', { n: count })
+        : t('settings.clearConfirmEmpty'),
+    confirmText: t('settings.clearConfirm'),
+    cancelText: t('dialog.cancel'),
     danger: true,
   })
   if (!ok) return
   const cleared = sidebarStore.clearAllTemplates()
-  showToast(cleared > 0 ? `已清除 ${cleared} 個自訂模板` : '已清除（模板庫原本為空）', 'success')
+  showToast(
+    cleared > 0 ? t('toast.templatesCleared', { n: cleared }) : t('toast.templatesClearedEmpty'),
+    'success',
+  )
   isOpen.value = false
 }
 </script>
@@ -104,8 +110,8 @@ async function handleClearData(): Promise<void> {
       type="button"
       class="settings-menu__trigger"
       :class="{ 'settings-menu__trigger--open': isOpen }"
-      title="設定"
-      aria-label="設定"
+      :title="$t('settings.gearLabel')"
+      :aria-label="$t('settings.gearLabel')"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
       @click.stop="toggle"
@@ -132,22 +138,23 @@ async function handleClearData(): Promise<void> {
           :style="panelStyle"
           @click.stop
         >
-          <div class="settings-menu__heading">設定</div>
+          <div class="settings-menu__heading">{{ $t('settings.heading') }}</div>
 
-        <!-- 語言切換（佔位） -->
+        <!-- 語言切換：選項顯示各語言母語名（不翻譯），值同步 i18n locale -->
         <label class="settings-menu__row">
-          <span class="settings-menu__label">介面語言</span>
+          <span class="settings-menu__label">{{ $t('settings.language') }}</span>
           <select v-model="settings.language" class="settings-menu__select">
-            <option value="zh-TW">繁體中文</option>
-            <option value="en" disabled>English（即將推出）</option>
+            <option v-for="loc in SUPPORTED_LOCALES" :key="loc.value" :value="loc.value">
+              {{ loc.label }}
+            </option>
           </select>
         </label>
 
         <!-- 大寫鎖定 -->
         <label class="settings-menu__row settings-menu__row--clickable">
           <span class="settings-menu__label">
-            大寫鎖定
-            <span class="settings-menu__hint">區塊文字提交時自動轉大寫</span>
+            {{ $t('settings.capsLock') }}
+            <span class="settings-menu__hint">{{ $t('settings.capsLockHint') }}</span>
           </span>
           <input
             v-model="settings.autoUppercase"
@@ -161,8 +168,8 @@ async function handleClearData(): Promise<void> {
         <!-- 動畫效果 -->
         <label class="settings-menu__row settings-menu__row--clickable">
           <span class="settings-menu__label">
-            動畫效果
-            <span class="settings-menu__hint">關閉可減少動態、提升效能</span>
+            {{ $t('settings.animations') }}
+            <span class="settings-menu__hint">{{ $t('settings.animationsHint') }}</span>
           </span>
           <input
             v-model="settings.animationsEnabled"
@@ -178,8 +185,8 @@ async function handleClearData(): Promise<void> {
         <!-- 復原步數 -->
         <label class="settings-menu__row">
           <span class="settings-menu__label">
-            復原步數上限
-            <span class="settings-menu__hint">{{ HISTORY_LIMIT_BOUNDS.min }}–{{ HISTORY_LIMIT_BOUNDS.max }} 步</span>
+            {{ $t('settings.historyLimit') }}
+            <span class="settings-menu__hint">{{ $t('settings.historyLimitHint', { min: HISTORY_LIMIT_BOUNDS.min, max: HISTORY_LIMIT_BOUNDS.max }) }}</span>
           </span>
           <input
             class="settings-menu__number"
@@ -194,8 +201,8 @@ async function handleClearData(): Promise<void> {
         <!-- 區塊間距 -->
         <label class="settings-menu__row">
           <span class="settings-menu__label">
-            區塊間距
-            <span class="settings-menu__hint">{{ TRACK_GAP_BOUNDS.min }}–{{ TRACK_GAP_BOUNDS.max }} px</span>
+            {{ $t('settings.trackGap') }}
+            <span class="settings-menu__hint">{{ $t('settings.trackGapHint', { min: TRACK_GAP_BOUNDS.min, max: TRACK_GAP_BOUNDS.max }) }}</span>
           </span>
           <input
             class="settings-menu__number"
@@ -210,8 +217,8 @@ async function handleClearData(): Promise<void> {
         <!-- 記住匯出設定 -->
         <label class="settings-menu__row settings-menu__row--clickable">
           <span class="settings-menu__label">
-            記住匯出設定
-            <span class="settings-menu__hint">保留上次的檔名與合併方式</span>
+            {{ $t('settings.rememberExport') }}
+            <span class="settings-menu__hint">{{ $t('settings.rememberExportHint') }}</span>
           </span>
           <input
             v-model="settings.rememberExport"
@@ -227,11 +234,11 @@ async function handleClearData(): Promise<void> {
         <!-- 清除資料（危險操作） -->
         <div class="settings-menu__row settings-menu__row--column">
           <span class="settings-menu__label">
-            清除資料
-            <span class="settings-menu__hint">刪除全部自訂模板（無法復原）</span>
+            {{ $t('settings.clearData') }}
+            <span class="settings-menu__hint">{{ $t('settings.clearDataHint') }}</span>
           </span>
           <button type="button" class="settings-menu__danger-btn" @click="handleClearData">
-            清除自訂模板
+            {{ $t('settings.clearBtn') }}
           </button>
           </div>
         </div>

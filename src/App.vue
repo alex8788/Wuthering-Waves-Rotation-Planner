@@ -17,12 +17,14 @@ import { showToast } from '@/composables/state/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useSidebarStore } from '@/stores/useSidebarStore'
 import { nextTick, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import JSZip from 'jszip'
 import type { RotationAxis } from '@/types/rotation'
 
 const rotationStore = useRotationStore()
 const sidebarStore = useSidebarStore()
 const exportDialog = useExportDialog()
+const { t } = useI18n()
 
 useKeyboardShortcuts()
 
@@ -37,7 +39,7 @@ async function renderToBlob(axes: RotationAxis[], selector: string): Promise<Blo
   renderAxes.value = axes
   await nextTick()
   const node = exportStageRef.value?.querySelector<HTMLElement>(selector)
-  if (!node) throw new Error('找不到匯出視圖節點')
+  if (!node) throw new Error(t('export.nodeNotFound'))
   return await nodeToPngBlob(node)
 }
 
@@ -63,7 +65,7 @@ async function handleExport(): Promise<void> {
       const blob = await renderToBlob(axes, selector)
       renderAxes.value = []
       const saved = await savePng(blob, options.filename)
-      if (saved) showToast('已匯出圖片', 'success')
+      if (saved) showToast(t('toast.exportedPng'), 'success')
     } else {
       // 多軸分開:逐軸出 PNG → 打包成單一 ZIP。
       const zip = new JSZip()
@@ -79,12 +81,12 @@ async function handleExport(): Promise<void> {
       renderAxes.value = []
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const saved = await saveZip(zipBlob, options.filename)
-      if (saved) showToast('已匯出 ZIP', 'success')
+      if (saved) showToast(t('toast.exportedZip'), 'success')
     }
   } catch (err) {
     console.error('[export] 匯出失敗', err)
     const msg = err instanceof Error ? err.message : String(err)
-    showToast(`匯出失敗:${msg}`, 'danger', 6000)
+    showToast(t('toast.exportFailed', { msg }), 'danger', 6000)
   } finally {
     renderAxes.value = []
   }
@@ -108,9 +110,9 @@ function clearAllSelection(): void {
             <button
               type="button"
               class="export-trigger"
-              title="匯出輸出軸圖片"
+              :title="$t('header.exportTooltip')"
               @click.stop="handleExport"
-            >匯出</button>
+            >{{ $t('header.export') }}</button>
             <SettingsMenu />
           </template>
         </AppHeader>
