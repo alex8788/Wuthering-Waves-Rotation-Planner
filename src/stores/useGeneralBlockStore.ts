@@ -13,6 +13,7 @@ import { ref, watch } from 'vue';
 import type { GeneralBlock } from '@/types/block';
 import { GENERAL_BLOCKS } from '@/constants/generalBlocks';
 import { generateUUID } from '@/utils/uuid';
+import { useSettings } from '@/composables/state/useSettings';
 
 const STORAGE_KEY = 'wuwa-rotation-general-blocks';
 /** 通用預設區塊的中性灰（系統預設、非角色專屬）。 */
@@ -80,9 +81,11 @@ export const useGeneralBlockStore = defineStore('generalBlocks', () => {
     return block.id;
   }
 
-  /** 更新 label；trim 後為空＝刪除該區塊（比照主軸新增後放棄命名）。 */
+  /** 更新 label；trim 後為空＝刪除該區塊（比照主軸新增後放棄命名）。
+   *  大寫鎖定（設定）開啟時自動轉大寫（僅影響英文字母），與主軸行內編輯一致。 */
   function updateLabel(id: string, label: string): void {
-    const trimmed = label.trim();
+    let trimmed = label.trim();
+    if (useSettings().settings.value.autoUppercase) trimmed = trimmed.toUpperCase();
     if (trimmed === '') {
       deleteBlock(id);
       return;
