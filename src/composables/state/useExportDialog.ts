@@ -16,6 +16,9 @@ import { ref } from 'vue';
 /** 多軸交付方式：合併成一張圖 / 分開打包成 ZIP（單軸時無意義）。 */
 export type ExportMode = 'merge' | 'separate';
 
+/** 匯出檔案格式：PNG 點陣圖 / SVG 向量圖（SVG 通常檔案更小）。 */
+export type ExportFormat = 'png' | 'svg';
+
 export interface ExportOptions {
   /** 檔名（不含副檔名）。 */
   filename: string;
@@ -23,6 +26,10 @@ export interface ExportOptions {
   axisIds: string[];
   /** 多軸時的交付方式。 */
   mode: ExportMode;
+  /** 檔案格式。 */
+  format: ExportFormat;
+  /** PNG 解析度倍率（僅 format='png' 有意義；越高越清晰、檔案越大）。 */
+  scale: number;
 }
 
 interface ExportDialogState {

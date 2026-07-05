@@ -11,9 +11,10 @@
 // ============================================================
 
 import { ref, watch } from 'vue'
-import { useExportDialog, type ExportMode } from '@/composables/state/useExportDialog'
+import { useExportDialog, type ExportMode, type ExportFormat } from '@/composables/state/useExportDialog'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useSettings } from '@/composables/state/useSettings'
+import { PNG_SCALE_OPTIONS, DEFAULT_PIXEL_RATIO } from '@/composables/useImageExport'
 
 const { state, submit, cancel } = useExportDialog()
 const rotationStore = useRotationStore()
@@ -23,6 +24,9 @@ const { settings } = useSettings()
 const filename = ref('')
 const selectedIds = ref<Set<string>>(new Set())
 const mode = ref<ExportMode>('merge')
+const format = ref<ExportFormat>('png')
+const scale = ref<number>(DEFAULT_PIXEL_RATIO)
+const scaleOptions = PNG_SCALE_OPTIONS
 
 // 視窗開啟時的預設：一律僅勾選作用中軸（軸 id 不跨 session 持久化，避免懸空）。
 // 「記住匯出設定」開啟時，檔名/合併模式沿用上次；否則回預設（檔名＝軸名、合併）。
@@ -33,19 +37,29 @@ watch(
     const active = rotationStore.activeAxis
     selectedIds.value = new Set([active.id])
     if (settings.value.rememberExport) {
-      filename.value = settings.value.exportPrefs.filename || active.name
-      mode.value = settings.value.exportPrefs.mode
+      const prefs = settings.value.exportPrefs
+      filename.value = prefs.filename || active.name
+      mode.value = prefs.mode
+      format.value = prefs.format
+      scale.value = prefs.scale
     } else {
       filename.value = active.name
       mode.value = 'merge'
+      format.value = 'png'
+      scale.value = DEFAULT_PIXEL_RATIO
     }
   }
 )
 
-// 「記住匯出設定」開啟時，檔名/模式每次調整即寫回設定（→ 持久化到 localStorage）。
-watch([filename, mode], () => {
+// 「記住匯出設定」開啟時，檔名/模式/格式/倍率每次調整即寫回設定（→ 持久化到 localStorage）。
+watch([filename, mode, format, scale], () => {
   if (!state.value.open || !settings.value.rememberExport) return
-  settings.value.exportPrefs = { filename: filename.value, mode: mode.value }
+  settings.value.exportPrefs = {
+    filename: filename.value,
+    mode: mode.value,
+    format: format.value,
+    scale: scale.value,
+  }
 })
 
 function toggleAxis(id: string): void {
@@ -69,6 +83,8 @@ function handleConfirm(): void {
     filename: filename.value.trim(),
     axisIds,
     mode: axisIds.length > 1 ? mode.value : 'merge',
+    format: format.value,
+    scale: scale.value,
   })
 }
 </script>
@@ -101,6 +117,37 @@ function handleConfirm(): void {
               @keydown.enter.prevent="handleConfirm"
             />
           </label>
+
+          <!-- 檔案格式 -->
+          <div class="export-dialog__field">
+            <span class="export-dialog__label">{{ $t('export.format') }}</span>
+            <div class="export-dialog__modes">
+              <label class="export-dialog__mode">
+                <input type="radio" value="png" v-model="format" />
+                <span>{{ $t('export.formatPng') }}</span>
+              </label>
+              <label class="export-dialog__mode">
+                <input type="radio" value="svg" v-model="format" />
+                <span>{{ $t('export.formatSvg') }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 解析度倍率（僅 PNG） -->
+          <div v-if="format === 'png'" class="export-dialog__field">
+            <span class="export-dialog__label">{{ $t('export.resolution') }}</span>
+            <div class="export-dialog__modes export-dialog__modes--row">
+              <label
+                v-for="opt in scaleOptions"
+                :key="opt"
+                class="export-dialog__mode"
+              >
+                <input type="radio" :value="opt" v-model="scale" />
+                <span>{{ opt }}×</span>
+              </label>
+            </div>
+            <span class="export-dialog__hint">{{ $t('export.resolutionHint') }}</span>
+          </div>
 
           <!-- 選軸 -->
           <div class="export-dialog__field">
@@ -159,16 +206,24 @@ function handleConfirm(): void {
   inset: 0;
   z-index: 10000;
   display: flex;
-  align-items: center;
+  /* 頂端對齊（非置中）：切換 PNG/SVG 使內容高度變動時，上緣與寬度不位移，
+     只往下伸長；超出視窗時由對話框自身內部捲動。 */
+  align-items: flex-start;
   justify-content: center;
+  padding: 8vh 1rem 1rem;
   background-color: rgba(5, 8, 16, 0.62);
   backdrop-filter: blur(2px);
   opacity: 1;
 }
 
 .export-dialog {
-  min-width: 320px;
-  max-width: 440px;
+  /* 固定寬度（不再隨內容在 320~440 間浮動）；窄視窗才退讓。 */
+  width: 400px;
+  max-width: 100%;
+  /* 內容過高時夾住高度並內部捲動，避免底部超出視窗。 */
+  max-height: calc(100vh - 8vh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1.125rem 1.25rem 1rem;
   background-color: #0D1526;
   border: 1px solid rgba(255, 255, 255, 0.10);
@@ -181,6 +236,16 @@ function handleConfirm(): void {
     0 16px 48px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
+}
+
+.export-dialog::-webkit-scrollbar {
+  width: 6px;
+}
+.export-dialog::-webkit-scrollbar-thumb {
+  background-color: rgba(34, 211, 238, 0.25);
+  border-radius: 3px;
 }
 
 .export-dialog__title {
@@ -254,6 +319,21 @@ function handleConfirm(): void {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+}
+
+/* 倍率選項橫向排列（1× 1.5× 2× 3×）。 */
+.export-dialog__modes--row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.export-dialog__hint {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.6875rem;
+  color: rgba(240, 244, 248, 0.42);
+  letter-spacing: 0.02em;
 }
 
 .export-dialog__mode {

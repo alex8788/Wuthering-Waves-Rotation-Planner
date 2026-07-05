@@ -12,7 +12,8 @@ import RotationAxisTabBar from '@/components/rotation/RotationAxisTabBar.vue'
 import RotationExportView from '@/components/rotation/RotationExportView.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useExportDialog } from '@/composables/state/useExportDialog'
-import { nodeToPngBlob, savePng, saveZip } from '@/composables/useImageExport'
+import { nodeToPngBlob, nodeToSvgBlob, savePng, saveSvg, saveZip } from '@/composables/useImageExport'
+import type { ExportFormat } from '@/composables/state/useExportDialog'
 import { showToast } from '@/composables/state/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useSidebarStore } from '@/stores/useSidebarStore'
@@ -32,15 +33,21 @@ useKeyboardShortcuts()
 const exportStageRef = ref<HTMLElement | null>(null)
 const renderAxes = ref<RotationAxis[]>([])
 
-// 把一組軸渲染到離螢幕舞台,等繪製與字型就緒後,截取指定節點成 PNG Blob。
+// 把一組軸渲染到離螢幕舞台,等繪製與字型就緒後,截取指定節點成圖片 Blob。
 //  - 合併:傳入多軸,截取整個 .export-merge-wrap(多軸縱向堆疊)。
 //  - 單張:傳入單軸,截取該軸的 .export-view。
-async function renderToBlob(axes: RotationAxis[], selector: string): Promise<Blob> {
+// format='svg' 轉向量圖(檔案小);'png' 依 scale 倍率點陣化。
+async function renderToBlob(
+  axes: RotationAxis[],
+  selector: string,
+  format: ExportFormat,
+  scale: number,
+): Promise<Blob> {
   renderAxes.value = axes
   await nextTick()
   const node = exportStageRef.value?.querySelector<HTMLElement>(selector)
   if (!node) throw new Error(t('export.nodeNotFound'))
-  return await nodeToPngBlob(node)
+  return format === 'svg' ? await nodeToSvgBlob(node) : await nodeToPngBlob(node, scale)
 }
 
 // 檔名淨化:移除檔案系統 / ZIP 條目不允許的字元。
@@ -58,25 +65,30 @@ async function handleExport(): Promise<void> {
     .filter((a): a is RotationAxis => a != null)
   if (axes.length === 0) return
 
+  const { format, scale } = options
+  const ext = format === 'svg' ? 'svg' : 'png'
+
   try {
     if (axes.length === 1 || options.mode === 'merge') {
-      // 單軸或合併:一張 PNG。多軸截整個堆疊容器,單軸截該視圖。
+      // 單軸或合併:一張圖。多軸截整個堆疊容器,單軸截該視圖。
       const selector = axes.length > 1 ? '.export-merge-wrap' : '.export-view'
-      const blob = await renderToBlob(axes, selector)
+      const blob = await renderToBlob(axes, selector, format, scale)
       renderAxes.value = []
-      const saved = await savePng(blob, options.filename)
-      if (saved) showToast(t('toast.exportedPng'), 'success')
+      const saved = format === 'svg'
+        ? await saveSvg(blob, options.filename)
+        : await savePng(blob, options.filename)
+      if (saved) showToast(t(format === 'svg' ? 'toast.exportedSvg' : 'toast.exportedPng'), 'success')
     } else {
-      // 多軸分開:逐軸出 PNG → 打包成單一 ZIP。
+      // 多軸分開:逐軸出圖 → 打包成單一 ZIP。
       const zip = new JSZip()
       const usedNames = new Set<string>()
       for (const axis of axes) {
-        const blob = await renderToBlob([axis], '.export-view')
+        const blob = await renderToBlob([axis], '.export-view', format, scale)
         let entry = sanitizeName(axis.name)
         let n = 2
         while (usedNames.has(entry)) entry = `${sanitizeName(axis.name)} (${n++})`
         usedNames.add(entry)
-        zip.file(`${entry}.png`, blob)
+        zip.file(`${entry}.${ext}`, blob)
       }
       renderAxes.value = []
       const zipBlob = await zip.generateAsync({ type: 'blob' })

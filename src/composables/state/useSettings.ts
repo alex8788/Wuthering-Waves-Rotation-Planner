@@ -15,7 +15,8 @@
 
 import { ref, watch } from 'vue';
 import { TRACK_GAP_PX } from '@/constants/layout';
-import type { ExportMode } from '@/composables/state/useExportDialog';
+import type { ExportMode, ExportFormat } from '@/composables/state/useExportDialog';
+import { DEFAULT_PIXEL_RATIO } from '@/composables/useImageExport';
 
 const STORAGE_KEY = 'wuwa-rotation-settings';
 
@@ -27,6 +28,8 @@ export const TRACK_GAP_BOUNDS = { min: 0, max: 16 } as const;
 export interface ExportPrefs {
   filename: string;
   mode: ExportMode;
+  format: ExportFormat;
+  scale: number;
 }
 
 export interface AppSettings {
@@ -53,7 +56,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   historyLimit: 30,
   trackGapPx: TRACK_GAP_PX,
   rememberExport: false,
-  exportPrefs: { filename: '', mode: 'merge' },
+  exportPrefs: { filename: '', mode: 'merge', format: 'png', scale: DEFAULT_PIXEL_RATIO },
 };
 
 /** 夾住數值於 [min, max]（NaN 回退預設）。 */
