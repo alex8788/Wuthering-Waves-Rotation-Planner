@@ -19,7 +19,9 @@
     "noTemplatesLabel": "此角色尚無自訂模板",
     "emptyHint": "從主軸拖回區塊以新增模板",
     "templatesOf": "{name} 的自訂模板",
-    "deleteTemplate": "刪除模板 {label}"
+    "deleteTemplate": "刪除模板 {label}",
+    "addDefaultBlock": "新增通用區塊",
+    "deleteDefaultBlock": "刪除區塊 {label}"
   },
   "swimlane": {
     "selectCharacter": "選擇角色",

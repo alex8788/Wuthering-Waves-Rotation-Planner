@@ -310,6 +310,9 @@ export function useBlockDrag() {
     return {
       group: { name: 'sidebar', pull: 'clone', put: false },
       sort: false,
+      // 只有 .chip-wrapper 是可拖項：讓 DefaultBlockField 能把「＋新增鈕」等
+      // 非區塊節點放在同一拖曳容器內而不被當成可拖項（CustomBlockField 亦僅 .chip-wrapper）。
+      draggable: '.chip-wrapper',
       animation: 0,
       ghostClass: 'sortable-ghost',
       forceFallback: true,

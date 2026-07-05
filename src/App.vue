@@ -17,6 +17,7 @@ import type { ExportFormat } from '@/composables/state/useExportDialog'
 import { showToast } from '@/composables/state/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useSidebarStore } from '@/stores/useSidebarStore'
+import { useDefaultBlockStore } from '@/stores/useDefaultBlockStore'
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JSZip from 'jszip'
@@ -24,6 +25,7 @@ import type { RotationAxis } from '@/types/rotation'
 
 const rotationStore = useRotationStore()
 const sidebarStore = useSidebarStore()
+const defaultBlockStore = useDefaultBlockStore()
 const exportDialog = useExportDialog()
 const { t } = useI18n()
 
@@ -104,12 +106,13 @@ async function handleExport(): Promise<void> {
   }
 }
 
-// 點擊任何空白區域 → 一併清除主軸與模板庫的選取（共用同一入口）。
+// 點擊任何空白區域 → 一併清除主軸、模板庫、通用預設區塊的選取（共用同一入口）。
 // 區塊/模板 chip 各自 @click.stop，不會冒泡到此；框選結束時 RotationBoard
 // 的 window capture 攔截器會擋下這次 click，故不會誤清剛框選的內容。
 function clearAllSelection(): void {
   rotationStore.clearSelection()
   sidebarStore.clearTemplateSelection()
+  defaultBlockStore.clearSelection()
 }
 </script>
 
