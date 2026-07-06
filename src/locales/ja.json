@@ -98,6 +98,29 @@
     "clearConfirmEmpty": "テンプレートライブラリは既に空です。それでも消去しますか？",
     "clearConfirm": "消去"
   },
+  "teams": {
+    "open": "チーム",
+    "openTooltip": "保存したチーム",
+    "title": "チーム管理",
+    "closeLabel": "閉じる",
+    "save": "現在のチームを保存",
+    "namePlaceholder": "チーム名",
+    "nameTaken": "この名前は既に使われています",
+    "saveConfirm": "保存",
+    "cancel": "キャンセル",
+    "empty": "保存されたチームはありません",
+    "axesLabel": "ローテーション",
+    "load": "読み込み",
+    "loadConfirmTitle": "チームを読み込み",
+    "loadConfirmMessage": "「{name}」を読み込むと現在のボードが置き換えられます。続けますか？",
+    "loadConfirm": "読み込み",
+    "moreLabel": "その他の操作",
+    "pin": "ピン留め",
+    "unpin": "ピン留め解除",
+    "delete": "削除",
+    "deleteTitle": "チームを削除",
+    "deleteMessage": "「{name}」を削除しますか？"
+  },
   "dialog": {
     "ok": "OK",
     "cancel": "キャンセル"

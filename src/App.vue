@@ -5,6 +5,7 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import ToastNotification from '@/components/ui/ToastNotification.vue'
 import DialogHost from '@/components/ui/DialogHost.vue'
 import ExportDialog from '@/components/ui/ExportDialog.vue'
+import TeamManagerDialog from '@/components/ui/TeamManagerDialog.vue'
 import SettingsMenu from '@/components/ui/SettingsMenu.vue'
 import SidebarPanel from '@/components/sidebar/SidebarPanel.vue'
 import RotationBoard from '@/components/rotation/RotationBoard.vue'
@@ -12,6 +13,7 @@ import RotationAxisTabBar from '@/components/rotation/RotationAxisTabBar.vue'
 import RotationExportView from '@/components/rotation/RotationExportView.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useExportDialog } from '@/composables/state/useExportDialog'
+import { useTeamManager } from '@/composables/state/useTeamManager'
 import { nodeToPngBlob, nodeToSvgBlob, savePng, saveSvg, saveZip } from '@/composables/useImageExport'
 import type { ExportFormat } from '@/composables/state/useExportDialog'
 import { showToast } from '@/composables/state/useToast'
@@ -27,6 +29,7 @@ const rotationStore = useRotationStore()
 const templateStore = useTemplateStore()
 const generalBlockStore = useGeneralBlockStore()
 const exportDialog = useExportDialog()
+const teamManager = useTeamManager()
 const { t } = useI18n()
 
 useKeyboardShortcuts()
@@ -125,6 +128,12 @@ function clearAllSelection(): void {
             <button
               type="button"
               class="export-trigger"
+              :title="$t('teams.openTooltip')"
+              @click.stop="teamManager.open()"
+            >{{ $t('teams.open') }}</button>
+            <button
+              type="button"
+              class="export-trigger"
               :title="$t('header.exportTooltip')"
               @click.stop="handleExport"
             >{{ $t('header.export') }}</button>
@@ -149,6 +158,7 @@ function clearAllSelection(): void {
     <ToastNotification />
     <DialogHost />
     <ExportDialog />
+    <TeamManagerDialog />
 
     <!-- 離螢幕匯出舞台:平時不渲染任何軸,匯出時才暫時掛上要輸出的軸供截圖。
          合併多軸時,export-merge-wrap 內縱向堆疊多個視圖,整塊截一張。 -->

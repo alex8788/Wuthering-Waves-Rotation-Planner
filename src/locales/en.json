@@ -98,6 +98,29 @@
     "clearConfirmEmpty": "The template library is already empty. Clear anyway?",
     "clearConfirm": "Clear"
   },
+  "teams": {
+    "open": "Teams",
+    "openTooltip": "Saved teams",
+    "title": "Team Manager",
+    "closeLabel": "Close",
+    "save": "Save current team",
+    "namePlaceholder": "Team name",
+    "nameTaken": "This name is already in use",
+    "saveConfirm": "Save",
+    "cancel": "Cancel",
+    "empty": "No saved teams yet",
+    "axesLabel": "Rotations",
+    "load": "Load",
+    "loadConfirmTitle": "Load Team",
+    "loadConfirmMessage": "Loading \"{name}\" will replace the current board. Continue?",
+    "loadConfirm": "Load",
+    "moreLabel": "More actions",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "delete": "Delete",
+    "deleteTitle": "Delete Team",
+    "deleteMessage": "Delete \"{name}\"?"
+  },
   "dialog": {
     "ok": "OK",
     "cancel": "Cancel"

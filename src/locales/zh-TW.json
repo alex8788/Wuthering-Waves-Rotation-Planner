@@ -98,6 +98,29 @@
     "clearConfirmEmpty": "自訂模板庫目前是空的，仍要執行清除嗎？",
     "clearConfirm": "清除"
   },
+  "teams": {
+    "open": "隊伍",
+    "openTooltip": "隊伍存檔",
+    "title": "隊伍管理",
+    "closeLabel": "關閉",
+    "save": "儲存目前隊伍",
+    "namePlaceholder": "隊伍名稱",
+    "nameTaken": "此名稱已存在",
+    "saveConfirm": "儲存",
+    "cancel": "取消",
+    "empty": "尚無隊伍存檔",
+    "axesLabel": "輸出軸",
+    "load": "載入",
+    "loadConfirmTitle": "載入隊伍",
+    "loadConfirmMessage": "載入「{name}」將覆蓋目前的排軸內容，是否繼續？",
+    "loadConfirm": "載入",
+    "moreLabel": "更多操作",
+    "pin": "置頂",
+    "unpin": "取消置頂",
+    "delete": "刪除",
+    "deleteTitle": "刪除隊伍",
+    "deleteMessage": "確定刪除「{name}」？"
+  },
   "dialog": {
     "ok": "確定",
     "cancel": "取消"
