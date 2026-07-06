@@ -61,31 +61,51 @@ watch(
 /** 元件外（stores/composables）用的全域 t()。 */
 export const t = i18n.global.t;
 
-/** 目前是否為中文介面（資料名稱 zh/en 切換用）。 */
-function isZh(): boolean {
-  return i18n.global.locale.value.startsWith('zh');
+function currentLocale(): LocaleCode {
+  return i18n.global.locale.value as LocaleCode;
 }
 
-/** 角色顯示名：依 locale 回 nameZh / nameEn（缺英文名 fallback 中文）。 */
+/** 角色顯示名：依 locale 回對應語言名；缺該語言時優雅回退（→英文→繁中）。
+ *  資料主鍵語言為繁中（nameZh 必有），故繁中直接回 nameZh。 */
 export function characterDisplayName(
-  c: Pick<Character, 'nameZh' | 'nameEn'> | null | undefined,
+  c: Pick<Character, 'nameZh' | 'nameZhCn' | 'nameEn' | 'nameJa' | 'nameKo'> | null | undefined,
 ): string {
   if (!c) return '';
-  return isZh() ? c.nameZh : c.nameEn || c.nameZh;
+  switch (currentLocale()) {
+    case 'zh-TW': return c.nameZh;
+    case 'zh-CN': return c.nameZhCn || c.nameZh;
+    case 'ja': return c.nameJa || c.nameEn || c.nameZh;
+    case 'ko': return c.nameKo || c.nameEn || c.nameZh;
+    default: return c.nameEn || c.nameZh; // en
+  }
 }
 
-// 屬性英文名查找表：generated（爬蟲）為底、overrides（人工）可覆寫。
-const ELEMENT_NAME_EN: Record<string, string> = Object.fromEntries(
-  (elementsGenerated as { name: string; nameEn?: string }[])
-    .map((e) => {
-      const override = (elementsOverrides as Record<string, { nameEn?: string }>)[e.name];
-      return [e.name, override?.nameEn ?? e.nameEn] as const;
-    })
-    .filter((pair): pair is readonly [string, string] => !!pair[1]),
+// 屬性各語顯示名查找表：generated（爬蟲）為底、overrides（人工）可覆寫。
+// key＝屬性資料鍵（繁中名，如「氣動」）；value＝各語名（缺者 undefined）。
+// 資料欄位為 nameZhCn/nameEn/nameJa/nameKo（與角色一致）。
+type ElementRow = { name: string; nameZhCn?: string; nameEn?: string; nameJa?: string; nameKo?: string };
+type ElementNames = { zhCn?: string; en?: string; ja?: string; ko?: string };
+const ELEMENT_NAMES: Record<string, ElementNames> = Object.fromEntries(
+  (elementsGenerated as ElementRow[]).map((e) => {
+    const ov = (elementsOverrides as Record<string, Omit<ElementRow, 'name'>>)[e.name] ?? {};
+    return [e.name, {
+      zhCn: ov.nameZhCn ?? e.nameZhCn,
+      en: ov.nameEn ?? e.nameEn,
+      ja: ov.nameJa ?? e.nameJa,
+      ko: ov.nameKo ?? e.nameKo,
+    }] as const;
+  }),
 );
 
-/** 屬性顯示名：依 locale 回中文（資料鍵本身）或英文（缺翻 fallback 中文）。 */
+/** 屬性顯示名：依 locale 回對應語言名；繁中回資料鍵本身，缺翻回退（→英文→鍵）。 */
 export function elementDisplayName(element: CharacterElement | null | undefined): string {
   if (!element) return '';
-  return isZh() ? element : (ELEMENT_NAME_EN[element] ?? element);
+  const n = ELEMENT_NAMES[element];
+  switch (currentLocale()) {
+    case 'zh-TW': return element; // 資料鍵即繁中名
+    case 'zh-CN': return n?.zhCn || element;
+    case 'ja': return n?.ja || n?.en || element;
+    case 'ko': return n?.ko || n?.en || element;
+    default: return n?.en || element; // en
+  }
 }

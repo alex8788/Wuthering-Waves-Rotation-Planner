@@ -2,7 +2,8 @@
 // crawl-characters.mjs — encore.moe 角色資料爬蟲（P3，只在 CI / 本機 node 執行）。
 //
 // 流程：
-//   1. 抓 zh-Hant + en 兩份 roleList，以數字 Id join（拿中文名 + 英文名）。
+//   1. 抓 5 份 roleList（zh-Hant/zh-Hans/en/ja/ko），以數字 Id join，拿各語顯示名
+//      （角色 nameZh/nameZhCn/nameEn/nameJa/nameKo + 屬性各語名）。zh-Hant 為主鍵語言。
 //   2. id 對應採乙方案：scripts/id-map.json（encore 數字 Id → 我們的 kebab id）。
 //      - 對照表沒有的 Id → 先用中文名比對現有 generated.json 認領舊 id；
 //        再沒有 → 由英文名轉 kebab-case 自動生成，並在摘要標記【新角色】。
@@ -80,12 +81,18 @@ async function downloadImage(url, destPath) {
 // ── 主流程 ───────────────────────────────────────────────────
 
 async function main() {
-  // 1. 抓兩種語言並以數字 Id join
-  const [zhList, enList] = await Promise.all([
+  // 1. 抓 5 種語言並以數字 Id join（zh-Hant 為主鍵語言）
+  const [zhList, zhCnList, enList, jaList, koList] = await Promise.all([
     fetchRoleList('zh-Hant'),
+    fetchRoleList('zh-Hans'),
     fetchRoleList('en'),
+    fetchRoleList('ja'),
+    fetchRoleList('ko'),
   ]);
   const enById = new Map(enList.map((r) => [r.Id, r]));
+  const zhCnById = new Map(zhCnList.map((r) => [r.Id, r]));
+  const jaById = new Map(jaList.map((r) => [r.Id, r]));
+  const koById = new Map(koList.map((r) => [r.Id, r]));
 
   // 2. id 對應（乙方案）
   const idMap = readJson(ID_MAP_PATH, {}); // { "<encoreId>": "<our-id>" }
@@ -124,11 +131,18 @@ async function main() {
     const c = {
       id: ourId,
       nameZh: zh.Name,
-      nameEn,
       element: zh.Element?.Name,
       rarity: zh.QualityId,
       encoreId: zh.Id, // 排序用，落檔前移除
     };
+    // 多語顯示名（i18n Part 2）：有值才寫入，缺則交由顯示層回退。
+    const nameZhCn = zhCnById.get(zh.Id)?.Name;
+    const nameJa = jaById.get(zh.Id)?.Name;
+    const nameKo = koById.get(zh.Id)?.Name;
+    if (nameZhCn) c.nameZhCn = nameZhCn;
+    if (nameEn) c.nameEn = nameEn;
+    if (nameJa) c.nameJa = nameJa;
+    if (nameKo) c.nameKo = nameKo;
 
     // 3. schema 驗證（任一筆失敗 → 整批中止）。
     //    屬性只驗「非空」不驗白名單：新屬性走自動吸納（見屬性區塊），不中止。
@@ -162,14 +176,18 @@ async function main() {
   // （輸出穩定、diff 乾淨）。新屬性自動吸納：slug 由 en 屬性名 kebab 化，
   // 圖示照常下載，並在摘要標記⚠提醒補色（不中止整批）。
   const elemByName = new Map(); // zh 屬性名 → zh Element 物件
-  const elemEnName = new Map(); // zh 屬性名 → en 屬性名（產 slug 用）
+  const elemNames = new Map(); // zh 屬性名 → { en, zhCn, ja, ko } 各語屬性名
   for (const zh of zhList) {
     const e = zh.Element;
     if (!e?.Name) continue;
     if (!elemByName.has(e.Name)) {
       elemByName.set(e.Name, e);
-      const enElemName = enById.get(zh.Id)?.Element?.Name;
-      if (enElemName) elemEnName.set(e.Name, enElemName);
+      elemNames.set(e.Name, {
+        en: enById.get(zh.Id)?.Element?.Name,
+        zhCn: zhCnById.get(zh.Id)?.Element?.Name,
+        ja: jaById.get(zh.Id)?.Element?.Name,
+        ko: koById.get(zh.Id)?.Element?.Name,
+      });
     }
   }
   const oldElements = readJson(ELEMENTS_GENERATED_PATH, []);
@@ -189,10 +207,11 @@ async function main() {
     const e = elemByName.get(name);
     const old = oldElemByName.get(name);
 
+    const names = elemNames.get(name) ?? {};
     // slug：舊檔沿用；新屬性由 en 屬性名 kebab 化，取不到/撞名退 element-<n>
     let slug = old?.slug;
     if (!slug) {
-      slug = kebab(elemEnName.get(name) ?? '') || `element-${elementsOut.length + 1}`;
+      slug = kebab(names.en ?? '') || `element-${elementsOut.length + 1}`;
       while (usedSlugs.has(slug)) slug = `${slug}-x`;
       newElements.push(`${name}（slug: ${slug}）`);
     }
@@ -200,9 +219,15 @@ async function main() {
 
     const iconPath = join(ELEMENT_DIR, `${slug}.webp`);
     const entry = { name, slug };
-    // 屬性英文名（i18n 顯示用）：本次 en roleList 取得；取不到沿用舊檔。
-    const nameEn = elemEnName.get(name) ?? old?.nameEn;
+    // 屬性多語顯示名（i18n 顯示用）：本次取得；取不到沿用舊檔。
+    const nameEn = names.en ?? old?.nameEn;
+    const nameZhCn = names.zhCn ?? old?.nameZhCn;
+    const nameJa = names.ja ?? old?.nameJa;
+    const nameKo = names.ko ?? old?.nameKo;
     if (nameEn) entry.nameEn = nameEn;
+    if (nameZhCn) entry.nameZhCn = nameZhCn;
+    if (nameJa) entry.nameJa = nameJa;
+    if (nameKo) entry.nameKo = nameKo;
     if (!SKIP_AVATARS && e.Icon) {
       const ok = await downloadImage(`${RESOURCE_BASE}${e.Icon}.webp`, iconPath);
       if (!ok) errors.push(`屬性 ${name}: 圖示下載失敗`);
@@ -233,7 +258,7 @@ async function main() {
   for (const c of output) {
     const old = oldById.get(c.id);
     if (!old) continue; // 新角色已在 newChars 記錄
-    const diffs = ['nameZh', 'nameEn', 'element', 'rarity', 'avatar']
+    const diffs = ['nameZh', 'nameZhCn', 'nameEn', 'nameJa', 'nameKo', 'element', 'rarity', 'avatar']
       .filter((k) => old[k] !== undefined && old[k] !== c[k])
       .map((k) => `${k}: ${old[k]} → ${c[k]}`);
     if (diffs.length) summary.push(`變更 ${c.nameZh}: ${diffs.join(', ')}`);

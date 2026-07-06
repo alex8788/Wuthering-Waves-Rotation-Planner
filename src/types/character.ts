@@ -11,10 +11,16 @@
 export interface Character {
   /** 唯一識別碼，英文名 kebab-case（如 'rover-havoc'）；對應 Block.characterId。 */
   id: string;
-  /** 繁中顯示名稱。 */
+  /** 繁中顯示名稱（zh-Hant；資料主鍵語言）。 */
   nameZh: string;
-  /** 英文顯示名稱（選填；由 encore API en 版帶入，MVP 尚未使用於 UI）。 */
+  /** 簡中顯示名稱（zh-Hans；選填，爬蟲 encore API 帶入）。 */
+  nameZhCn?: string;
+  /** 英文顯示名稱（選填；由 encore API en 版帶入）。 */
   nameEn?: string;
+  /** 日文顯示名稱（選填；由 encore API ja 版帶入）。 */
+  nameJa?: string;
+  /** 韓文顯示名稱（選填；由 encore API ko 版帶入）。 */
+  nameKo?: string;
   /** 屬性（元素）。 */
   element: CharacterElement;
   /** 星級：5 或 4；角色選單各屬性頁籤內依此分組（5★ 在 4★ 之前）。 */

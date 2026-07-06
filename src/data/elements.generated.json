@@ -3,36 +3,54 @@
     "name": "氣動",
     "slug": "aero",
     "nameEn": "Aero",
+    "nameZhCn": "气动",
+    "nameJa": "気動",
+    "nameKo": "기류",
     "icon": "/assets/elements/aero.webp"
   },
   {
     "name": "冷凝",
     "slug": "glacio",
     "nameEn": "Glacio",
+    "nameZhCn": "冷凝",
+    "nameJa": "凝縮",
+    "nameKo": "응결",
     "icon": "/assets/elements/glacio.webp"
   },
   {
     "name": "導電",
     "slug": "electro",
     "nameEn": "Electro",
+    "nameZhCn": "导电",
+    "nameJa": "電導",
+    "nameKo": "전도",
     "icon": "/assets/elements/electro.webp"
   },
   {
     "name": "湮滅",
     "slug": "havoc",
     "nameEn": "Havoc",
+    "nameZhCn": "湮灭",
+    "nameJa": "消滅",
+    "nameKo": "인멸",
     "icon": "/assets/elements/havoc.webp"
   },
   {
     "name": "衍射",
     "slug": "spectro",
     "nameEn": "Spectro",
+    "nameZhCn": "衍射",
+    "nameJa": "回折",
+    "nameKo": "회절",
     "icon": "/assets/elements/spectro.webp"
   },
   {
     "name": "熱熔",
     "slug": "fusion",
     "nameEn": "Fusion",
+    "nameZhCn": "热熔",
+    "nameJa": "焦熱",
+    "nameKo": "용융",
     "icon": "/assets/elements/fusion.webp"
   }
 ]
