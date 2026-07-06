@@ -7,7 +7,7 @@
   "sidebar": {
     "panelLabel": "區塊側邊欄",
     "switchTabsLabel": "切換區塊類型",
-    "presetTab": "預設",
+    "presetTab": "通用",
     "customTab": "自訂",
     "generalBlocks": "基礎招式",
     "collapse": "收合側邊欄",

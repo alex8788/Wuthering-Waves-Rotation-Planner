@@ -306,6 +306,7 @@ async function handleDeselectCharacter(): Promise<void> {
 
     <div
       class="swimlane__header"
+      :class="{ 'swimlane__header--drag-inert': dragState.isDragging }"
       :style="{ '--lane-color': laneColor }"
       aria-hidden="false"
     >
@@ -512,6 +513,13 @@ async function handleDeselectCharacter(): Promise<void> {
   z-index: 5;
   /* 不透明底（面板深色），上面再疊各槽位細微色調 */
   background-color: #0b101d;
+}
+
+/* 拖曳區塊期間：header 整體不可互動。forceFallback 浮動分身跟手經過 sticky
+   header 上方時，滑鼠 hover 會誤觸角色頭像原生 title 提示與「取消選角」鈕浮現。
+   拖曳中一律穿透（不攔 hover / 不吃點擊），放開後恢復。 */
+.swimlane__header--drag-inert {
+  pointer-events: none;
 }
 
 /* 左側垂直色條：改為沿左緣的直條（原為頂部橫條）。 */

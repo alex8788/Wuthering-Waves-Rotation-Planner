@@ -7,7 +7,7 @@
   "sidebar": {
     "panelLabel": "블록 사이드바",
     "switchTabsLabel": "블록 유형 전환",
-    "presetTab": "프리셋",
+    "presetTab": "일반",
     "customTab": "사용자 지정",
     "generalBlocks": "기본 동작",
     "collapse": "사이드바 접기",

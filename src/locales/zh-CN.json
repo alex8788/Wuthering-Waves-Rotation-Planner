@@ -7,7 +7,7 @@
   "sidebar": {
     "panelLabel": "区块侧边栏",
     "switchTabsLabel": "切换区块类型",
-    "presetTab": "预设",
+    "presetTab": "通用",
     "customTab": "自定义",
     "generalBlocks": "基础招式",
     "collapse": "收起侧边栏",

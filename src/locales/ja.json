@@ -7,7 +7,7 @@
   "sidebar": {
     "panelLabel": "ブロックサイドバー",
     "switchTabsLabel": "ブロックタイプを切り替え",
-    "presetTab": "プリセット",
+    "presetTab": "汎用",
     "customTab": "カスタム",
     "generalBlocks": "基本アクション",
     "collapse": "サイドバーを折りたたむ",

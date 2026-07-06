@@ -7,7 +7,7 @@
   "sidebar": {
     "panelLabel": "Block sidebar",
     "switchTabsLabel": "Switch block type",
-    "presetTab": "Preset",
+    "presetTab": "General",
     "customTab": "Custom",
     "generalBlocks": "Basic Moves",
     "collapse": "Collapse sidebar",
