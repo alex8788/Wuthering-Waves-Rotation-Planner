@@ -62,10 +62,16 @@ function measurerColor(entry: RotationEntry): string {
   return getElementColor(characterStore.slotCharacters[entry.slotIndex]?.element ?? null)
 }
 
-// 量測列用的 label：編輯中的區塊改用「即時草稿」而非已提交 label，
-// 使欄寬隨輸入即時重算（編輯時區塊即時變寬、鄰塊即時順延）。
+// 量測列用的 label：編輯中的區塊改用「即時草稿」而非已提交 label，使欄寬隨輸入
+// 即時重算（區塊即時變寬、鄰塊即時順延）。多選同步編輯的其餘批次成員只在
+// 「實際打字後」（editingDraftDirty）改量草稿——與 Swimlane.displayLabel 的
+// 鏡射門檻一致，進入編輯瞬間各成員維持原字原寬。
 function measurerLabel(entry: RotationEntry): string {
-  return entry.id === rotationStore.editingId ? rotationStore.editingDraft : entry.block.label
+  if (entry.id === rotationStore.editingId) return rotationStore.editingDraft
+  if (rotationStore.editingDraftDirty && rotationStore.editingBatchIds.includes(entry.id)) {
+    return rotationStore.editingDraft
+  }
+  return entry.block.label
 }
 
 // 欄寬量測（隱藏量測列 → grid-template-columns；含 entries/草稿/resize/字型重量）

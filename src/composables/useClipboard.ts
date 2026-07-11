@@ -70,6 +70,8 @@ export function useClipboard() {
     // 每次貼上都從剪貼簿重新深拷貝，允許多次連續貼上（insertClonedBlocks 賦予新 UUID）。
     const itemsToInsert = _clipboardBuffer.value.map((entry) => deepClone(entry));
     const newIds = rotationStore.insertClonedBlocks(itemsToInsert, insertAfterIndex);
+    // 貼上後清除原選取、改選中所有新貼上的區塊（方便接續搬移／再貼上）。
+    rotationStore.selectBlocks(newIds);
     // 貼上位置可能在可視範圍外 → 渲染後捲動到最後一個貼上的區塊。
     scrollEntryIntoView(newIds[newIds.length - 1]);
   }
@@ -86,7 +88,9 @@ export function useClipboard() {
     const insertAfterIndex = entries.findIndex((e) => e.id === lastEntry.id);
 
     const itemsToInsert = sortedSelected.map((entry) => deepClone(entry));
-    rotationStore.insertClonedBlocks(itemsToInsert, insertAfterIndex);
+    // 向右複製亦視為貼上：清除原選取、改選中所有新複製出的區塊。
+    const newIds = rotationStore.insertClonedBlocks(itemsToInsert, insertAfterIndex);
+    rotationStore.selectBlocks(newIds);
   }
 
   return {

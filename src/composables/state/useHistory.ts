@@ -21,6 +21,8 @@ import { useRotationStore } from '@/stores/useRotationStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLaneOrder } from '@/composables/state/useLaneOrder';
 import { useSettings } from '@/composables/state/useSettings';
+import { showToast } from '@/composables/state/useToast';
+import { t } from '@/i18n';
 import type { RotationAxis } from '@/types/rotation';
 import type { CharacterSlots, SlotIndex } from '@/types/character';
 
@@ -101,6 +103,7 @@ export function useHistory() {
     future.value.push(_snapshot());
     trimHistory(future.value);
     _apply(past.value.pop()!);
+    showToast(t('toast.undone'), 'info');
   }
 
   function redo(): void {
@@ -108,6 +111,7 @@ export function useHistory() {
     past.value.push(_snapshot());
     trimHistory(past.value);
     _apply(future.value.pop()!);
+    showToast(t('toast.redone'), 'info');
   }
 
   /**

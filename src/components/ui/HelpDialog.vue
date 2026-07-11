@@ -54,6 +54,8 @@ const sections = computed<Section[]>(() => [
       { keys: [mod, 'X'], descKey: 'help.cut' },
       { keys: [mod, 'V'], descKey: 'help.paste' },
       { keys: [mod, 'D'], descKey: 'help.duplicateRight' },
+      { keys: ['Space'], descKey: 'help.insertBlank' },
+      { keys: ['Enter'], descKey: 'help.editLabel' },
     ],
   },
   {
