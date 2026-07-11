@@ -210,11 +210,33 @@ function handleRequestEdit(entryId: string): void {
   rotationStore.startEditing(entryId)
 }
 
+// 區塊顯示文字：多選同步編輯的批次成員（輸入框本體除外）在「使用者實際打字後」
+// （editingDraftDirty）才鏡射草稿，進入編輯瞬間各自保留原字（避免被主要區塊的字
+// 誤蓋）；打字時所有成員一起變字；取消編輯（stopEditing 清批次）自動回落原 label。
+function displayLabel(entry: RotationEntry): string {
+  if (
+    rotationStore.editingId !== null &&
+    entry.id !== rotationStore.editingId &&
+    rotationStore.editingDraftDirty &&
+    rotationStore.editingBatchIds.includes(entry.id)
+  ) {
+    return rotationStore.editingDraft
+  }
+  return entry.block.label
+}
+
 // 提交：寫入 store（空字串由 store.updateLabel 處理為刪除），結束編輯。
+// 多選同步編輯：使用者實際打過字（dirty）才把同一文字套用到全部批次成員
+// （同步批次 → 歷史合併為單一步）；沒打字就提交＝維持各自原字，只走單塊路徑
+// （updateLabel 對未變更文字為 no-op）。
 // 若有進行中的新增交易：命名成功 → 提交成一步；命名為空（被刪）→ 整筆丟棄不留歷史。
 // （雙擊既有區塊的再編輯無交易，commit/cancelPending 皆為 no-op，由 updateLabel 自行記一步。）
 function handleCommitLabel(entryId: string, label: string): void {
-  rotationStore.updateLabel(entryId, label)
+  const batch = rotationStore.editingBatchIds
+  const isBatchCommit =
+    rotationStore.editingDraftDirty && batch.includes(entryId) && batch.length > 1
+  const targets = isBatchCommit ? [...batch] : [entryId]
+  targets.forEach((id) => rotationStore.updateLabel(id, label))
   if (label.trim() === '') history.cancelPending()
   else history.commitPending()
   if (rotationStore.editingId === entryId) rotationStore.stopEditing()
@@ -399,7 +421,7 @@ async function handleDeselectCharacter(): Promise<void> {
               :key="entry.id"
               :data-tour="slotIndex === 0 && entry.id === localEntries[0]?.id ? 'first-block' : undefined"
               :entry-id="entry.id"
-              :label="entry.block.label"
+              :label="displayLabel(entry)"
               :color="laneColor"
               :is-selected="rotationStore.isSelected(entry.id)"
               :multi-select-count="rotationStore.selectedIds.size"

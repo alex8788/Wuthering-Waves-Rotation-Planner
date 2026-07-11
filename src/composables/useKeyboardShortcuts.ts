@@ -15,6 +15,7 @@
 //   Ctrl+Z              → 復原（Undo）
 //   Ctrl+Shift+Z / Ctrl+Y → 重做（Redo）
 //   Space               → 在選取區塊之後插入空白區塊並進入編輯（無選取則不動作）
+//   Enter               → 編輯選取區塊的文字；多選＝同步編輯全部（無選取則不動作）
 //   Escape              → 清除所有選取
 //   Tab                 → 展開／收合側邊欄
 // ============================================================
@@ -37,6 +38,21 @@ export function useKeyboardShortcuts() {
   const sidebarCollapse = useSidebarCollapse();
   const { scrollEntryIntoView } = useBoardScroll();
   const history = useHistory();
+
+  /**
+   * Enter：編輯選取區塊的文字。輸入框掛在「第一個選取區塊」（時間序）上，
+   * 多選時其餘成員即時鏡射草稿、提交時同一文字套用全部（批次機制見
+   * rotationStore.editingBatchIds 與 Swimlane.handleCommitLabel）。
+   * 既有區塊的再編輯不開交易（與雙擊編輯同模式），由 updateLabel 自行記一步。
+   */
+  function editSelectedLabels(): void {
+    const selected = rotationStore.selectedEntries; // 已依 1D 陣列時間序排列
+    if (selected.length === 0) return;
+    const primary = selected[0];
+    rotationStore.startEditing(primary.id, selected.map((e) => e.id));
+    // 輸入框可能在可視範圍外 → 不在畫面內才跟隨鏡頭。
+    scrollEntryIntoView(primary.id, { onlyIfNeeded: true });
+  }
 
   /**
    * Space：在「最後一個選取區塊」之後插入同泳道空白區塊並進入行內編輯。
@@ -95,6 +111,19 @@ export function useKeyboardShortcuts() {
       if (rotationStore.selectedIds.size > 0) {
         event.preventDefault();
         rotationStore.deleteSelectedBlocks();
+      }
+      return;
+    }
+
+    // ── Enter：編輯選取區塊的文字（多選＝同步編輯）────────────
+    // 與「提交編輯」無衝突：編輯中焦點在輸入框，Enter 由 RotationBlock 的
+    // keydown 自行提交，且事件 target 為 input 會被 _shouldIgnore 提前排除，
+    // 不會落到這裡；此分支只在「非編輯狀態、有選取」時進場。
+    if (key === 'Enter' && !isCtrl && !event.altKey && !event.shiftKey) {
+      if (rotationStore.selectedIds.size > 0) {
+        // preventDefault：焦點若停在按鈕（如 ＋）上，避免 Enter 同時觸發原生 click。
+        event.preventDefault();
+        editSelectedLabels();
       }
       return;
     }

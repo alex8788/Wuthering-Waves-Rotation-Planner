@@ -61,6 +61,14 @@ export const useRotationStore = defineStore('rotation', () => {
   // → 編輯時區塊寬度隨輸入即時變、鄰塊順延。editingId 為 null＝無編輯中。
   const editingId = ref<string | null>(null);
   const editingDraft = ref<string>('');
+  // 批次編輯成員（含 editingId 本身）：多選按 Enter 同步編輯時，其餘成員的
+  // chip 與量測列即時鏡射 editingDraft，提交時一次套用到全部成員。
+  // 僅編輯期間有效；stopEditing 清空。單塊編輯＝只含自己。
+  const editingBatchIds = ref<string[]>([]);
+  // 草稿是否被實際輸入過：批次鏡射與批次提交都以此為門檻——
+  // 進入編輯瞬間草稿＝主要區塊的原字，若立即鏡射/提交會把其他成員的字
+  // 誤蓋成主要區塊的字；必須等使用者真的打字（setEditingDraft）才生效。
+  const editingDraftDirty = ref(false);
 
   /** 正在播刪除消失動畫的 id 集合；仍留在 entries 佔欄位，動畫結束才真正移除。 */
   const leavingIds = ref<Set<string>>(new Set());
@@ -268,21 +276,28 @@ export const useRotationStore = defineStore('rotation', () => {
     selectedIds.value.delete(id);
   }
 
-  /** 標記區塊進入行內編輯，以其目前 label 初始化草稿。 */
-  function startEditing(id: string): void {
+  /** 標記區塊進入行內編輯，以其目前 label 初始化草稿。
+   *  batchIds：多選同步編輯的成員（省略＝只編輯自己）。 */
+  function startEditing(id: string, batchIds: string[] = []): void {
     editingId.value = id;
     editingDraft.value = entries.value.find((e) => e.id === id)?.block.label ?? '';
+    editingBatchIds.value = batchIds.includes(id) ? [...batchIds] : [id];
+    editingDraftDirty.value = false;
   }
 
-  /** setEditingDraft：同步行內編輯框的即時草稿文字（供量測列即時重算欄寬）。 */
+  /** setEditingDraft：同步行內編輯框的即時草稿文字（供量測列即時重算欄寬）。
+   *  首次呼叫即標記 dirty → 批次鏡射/提交自此生效（見 editingDraftDirty）。 */
   function setEditingDraft(text: string): void {
     editingDraft.value = text;
+    editingDraftDirty.value = true;
   }
 
-  /** stopEditing：結束行內編輯，清掉草稿狀態。 */
+  /** stopEditing：結束行內編輯，清掉草稿與批次成員（鏡射顯示隨之回落原 label）。 */
   function stopEditing(): void {
     editingId.value = null;
     editingDraft.value = '';
+    editingBatchIds.value = [];
+    editingDraftDirty.value = false;
   }
 
   /** 批量刪除選中區塊：先標記 leavingIds 播動畫，LEAVE_MS 後移除（reduce 則即刪）。 */
@@ -404,6 +419,8 @@ export const useRotationStore = defineStore('rotation', () => {
     selectedIds,
     editingId,
     editingDraft,
+    editingBatchIds,
+    editingDraftDirty,
     totalBlockCount,
     selectedEntries,
     startEditing,
