@@ -6,7 +6,7 @@
 
 import type { RotationEntry } from '../types/rotation';
 
-/** 在 afterIndex 之後插入一個條目。 */
+/** 在 afterIndex 之後插入一個條目（afterIndex 超出末尾時 splice 自動夾到尾端＝追加）。 */
 export function insertEntryAfterIndex(
   entries: RotationEntry[],
   newEntry: RotationEntry,
@@ -63,12 +63,4 @@ export function findEntryIndexById(
   id: string
 ): number {
   return entries.findIndex((entry) => entry.id === id);
-}
-
-/** 追加到陣列末尾（全局尾端吸附）。 */
-export function appendEntry(
-  entries: RotationEntry[],
-  newEntry: RotationEntry
-): RotationEntry[] {
-  return [...entries, newEntry];
 }

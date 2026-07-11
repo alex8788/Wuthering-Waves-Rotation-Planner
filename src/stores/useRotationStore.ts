@@ -18,9 +18,6 @@ import { deepClone } from '../utils/deepClone';
 import { useHistory } from '@/composables/state/useHistory';
 import { useSettings } from '@/composables/state/useSettings';
 import { t } from '@/i18n';
-
-/** 刪除消失動畫時長(ms)，須與 RotationBlock 的 @keyframes block-leave 一致。 */
-const LEAVE_MS = 180;
 import { prefersReducedMotion } from '../utils/reducedMotion';
 import {
   insertEntryAfterIndex,
@@ -28,8 +25,10 @@ import {
   removeEntriesByIds,
   moveEntry,
   findEntryIndexById,
-  appendEntry,
 } from '../utils/arrayHelpers';
+
+/** 刪除消失動畫時長(ms)，須與 RotationBlock 的 @keyframes block-leave 一致。 */
+const LEAVE_MS = 180;
 
 export const useRotationStore = defineStore('rotation', () => {
   // ── State ──────────────────────────────────
@@ -109,11 +108,7 @@ export const useRotationStore = defineStore('rotation', () => {
       block: newBlock,
     };
 
-    if (afterIndex >= entries.value.length - 1) {
-      entries.value = appendEntry(entries.value, newEntry);
-    } else {
-      entries.value = insertEntryAfterIndex(entries.value, newEntry, afterIndex);
-    }
+    entries.value = insertEntryAfterIndex(entries.value, newEntry, afterIndex);
   }
 
   /** 憑空新增空白/自訂文字的實體區塊（自由輸入，originId 設 null）；回傳新 id。 */
@@ -141,11 +136,7 @@ export const useRotationStore = defineStore('rotation', () => {
       block: newBlock,
     };
 
-    if (afterIndex >= entries.value.length - 1) {
-      entries.value = appendEntry(entries.value, newEntry);
-    } else {
-      entries.value = insertEntryAfterIndex(entries.value, newEntry, afterIndex);
-    }
+    entries.value = insertEntryAfterIndex(entries.value, newEntry, afterIndex);
 
     // 回傳新區塊 id，供呼叫端（如新增後立即進入行內編輯）取得目標
     return newBlock.id;
@@ -197,11 +188,7 @@ export const useRotationStore = defineStore('rotation', () => {
         },
       };
 
-      if (currentIndex >= currentEntries.length - 1) {
-        currentEntries = appendEntry(currentEntries, newEntry);
-      } else {
-        currentEntries = insertEntryAfterIndex(currentEntries, newEntry, currentIndex);
-      }
+      currentEntries = insertEntryAfterIndex(currentEntries, newEntry, currentIndex);
       currentIndex++; // 確保下一個區塊排在剛剛插入的區塊後面
     }
 

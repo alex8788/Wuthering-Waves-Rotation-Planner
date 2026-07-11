@@ -156,30 +156,6 @@ html.force-reduce-motion *::after {
   }
 }
 
-/* ── 吸附線 Ghost：佔位中的原始位置 ──────────────────────────
-   對應 SDD「預期落點提示」：顯示一條發光的吸附線，。
-*/
-.sortable-ghost {
-  position: relative;
-}
-
-.sortable-ghost > * {
-  visibility: hidden !important;
-}
-
-.sortable-ghost::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12%;
-  bottom: 12%;
-  width: 2px;
-  border-radius: 1px;
-  background: rgba(125, 211, 252, 0.95);
-  box-shadow: 0 0 8px 1px rgba(125, 211, 252, 0.85);
-  pointer-events: none;
-}
-
 /* ── 抓取浮空 Chosen：放開前留在原位的視覺強化 ─────────────────
    對應 SDD「抓取浮空」：scale 放大 + 較深陰影。
 */
@@ -260,23 +236,14 @@ html.force-reduce-motion *::after {
 
 /* ── n6：側邊欄拖曳時，原始 chip 不可消失 ──────────────────────────
    forceFallback 下，SortableJS 會把「拖曳來源的本物 DOM（dragEl）」掛上
-   .sortable-ghost 當作佔位。但上方全域 .sortable-ghost 規則（為主軸吸附線
-   而設）會把它變透明 → 側邊欄原始 chip 在拖曳期間消失。pull:'clone' 的
-   clone 又只在「離開清單」後才顯示，於是出現「開始即消失 / 進主軸排序才
+   .sortable-ghost 當作佔位。但 utilities layer 的全域 .sortable-ghost
+   （opacity:0）會把它變透明 → 側邊欄原始 chip 在拖曳期間消失。pull:'clone'
+   的 clone 又只在「離開清單」後才顯示，於是出現「開始即消失 / 進主軸排序才
    復活 / 移回原位又消失」的閃爍。
    解法：在側邊欄拖曳容器內，把 ghost 還原為可見（原本 chip 留在原位，
-   符合「拖出複製、原本保留」的設計），且不畫吸附線。主軸（[data-drop-zone]
-   內）的吸附線規則完全不受影響。 */
+   符合「拖出複製、原本保留」的設計）。 */
 .chip-row__draggable .sortable-ghost {
   opacity: 1 !important;
-}
-
-.chip-row__draggable .sortable-ghost > * {
-  visibility: visible !important;
-}
-
-.chip-row__draggable .sortable-ghost::after {
-  display: none !important;
 }
 
 /* 條紋流動動畫（元件內的 danger-march 為 scoped，全域無法引用，需自備一份）。
