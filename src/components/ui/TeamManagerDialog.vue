@@ -11,20 +11,22 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useTeamManager } from '@/composables/state/useTeamManager'
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
-import { useRotationStore } from '@/stores/useRotationStore'
 import { useDialog } from '@/composables/state/useDialog'
+import { useToast } from '@/composables/state/useToast'
 import { characterDisplayName } from '@/i18n'
 import { useI18n } from 'vue-i18n'
 import type { SavedTeam } from '@/types/savedTeam'
 
 const { isOpen, close } = useTeamManager()
 const store = useSavedTeamStore()
-const rotationStore = useRotationStore()
 const { confirm } = useDialog()
+const { showToast } = useToast()
 const { t } = useI18n()
 
-// ── 儲存目前隊伍：行內命名 ────────────────────────────────────
+// ── 行內命名：另存新檔 / 建立空隊伍 共用同一個輸入列（以 saveMode 區分） ──
+type SaveMode = 'saveAs' | 'create'
 const isSaving = ref(false)
+const saveMode = ref<SaveMode>('saveAs')
 const saveName = ref('')
 const saveInputRef = ref<HTMLInputElement | null>(null)
 
@@ -33,15 +35,34 @@ const nameTaken = computed(
 )
 const canSave = computed(() => saveName.value.trim() !== '' && !nameTaken.value)
 
-function beginSave(): void {
+function beginSave(mode: SaveMode): void {
+  saveMode.value = mode
   isSaving.value = true
   saveName.value = ''
   void nextTick(() => saveInputRef.value?.focus())
 }
 
-function commitSave(): void {
+async function commitSave(): Promise<void> {
   if (!canSave.value) return
+  if (saveMode.value === 'create') {
+    // 建立空隊伍會即刻載入 → 捨棄當前工作區內容，有未存變更時先確認。
+    if (store.isDirty) {
+      const ok = await confirm({
+        title: t('teams.discardTitle'),
+        message: t('teams.discardMessage'),
+        confirmText: t('teams.discardConfirm'),
+        danger: true,
+      })
+      if (!ok) return
+    }
+    store.createEmptyTeam(saveName.value)
+    showToast(t('teams.createdToast', { name: saveName.value.trim() }), 'success')
+    cancelSave()
+    close()
+    return
+  }
   store.saveCurrent(saveName.value)
+  showToast(t('teams.savedToast', { name: saveName.value.trim() }), 'success')
   isSaving.value = false
   saveName.value = ''
 }
@@ -49,6 +70,14 @@ function commitSave(): void {
 function cancelSave(): void {
   isSaving.value = false
   saveName.value = ''
+}
+
+// ── 儲存變更：覆蓋當前綁定的存檔 ──────────────────────────────
+function handleSaveToCurrent(): void {
+  const team = store.currentTeam
+  if (!team || !store.isDirty) return
+  store.saveToCurrent()
+  showToast(t('teams.savedToast', { name: team.name }), 'success')
 }
 
 // ── 每列顯示：三角色（依存檔泳道順序）＋ 軸名清單 ──────────────
@@ -65,14 +94,20 @@ function axisNames(team: SavedTeam): string {
   return team.axes.map((a) => a.name).join('・')
 }
 
-// ── 載入（覆蓋當前工作區；有內容時先確認） ────────────────────
+// ── 載入（覆蓋當前工作區；有未儲存變更時先確認） ────────────────
 async function handleLoad(team: SavedTeam): Promise<void> {
-  const hasContent = rotationStore.axes.some((a) => a.entries.length > 0)
-  if (hasContent) {
+  // 已是當前隊伍且無變更 → 無事可做，直接關閉。
+  if (team.id === store.currentTeamId && !store.isDirty) {
+    closeMenu()
+    close()
+    return
+  }
+  if (store.isDirty) {
     const ok = await confirm({
       title: t('teams.loadConfirmTitle'),
       message: t('teams.loadConfirmMessage', { name: team.name }),
       confirmText: t('teams.loadConfirm'),
+      danger: true,
     })
     if (!ok) return
   }
@@ -112,11 +147,29 @@ async function handlePin(team: SavedTeam): Promise<void> {
   closeMenu()
 }
 
-async function handleDelete(team: SavedTeam): Promise<void> {
+// 以目前工作區內容覆蓋此存檔（原內容遺失，先確認）。
+async function handleOverwrite(team: SavedTeam): Promise<void> {
   closeMenu()
   const ok = await confirm({
+    title: t('teams.overwriteTitle'),
+    message: t('teams.overwriteMessage', { name: team.name }),
+    confirmText: t('teams.overwriteConfirm'),
+    danger: true,
+  })
+  if (!ok) return
+  store.overwriteTeam(team.id)
+  showToast(t('teams.savedToast', { name: team.name }), 'success')
+}
+
+async function handleDelete(team: SavedTeam): Promise<void> {
+  closeMenu()
+  const isCurrent = team.id === store.currentTeamId
+  const ok = await confirm({
     title: t('teams.deleteTitle'),
-    message: t('teams.deleteMessage', { name: team.name }),
+    // 刪除正在編輯的隊伍時，額外提醒使用者。
+    message: isCurrent
+      ? t('teams.deleteCurrentMessage', { name: team.name })
+      : t('teams.deleteMessage', { name: team.name }),
     confirmText: t('teams.delete'),
     danger: true,
   })
@@ -168,12 +221,29 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
             </button>
           </div>
 
-          <!-- 儲存目前隊伍 -->
+          <!-- 儲存區：儲存變更（覆蓋當前隊伍）／另存新檔／建立空隊伍 -->
           <div class="team-dialog__save">
             <template v-if="!isSaving">
-              <button type="button" class="team-dialog__save-btn" @click="beginSave">
-                <span aria-hidden="true">＋</span> {{ $t('teams.save') }}
+              <!-- 已綁定當前隊伍：顯示「儲存變更」（有未存變更才可按） -->
+              <button
+                v-if="store.currentTeam"
+                type="button"
+                class="team-dialog__save-btn team-dialog__save-btn--primary"
+                :disabled="!store.isDirty"
+                @click="handleSaveToCurrent"
+              >
+                {{ store.isDirty
+                  ? $t('teams.saveChanges', { name: store.currentTeam.name })
+                  : $t('teams.saved') }}
               </button>
+              <div class="team-dialog__save-actions">
+                <button type="button" class="team-dialog__mini-btn" @click="beginSave('saveAs')">
+                  <span aria-hidden="true">＋</span> {{ $t('teams.saveAs') }}
+                </button>
+                <button type="button" class="team-dialog__mini-btn" @click="beginSave('create')">
+                  <span aria-hidden="true">＋</span> {{ $t('teams.createEmpty') }}
+                </button>
+              </div>
             </template>
             <template v-else>
               <div class="team-save-row">
@@ -183,7 +253,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
                   class="team-save-row__input"
                   :class="{ 'team-save-row__input--error': nameTaken }"
                   type="text"
-                  :placeholder="$t('teams.namePlaceholder')"
+                  :placeholder="saveMode === 'create'
+                    ? $t('teams.createNamePlaceholder')
+                    : $t('teams.namePlaceholder')"
                   @keydown.enter.prevent="commitSave"
                   @keydown.esc.prevent="cancelSave"
                 />
@@ -192,7 +264,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
                   class="team-save-row__btn team-save-row__btn--confirm"
                   :disabled="!canSave"
                   @click="commitSave"
-                >{{ $t('teams.saveConfirm') }}</button>
+                >{{ saveMode === 'create' ? $t('teams.createConfirm') : $t('teams.saveConfirm') }}</button>
                 <button
                   type="button"
                   class="team-save-row__btn"
@@ -218,6 +290,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
                 <div class="team-row__name-line">
                   <span class="team-row__name">{{ team.name }}</span>
                   <span v-if="team.pinned" class="team-row__pin" aria-hidden="true">📌</span>
+                  <span v-if="team.id === store.currentTeamId" class="team-row__editing">
+                    {{ $t('teams.editingBadge') }}
+                  </span>
                 </div>
                 <div class="team-row__chars">
                   <span
@@ -260,6 +335,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       role="menu"
       @click.stop
     >
+      <button type="button" class="team-menu__item" role="menuitem" @click="handleOverwrite(openTeam)">
+        {{ $t('teams.overwrite') }}
+      </button>
       <button type="button" class="team-menu__item" role="menuitem" @click="handlePin(openTeam)">
         {{ openTeam.pinned ? $t('teams.unpin') : $t('teams.pin') }}
       </button>
@@ -355,6 +433,39 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   background: rgba(34, 211, 238, 0.12);
   border-color: rgba(34, 211, 238, 0.7);
 }
+/* 「儲存變更」主按鈕：實心邊框；無變更時淡化不可按。 */
+.team-dialog__save-btn--primary {
+  border-style: solid;
+  margin-bottom: 0.4rem;
+}
+.team-dialog__save-btn--primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.team-dialog__save-btn--primary:disabled:hover {
+  background: rgba(34, 211, 238, 0.05);
+  border-color: rgba(34, 211, 238, 0.45);
+}
+/* 另存新檔 / 建立空隊伍：並列的次要小按鈕。 */
+.team-dialog__save-actions { display: flex; gap: 0.4rem; }
+.team-dialog__mini-btn {
+  flex: 1;
+  padding: 0.4rem;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(240, 244, 248, 0.7);
+  font-size: 0.75rem;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.team-dialog__mini-btn:hover {
+  background: rgba(34, 211, 238, 0.08);
+  border-color: rgba(34, 211, 238, 0.4);
+  color: rgba(34, 211, 238, 0.9);
+}
 .team-save-row { display: flex; gap: 0.4rem; }
 .team-save-row__input {
   flex: 1;
@@ -419,6 +530,16 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 .team-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 .team-row__name-line { display: flex; align-items: center; gap: 0.35rem; }
 .team-row__pin { font-size: 0.75rem; }
+.team-row__editing {
+  flex-shrink: 0;
+  padding: 0.05rem 0.35rem;
+  border-radius: 99px;
+  background: rgba(34, 211, 238, 0.16);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  color: rgba(34, 211, 238, 0.95);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+}
 .team-row__name {
   font-size: 0.8125rem;
   font-weight: 700;
