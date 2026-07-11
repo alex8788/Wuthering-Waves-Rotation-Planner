@@ -20,7 +20,7 @@ import type { SavedTeam } from '@/types/savedTeam'
 
 const { isOpen, saveAsRequested, close } = useTeamManager()
 const store = useSavedTeamStore()
-const { confirm } = useDialog()
+const { confirm, prompt } = useDialog()
 const { showToast } = useToast()
 const { t } = useI18n()
 
@@ -170,6 +170,25 @@ async function handleOverwrite(team: SavedTeam): Promise<void> {
   if (!ok) return
   store.overwriteTeam(team.id)
   showToast(t('teams.savedToast', { name: team.name }), 'success')
+}
+
+// 改名此存檔：以 prompt 取新名，交由 store 驗證（空白/重名則忽略並提示）。
+async function handleRename(team: SavedTeam): Promise<void> {
+  closeMenu()
+  const name = await prompt({
+    title: t('teams.renameTitle'),
+    defaultValue: team.name,
+    placeholder: t('teams.namePlaceholder'),
+    confirmText: t('teams.saveConfirm'),
+  })
+  if (name == null) return
+  const trimmed = name.trim()
+  if (trimmed === '' || trimmed === team.name) return
+  if (store.isNameTaken(trimmed, team.id)) {
+    showToast(t('teams.nameTaken'), 'warning')
+    return
+  }
+  store.renameTeam(team.id, trimmed)
 }
 
 async function handleDelete(team: SavedTeam): Promise<void> {
@@ -347,6 +366,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
     >
       <button type="button" class="team-menu__item" role="menuitem" @click="handleOverwrite(openTeam)">
         {{ $t('teams.overwrite') }}
+      </button>
+      <button type="button" class="team-menu__item" role="menuitem" @click="handleRename(openTeam)">
+        {{ $t('teams.rename') }}
       </button>
       <button type="button" class="team-menu__item" role="menuitem" @click="handlePin(openTeam)">
         {{ openTeam.pinned ? $t('teams.unpin') : $t('teams.pin') }}
@@ -551,7 +573,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   letter-spacing: 0.04em;
 }
 .team-row__name {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: rgba(245, 249, 252, 0.95);
   overflow: hidden;
@@ -560,15 +582,15 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 .team-row__chars { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 /* 角色名以屬性代表色著色（color/borderColor 由行內樣式注入）；
-   深色底 + 淡色描邊確保各屬性色在暗色卡片上可辨。 */
+   無底色、僅留淡色描邊；整體降透明度使其在卡片上更為內斂。 */
 .team-row__char {
   font-size: 0.6875rem;
   font-weight: 600;
   padding: 0.1rem 0.4rem;
   border-radius: 99px;
   border: 1px solid transparent;
-  background: rgba(0, 0, 0, 0.3);
-  color: rgba(240, 244, 248, 0.72);
+  background: transparent;
+  opacity: 0.8;
 }
 .team-row__axes { display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.6875rem; }
 .team-row__axes-label {

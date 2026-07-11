@@ -232,6 +232,32 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     currentTeamId.value = null;
   }
 
+  /**
+   * 開檔還原：若已綁定當前隊伍，把該存檔內容補進工作區。
+   * 排軸內容非持久化，重整後工作區會退回空白，但 currentTeamId 仍保留 →
+   * 若不補回內容，isDirty 會誤判「空工作區 ≠ 存檔」為有未存變更（可誤覆蓋成空）。
+   * 故啟動時還原一次；不記錄歷史、不改綁定；無綁定或找不到存檔則不動作。
+   */
+  function hydrateCurrentTeam(): void {
+    const team = teams.value.find((t) => t.id === currentTeamId.value);
+    if (!team) return;
+
+    const rotationStore = useRotationStore();
+    const characterStore = useCharacterStore();
+    const { laneOrder } = useLaneOrder();
+
+    rotationStore.axes = deepClone(team.axes);
+    characterStore.slots = deepClone(team.slots);
+    laneOrder.value = deepClone(team.laneOrder);
+    rotationStore.setActiveAxis(team.activeAxisId);
+    if (rotationStore.activeAxisId !== team.activeAxisId && rotationStore.axes.length) {
+      rotationStore.setActiveAxis(rotationStore.axes[0].id);
+    }
+
+    rotationStore.clearSelection();
+    rotationStore.stopEditing();
+  }
+
   /** 載入存檔：覆蓋當前工作區（可由 Undo 還原），並綁定為當前隊伍。 */
   function loadTeam(id: string): void {
     const team = teams.value.find((t) => t.id === id);
@@ -292,6 +318,7 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     saveToCurrent,
     overwriteTeam,
     createEmptyWorkspace,
+    hydrateCurrentTeam,
     loadTeam,
     deleteTeam,
     togglePin,
