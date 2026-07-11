@@ -437,7 +437,9 @@ onMounted(() => {
   flex-direction: column;
   width: max-content;
   min-width: 100%;
-  height: 100%;
+  /* 高度自適應（泳道為固定高、不依賴父高）：使本容器剛好包住三泳道，
+     下方空白改由 .board__scroll 承載。導覽 step6/8 即以此元素精準聚焦三泳道。 */
+  height: fit-content;
 }
 
 /* 泳道拖曳進行中：整個面板游標呈抓取態 */

@@ -141,8 +141,19 @@ export function useHistory() {
     _pending = null;
   }
 
+  /** snapshotStacks / restoreStacks：暫存與還原 undo/redo 佇列
+   *  （導覽示範會用真實動作污染歷史，結束時據此完整還原使用者原歷史）。 */
+  function snapshotStacks(): { past: Snapshot[]; future: Snapshot[]; pending: Snapshot | null } {
+    return { past: [...past.value], future: [...future.value], pending: _pending };
+  }
+  function restoreStacks(s: { past: Snapshot[]; future: Snapshot[]; pending: Snapshot | null }): void {
+    past.value = [...s.past];
+    future.value = [...s.future];
+    _pending = s.pending;
+  }
+
   const canUndo = computed(() => past.value.length > 0);
   const canRedo = computed(() => future.value.length > 0);
 
-  return { record, beginPending, commitPending, cancelPending, undo, redo, clear, canUndo, canRedo };
+  return { record, beginPending, commitPending, cancelPending, undo, redo, clear, snapshotStacks, restoreStacks, canUndo, canRedo };
 }

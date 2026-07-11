@@ -308,6 +308,7 @@ async function handleDeselectCharacter(): Promise<void> {
       class="swimlane__header"
       :class="{ 'swimlane__header--drag-inert': dragState.isDragging }"
       :style="{ '--lane-color': laneColor }"
+      :data-tour="slotIndex === 0 ? 'lane-header' : undefined"
       aria-hidden="false"
     >
       <!-- 左側垂直色條：屬性色識別（未選角為灰）。 -->
@@ -406,6 +407,7 @@ async function handleDeselectCharacter(): Promise<void> {
             <RotationBlock
               v-for="entry in localEntries"
               :key="entry.id"
+              :data-tour="slotIndex === 0 && entry.id === localEntries[0]?.id ? 'first-block' : undefined"
               :entry-id="entry.id"
               :label="entry.block.label"
               :color="laneColor"
@@ -437,6 +439,7 @@ async function handleDeselectCharacter(): Promise<void> {
               class="track__add-btn"
               :class="{ 'track__add-btn--drag-hidden': dragState.isDragging }"
               :style="{ gridColumn: String(addButtonColumn + 1) }"
+              :data-tour="slotIndex === 0 ? 'add-block' : undefined"
               type="button"
               :aria-label="$t('swimlane.addBlockLabel', { name: charName })"
               :title="$t('swimlane.addBlockTitle', { name: charName })"

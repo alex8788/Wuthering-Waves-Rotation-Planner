@@ -20,5 +20,5 @@ export const GENERAL_BLOCKS: GeneralBlock[] = [
   { id: 'general-R', label: 'R', color: '#64748B', characterId: null, source: 'general', tags: [] },
   { id: 'general-Q', label: 'Q', color: '#64748B', characterId: null, source: 'general', tags: [] },
   { id: 'general-D', label: 'D', color: '#64748B', characterId: null, source: 'general', tags: [] },
-  { id: 'general-SWAP', label: 'Outro', color: '#64748B', characterId: null, source: 'general', tags: [] },
+  { id: 'general-SWAP', label: 'Intro', color: '#64748B', characterId: null, source: 'general', tags: [] },
 ];

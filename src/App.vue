@@ -6,6 +6,7 @@ import ToastNotification from '@/components/ui/ToastNotification.vue'
 import DialogHost from '@/components/ui/DialogHost.vue'
 import ExportDialog from '@/components/ui/ExportDialog.vue'
 import TeamManagerDialog from '@/components/ui/TeamManagerDialog.vue'
+import HelpDialog from '@/components/ui/HelpDialog.vue'
 import SettingsMenu from '@/components/ui/SettingsMenu.vue'
 import SidebarPanel from '@/components/sidebar/SidebarPanel.vue'
 import RotationBoard from '@/components/rotation/RotationBoard.vue'
@@ -14,13 +15,15 @@ import RotationExportView from '@/components/rotation/RotationExportView.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useExportDialog } from '@/composables/state/useExportDialog'
 import { useTeamManager } from '@/composables/state/useTeamManager'
+import { useHelpDialog } from '@/composables/state/useHelpDialog'
+import { useSpotlightTour } from '@/composables/state/useSpotlightTour'
 import { nodeToPngBlob, nodeToSvgBlob, savePng, saveSvg, saveZip } from '@/composables/useImageExport'
 import type { ExportFormat } from '@/composables/state/useExportDialog'
 import { showToast } from '@/composables/state/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useTemplateStore } from '@/stores/useTemplateStore'
 import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
-import { nextTick, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JSZip from 'jszip'
 import type { RotationAxis } from '@/types/rotation'
@@ -30,7 +33,14 @@ const templateStore = useTemplateStore()
 const generalBlockStore = useGeneralBlockStore()
 const exportDialog = useExportDialog()
 const teamManager = useTeamManager()
+const helpDialog = useHelpDialog()
+const tour = useSpotlightTour()
 const { t } = useI18n()
+
+// 首訪自動播放功能導覽（僅第一次；之後由使用說明視窗的「重新觀看」重播）。
+onMounted(() => {
+  if (!tour.hasSeenTour.value) tour.start()
+})
 
 useKeyboardShortcuts()
 
@@ -128,16 +138,37 @@ function clearAllSelection(): void {
             <button
               type="button"
               class="export-trigger"
+              data-tour="teams"
               :title="$t('teams.openTooltip')"
               @click.stop="teamManager.open()"
             >{{ $t('teams.open') }}</button>
             <button
               type="button"
               class="export-trigger"
+              data-tour="export"
               :title="$t('header.exportTooltip')"
               @click.stop="handleExport"
             >{{ $t('header.export') }}</button>
             <SettingsMenu />
+            <button
+              type="button"
+              class="help-trigger"
+              data-tour="help"
+              :title="$t('help.openTooltip')"
+              :aria-label="$t('help.openTooltip')"
+              @click.stop="helpDialog.open()"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.4" />
+                <path
+                  d="M7.6 7.4a2.4 2.4 0 0 1 4.7.7c0 1.6-2.3 2-2.3 3.4"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                />
+                <circle cx="10" cy="14.6" r="0.9" fill="currentColor" />
+              </svg>
+            </button>
           </template>
         </AppHeader>
       </template>
@@ -159,6 +190,7 @@ function clearAllSelection(): void {
     <DialogHost />
     <ExportDialog />
     <TeamManagerDialog />
+    <HelpDialog />
 
     <!-- 離螢幕匯出舞台:平時不渲染任何軸,匯出時才暫時掛上要輸出的軸供截圖。
          合併多軸時,export-merge-wrap 內縱向堆疊多個視圖,整塊截一張。 -->
@@ -199,6 +231,171 @@ function clearAllSelection(): void {
   .export-trigger:focus-visible {
     outline: 1px solid rgba(34, 211, 238, 0.6);
     outline-offset: 1px;
+  }
+
+  /* 標題列說明按鈕：與齒輪同款中性方形圖示鈕（沿用 SettingsMenu 觸發鈕語彙） */
+  .help-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: rgba(240, 244, 248, 0.65);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .help-trigger:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: rgba(240, 244, 248, 0.95);
+  }
+  .help-trigger:focus-visible {
+    outline: none;
+    border-color: rgba(34, 211, 238, 0.6);
+    color: rgba(34, 211, 238, 0.95);
+  }
+  .help-trigger svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  /* ── 功能導覽（driver.js）暗色主題：套 popoverClass='tour-popover' ── */
+  .driver-popover.tour-popover {
+    background-color: #243456;
+    border: 1px solid rgba(34, 211, 238, 0.75);
+    border-radius: 8px;
+    box-shadow:
+      0 0 0 1px rgba(34, 211, 238, 0.3),
+      0 0 24px -4px rgba(34, 211, 238, 0.4),
+      0 24px 70px -12px rgba(0, 0, 0, 0.9);
+    color: rgba(240, 244, 248, 0.92);
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    max-width: 20rem;
+  }
+  /* spotlight 發光邊框：獨立 fixed 元素（見 useSpotlightTour startStageRing），
+     以 rAF 跟隨高亮元素。用獨立元素而非高亮元素的 box-shadow，可避開
+     .rotation-board/.board__scroll 等 overflow:hidden 祖先的裁切，並疊在暗遮罩(10000)之上。 */
+  .tour-stage-ring {
+    position: fixed;
+    z-index: 10001;
+    pointer-events: none;
+    border: 2px solid rgba(34, 211, 238, 0.833);
+    border-radius: 6px;
+    box-shadow:
+      0 0 22px 3px rgba(34, 211, 238, 0.55),
+      0 0 0 1px rgba(34, 211, 238, 0.5);
+    opacity: 0;
+  }
+  .driver-popover.tour-popover .driver-popover-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: rgba(240, 244, 248, 0.98);
+  }
+  .driver-popover.tour-popover .driver-popover-description {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: rgba(240, 244, 248, 0.72);
+  }
+  .driver-popover.tour-popover .driver-popover-progress-text {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: rgba(34, 211, 238, 0.7);
+  }
+  /* 箭頭：填色同氣泡底（融為氣泡一部分），再加青色光暈讓「發光邊框」在箭頭處也連成一圈，
+     避免箭頭與相近的頁面底色混在一起看不見。 */
+  .driver-popover.tour-popover .driver-popover-arrow {
+    filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.95));
+  }
+  .driver-popover.tour-popover .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: #243456; }
+  .driver-popover.tour-popover .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: #243456; }
+  .driver-popover.tour-popover .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: #243456; }
+  .driver-popover.tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: #243456; }
+
+  .driver-popover.tour-popover .driver-popover-footer button {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    color: rgba(240, 244, 248, 0.85);
+    text-shadow: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .driver-popover.tour-popover .driver-popover-footer button:hover {
+    background-color: rgba(34, 211, 238, 0.16);
+    border-color: rgba(34, 211, 238, 0.55);
+    color: rgba(34, 211, 238, 0.95);
+  }
+  .driver-popover.tour-popover .driver-popover-close-btn {
+    color: rgba(240, 244, 248, 0.5);
+  }
+  .driver-popover.tour-popover .driver-popover-close-btn:hover {
+    color: rgba(240, 244, 248, 0.95);
+  }
+
+  /* ── 導覽示範動畫：虛擬滑鼠指標 / 點擊漣漪 / 框選框 ── */
+  /* 導覽期間：把被 Teleport 的真實 UI 抬到 driver 遮罩（z-index 1e9）之上，
+     否則下拉選單／確認框會被遮罩蓋住變暗、看不清。 */
+  body.tour-active .char-selector__listbox {
+    z-index: 1000000010 !important;
+  }
+  body.tour-active .dialog-overlay {
+    z-index: 1000000014 !important;
+  }
+  /* 真實拖曳期間：driver 的 disableActiveInteraction 會把高亮元件設為
+     pointer-events:none!important，導致 App 的 elementFromPoint 取不到泳道、
+     判為「禁止放置」。拖曳時暫時強制排軸板可命中（遮罩/氣泡則於 JS 關閉）。 */
+  body.tour-dragging .rotation-board,
+  body.tour-dragging .rotation-board *,
+  body.tour-dragging .sidebar-panel,
+  body.tour-dragging .sidebar-panel * {
+    pointer-events: auto !important;
+  }
+
+  .tour-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000000030;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-100px, -100px);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+    transition: opacity 0.2s ease;
+    will-change: transform;
+  }
+  .tour-cursor svg {
+    display: block;
+    transition: transform 0.12s ease;
+  }
+  .tour-cursor--press svg,
+  .tour-cursor--drag svg {
+    transform: scale(0.82);
+  }
+  .tour-ripple {
+    position: fixed;
+    z-index: 1000000028;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: rgba(34, 211, 238, 0.5);
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.8);
+    animation: tour-ripple 0.6s ease-out forwards;
+  }
+  @keyframes tour-ripple {
+    0% { transform: scale(0.3); opacity: 0.9; }
+    100% { transform: scale(3.2); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tour-ripple { animation: none; }
   }
 
   /* 離螢幕匯出舞台:移出可視範圍(不可用 display:none,否則量不到尺寸/截不到圖) */
