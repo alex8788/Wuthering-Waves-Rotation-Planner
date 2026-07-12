@@ -5,7 +5,10 @@
 // 取代原本的固定 eyebrow：綁定存檔時顯示隊伍名，可雙擊就地改名；
 // 自由模式（未綁定存檔）則顯示「隊伍未存檔」的特殊淡化樣式，且不可改名。
 //
-// 狀態來源：useSavedTeamStore（currentTeam 綁定 + renameTeam 改名）。
+// 未儲存提示（isDirty）：綁定存檔且有未存變更時，名稱後綴黃色星號「*」，
+// 儲存為最新版後移除；自由模式且工作區有內容時，未存檔字樣改黃色警示並加括號。
+//
+// 狀態來源：useSavedTeamStore（currentTeam 綁定 + renameTeam 改名 + isDirty）。
 // 右側保留 actions slot 供功能按鈕（隊伍/匯出/說明）擴充。
 // ============================================================
 import { ref, computed, nextTick } from 'vue'
@@ -91,11 +94,14 @@ function cancelRename(): void {
           class="app-header__team"
           :title="$t('teams.renameTooltip')"
           @dblclick="beginRename"
-        >{{ currentTeam.name }}</span>
+        >{{ currentTeam.name }}<!--
+          未儲存變更時，於隊伍名後綴黃色星號；儲存為最新版後消失。
+        --><span v-if="store.isDirty" class="app-header__dirty-mark" aria-hidden="true">*</span></span>
         <span
           v-else
           class="app-header__team app-header__team--unsaved"
-        >{{ $t('teams.unsaved') }}</span>
+          :class="{ 'app-header__team--unsaved-dirty': store.isDirty }"
+        >{{ store.isDirty ? `（${$t('teams.unsaved')}）` : $t('teams.unsaved') }}</span>
       </div>
     </div>
 
@@ -195,6 +201,17 @@ function cancelRename(): void {
   color: rgba(240, 244, 248, 0.4);
   font-style: italic;
   letter-spacing: 0.1em;
+}
+/* 自由模式且工作區有未存內容：改以黃色警示色，強調有內容尚未存檔。 */
+.app-header__team--unsaved-dirty {
+  color: rgba(250, 204, 21, 0.85);
+}
+
+/* 未儲存星號：綁定存檔時附於名稱後的黃色 '*'，儲存為最新版後移除。 */
+.app-header__dirty-mark {
+  margin-left: 0.15em;
+  color: rgba(250, 204, 21, 0.95);
+  font-weight: 700;
 }
 
 /* 就地改名輸入框：沿用青色系，貼齊名稱位置以求視覺連續。 */

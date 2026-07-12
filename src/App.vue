@@ -24,7 +24,7 @@ import { useRotationStore } from '@/stores/useRotationStore'
 import { useTemplateStore } from '@/stores/useTemplateStore'
 import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JSZip from 'jszip'
 import type { RotationAxis } from '@/types/rotation'
@@ -49,6 +49,16 @@ onMounted(() => {
 })
 
 useKeyboardShortcuts()
+
+// 關閉／重整分頁時，若工作區有未存變更（isDirty：綁定存檔有異動，或自由模式有內容），
+// 觸發瀏覽器原生離站確認對話框，避免未存內容遺失。設定 returnValue 即啟用提示。
+function handleBeforeUnload(e: BeforeUnloadEvent): void {
+  if (!savedTeamStore.isDirty) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+onMounted(() => window.addEventListener('beforeunload', handleBeforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnload))
 
 // 離螢幕匯出舞台:把要輸出的軸暫時掛上(可同時多軸供合併),點陣化後清空。
 const exportStageRef = ref<HTMLElement | null>(null)
