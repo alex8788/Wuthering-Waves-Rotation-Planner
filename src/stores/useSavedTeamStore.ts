@@ -185,7 +185,8 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
 
   /**
    * 以當前工作區內容覆蓋指定存檔；回傳是否成功（找不到則 false）。
-   * 覆蓋後綁定為當前隊伍。供「儲存變更」（覆蓋當前隊伍）與「以目前內容覆蓋」共用。
+   * 刻意不改動當前隊伍綁定：供「儲存變更」（本就綁定該存檔）與「以目前內容覆蓋
+   * 他檔」共用；後者覆蓋他檔後不應把當前隊伍切換過去（使用者仍在編輯原隊伍）。
    */
   function overwriteTeam(id: string): boolean {
     const target = teams.value.find((t) => t.id === id);
@@ -194,7 +195,6 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     teams.value = teams.value.map((t) =>
       t.id === id ? { ...t, ...snapshot, updatedAt: Date.now() } : t
     );
-    currentTeamId.value = id;
     return true;
   }
 
