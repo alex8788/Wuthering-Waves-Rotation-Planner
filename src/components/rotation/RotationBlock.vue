@@ -66,7 +66,9 @@ watch(
       draft.value = props.label
       finishing = false
       void nextTick(() => {
-        inputRef.value?.focus()
+        // preventScroll：避免原生聚焦把新區塊「瞬間」捲入視野，
+        // 蓋掉 scrollEntryIntoView 的平滑捲動（<space> 新增須比照貼上效果）
+        inputRef.value?.focus({ preventScroll: true })
         inputRef.value?.select()
       })
     }
