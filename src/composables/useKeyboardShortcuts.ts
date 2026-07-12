@@ -36,7 +36,13 @@ import { useToast } from '@/composables/state/useToast';
 import { getElementColor } from '@/constants/elements';
 import { t } from '@/i18n';
 
+// A/D 長按自動重複的最短間隔（ms）。放慢重複速度，使每步選中光暈（0.15s 過渡）
+// 來得及浮現、焦點移動肉眼可跟；比原生 ~30ms 慢一截但仍具連續巡覽的流暢感。
+const NAV_REPEAT_MS = 110;
+
 export function useKeyboardShortcuts() {
+  // 上一次「重複」巡覽事件的時間戳（模組外層宣告會跨實例共用，故置於函式內）。
+  let _lastNavRepeatAt = 0;
   const rotationStore = useRotationStore();
   const characterStore = useCharacterStore();
   const clipboard = useClipboard();
@@ -182,14 +188,18 @@ export function useKeyboardShortcuts() {
     }
 
     // ── 區塊巡覽 A / D（純鍵，無修飾鍵時才觸發；Ctrl+A/Ctrl+D 維持原行為）──
-    if (!isCtrl && !event.altKey && key.toLowerCase() === 'a') {
+    // 長按時作業系統的鍵盤自動重複約 30ms 觸發一次，遠快於選中光暈的 0.15s
+    // 過渡，導致每塊還沒亮起就跳走（看起來像「動畫一開始就被重置」）。
+    // 對「重複事件（event.repeat）」節流至最短 NAV_REPEAT_MS，讓每一步的選中
+    // 光暈有足夠時間浮現、肉眼能跟上焦點移動；首次按下（非重複）不受限。
+    if (!isCtrl && !event.altKey && (key.toLowerCase() === 'a' || key.toLowerCase() === 'd')) {
       event.preventDefault();
-      nav.focusStep(-1);
-      return;
-    }
-    if (!isCtrl && !event.altKey && key.toLowerCase() === 'd') {
-      event.preventDefault();
-      nav.focusStep(1);
+      if (event.repeat) {
+        const now = performance.now();
+        if (now - _lastNavRepeatAt < NAV_REPEAT_MS) return;
+        _lastNavRepeatAt = now;
+      }
+      nav.focusStep(key.toLowerCase() === 'a' ? -1 : 1);
       return;
     }
 
