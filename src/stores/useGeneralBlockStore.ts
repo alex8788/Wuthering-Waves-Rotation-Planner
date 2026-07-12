@@ -123,6 +123,12 @@ export const useGeneralBlockStore = defineStore('generalBlocks', () => {
     selectedIds.value.clear();
   }
 
+  /** resetToDefaults：還原為內建 7 個種子區塊（設定選單「清除資料」用）。 */
+  function resetToDefaults(): void {
+    blocks.value = GENERAL_BLOCKS.map((b) => normalize(b));
+    selectedIds.value = new Set();
+  }
+
   function isSelected(id: string): boolean {
     return selectedIds.value.has(id);
   }
@@ -137,5 +143,6 @@ export const useGeneralBlockStore = defineStore('generalBlocks', () => {
     toggleSelection,
     clearSelection,
     isSelected,
+    resetToDefaults,
   };
 });

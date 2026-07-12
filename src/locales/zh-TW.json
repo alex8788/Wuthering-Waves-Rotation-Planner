@@ -91,11 +91,10 @@
     "rememberExport": "記住匯出設定",
     "rememberExportHint": "保留上次的檔名與合併方式",
     "clearData": "清除資料",
-    "clearDataHint": "刪除全部自訂模板（無法復原）",
-    "clearBtn": "清除自訂模板",
+    "clearDataHint": "還原通用區塊與匯出設定，並刪除自訂模板與隊伍存檔（無法復原）",
+    "clearBtn": "清除資料",
     "clearConfirmTitle": "清除資料",
-    "clearConfirmMessage": "將刪除全部 {n} 個自訂模板（無法復原）。確定要清除嗎？",
-    "clearConfirmEmpty": "自訂模板庫目前是空的，仍要執行清除嗎？",
+    "clearConfirmMessage": "此動作會將通用區塊與匯出設定還原為預設，並刪除全部自訂模板與隊伍存檔（無法復原）。確定要清除嗎？",
     "clearConfirm": "清除"
   },
   "teams": {
@@ -216,8 +215,7 @@
     "templateAdded": "已新增至模板庫",
     "templatesAdded": "已新增 {n} 個區塊至模板庫",
     "templatesAddedSkipped": "已新增 {added} 個區塊至模板庫，{skipped} 個區塊已存在",
-    "templatesCleared": "已清除 {n} 個自訂模板",
-    "templatesClearedEmpty": "已清除（模板庫原本為空）",
+    "dataCleared": "已清除資料並還原預設",
     "closeLabel": "關閉提示"
   }
 }

@@ -91,11 +91,10 @@
     "rememberExport": "Remember export settings",
     "rememberExportHint": "Keep last filename and merge mode",
     "clearData": "Clear Data",
-    "clearDataHint": "Delete all custom templates (cannot be undone)",
-    "clearBtn": "Clear custom templates",
+    "clearDataHint": "Reset general blocks and export settings, and delete custom templates and saved teams (cannot be undone)",
+    "clearBtn": "Clear Data",
     "clearConfirmTitle": "Clear Data",
-    "clearConfirmMessage": "This will delete all {n} custom templates (cannot be undone). Continue?",
-    "clearConfirmEmpty": "The template library is already empty. Clear anyway?",
+    "clearConfirmMessage": "This will reset general blocks and export settings to their defaults, and delete all custom templates and saved teams (cannot be undone). Continue?",
     "clearConfirm": "Clear"
   },
   "teams": {
@@ -216,8 +215,7 @@
     "templateAdded": "Added to template library",
     "templatesAdded": "Added {n} blocks to template library",
     "templatesAddedSkipped": "Added {added} blocks, {skipped} already existed",
-    "templatesCleared": "Cleared {n} custom templates",
-    "templatesClearedEmpty": "Cleared (library was already empty)",
+    "dataCleared": "Data cleared and defaults restored",
     "closeLabel": "Dismiss notification"
   }
 }

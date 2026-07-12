@@ -91,11 +91,10 @@
     "rememberExport": "エクスポート設定を記憶",
     "rememberExportHint": "前回のファイル名と結合方法を保持",
     "clearData": "データを消去",
-    "clearDataHint": "すべてのカスタムテンプレートを削除（元に戻せません）",
-    "clearBtn": "カスタムテンプレートを消去",
+    "clearDataHint": "汎用ブロックとエクスポート設定を初期化し、カスタムテンプレートとチーム保存を削除（元に戻せません）",
+    "clearBtn": "データを消去",
     "clearConfirmTitle": "データを消去",
-    "clearConfirmMessage": "{n} 件のカスタムテンプレートをすべて削除します（元に戻せません）。続行しますか？",
-    "clearConfirmEmpty": "テンプレートライブラリは既に空です。それでも消去しますか？",
+    "clearConfirmMessage": "この操作は汎用ブロックとエクスポート設定を初期値に戻し、すべてのカスタムテンプレートとチーム保存を削除します（元に戻せません）。続行しますか？",
     "clearConfirm": "消去"
   },
   "teams": {
@@ -216,8 +215,7 @@
     "templateAdded": "テンプレートライブラリに追加しました",
     "templatesAdded": "{n} 個のブロックをライブラリに追加しました",
     "templatesAddedSkipped": "{added} 個のブロックを追加、{skipped} 個は既に存在",
-    "templatesCleared": "{n} 個のカスタムテンプレートを消去しました",
-    "templatesClearedEmpty": "消去しました（ライブラリは元々空でした）",
+    "dataCleared": "データを消去し、初期設定に戻しました",
     "closeLabel": "通知を閉じる"
   }
 }

@@ -112,6 +112,15 @@ if (typeof document !== 'undefined') {
   );
 }
 
+/**
+ * 還原匯出相關設定至預設（「清除資料」用）：記住匯出開關與匯出偏好。
+ * 其餘設定（語言/大寫/動畫/步數/間距）保留不動。
+ */
+export function resetExportSettings(): void {
+  settings.value.rememberExport = DEFAULT_SETTINGS.rememberExport;
+  settings.value.exportPrefs = { ...DEFAULT_SETTINGS.exportPrefs };
+}
+
 export function useSettings() {
   return { settings };
 }

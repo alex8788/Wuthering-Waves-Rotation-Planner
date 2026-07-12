@@ -5,7 +5,7 @@
 // 設定項：
 //   - 語言切換（佔位：僅繁中可選，英文標示即將推出）
 //   - 大寫鎖定（區塊文字提交時自動轉大寫）
-//   - 清除資料（自訂模板庫；紅色警示鈕 + danger confirm 二次確認）
+//   - 清除資料（還原通用區塊/匯出設定 + 刪除自訂模板/隊伍存檔；紅色警示鈕 + danger confirm）
 //
 // 自含觸發鈕與面板：外點/Escape 關閉；面板為 absolute 錨定於鈕右下。
 // ============================================================
@@ -13,12 +13,15 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import {
   useSettings,
+  resetExportSettings,
   clampSetting,
   HISTORY_LIMIT_BOUNDS,
   TRACK_GAP_BOUNDS,
 } from '@/composables/state/useSettings'
 import { useDialog } from '@/composables/state/useDialog'
 import { useTemplateStore } from '@/stores/useTemplateStore'
+import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
+import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
 import { showToast } from '@/composables/state/useToast'
 import { useI18n } from 'vue-i18n'
 import { SUPPORTED_LOCALES } from '@/i18n'
@@ -48,6 +51,8 @@ function stepTrackGap(dir: number): void {
 }
 const dialog = useDialog()
 const templateStore = useTemplateStore()
+const generalBlockStore = useGeneralBlockStore()
+const savedTeamStore = useSavedTeamStore()
 
 const isOpen = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
@@ -91,25 +96,22 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
 })
 
-// 清除資料：danger confirm 二次確認 → 清空自訂模板庫。
+// 清除資料：danger confirm 二次確認 → 通用區塊與匯出設定還原預設、
+// 刪除自訂模板庫與隊伍存檔。
 async function handleClearData(): Promise<void> {
-  const count = templateStore.templates.length
   const ok = await dialog.confirm({
     title: t('settings.clearConfirmTitle'),
-    message:
-      count > 0
-        ? t('settings.clearConfirmMessage', { n: count })
-        : t('settings.clearConfirmEmpty'),
+    message: t('settings.clearConfirmMessage'),
     confirmText: t('settings.clearConfirm'),
     cancelText: t('dialog.cancel'),
     danger: true,
   })
   if (!ok) return
-  const cleared = templateStore.clearAllTemplates()
-  showToast(
-    cleared > 0 ? t('toast.templatesCleared', { n: cleared }) : t('toast.templatesClearedEmpty'),
-    'success',
-  )
+  generalBlockStore.resetToDefaults()
+  resetExportSettings()
+  templateStore.clearAllTemplates()
+  savedTeamStore.clearAllTeams()
+  showToast(t('toast.dataCleared'), 'success')
   isOpen.value = false
 }
 </script>

@@ -291,6 +291,14 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     if (currentTeamId.value === id) currentTeamId.value = null;
   }
 
+  /** clearAllTeams：清空所有隊伍存檔並解除當前綁定（設定選單「清除資料」用）；回傳清除筆數。 */
+  function clearAllTeams(): number {
+    const count = teams.value.length;
+    teams.value = [];
+    currentTeamId.value = null;
+    return count;
+  }
+
   /** 切換置頂。 */
   function togglePin(id: string): void {
     teams.value = teams.value.map((t) =>
@@ -321,6 +329,7 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     hydrateCurrentTeam,
     loadTeam,
     deleteTeam,
+    clearAllTeams,
     togglePin,
     renameTeam,
   };
