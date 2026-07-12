@@ -3,7 +3,7 @@
 // 資料改由 useGeneralBlockStore 提供（可增刪改、持久化，見 store 註解）。
 // 支援：拖到主軸、＋新增後即命名、雙擊重命名、點擊選取（Ctrl 多選）、
 //       刪除鈕 / Delete 鍵刪除、多選整組拖曳。顏色固定中性灰、不可改。
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
@@ -42,6 +42,10 @@ function handleDragStart(event: { oldIndex?: number }): void {
 const rootRef = ref<HTMLElement | null>(null)
 const editingId = ref<string | null>(null)
 const draft = ref('')
+// 輸入框寬度隨草稿即時撐開（ch＝monospace 單字寬，加左右內距）；空字串保底 1ch。
+const editStyle = computed(() => ({
+  width: `calc(${Math.max(draft.value.length, 1)}ch + 1.4rem)`,
+}))
 // 進入編輯後聚焦輸入框並全選（focus 由 watch 在 DOM 更新後執行）。
 watch(editingId, (id) => {
   if (!id) return
@@ -142,6 +146,7 @@ onUnmounted(() => {
             v-if="editingId === block.id"
             v-model="draft"
             class="chip-edit"
+            :style="editStyle"
             type="text"
             @keydown="onEditKeydown"
             @blur="commitEdit"
@@ -231,7 +236,7 @@ onUnmounted(() => {
 /* ── 行內命名輸入框：外觀對齊 compact BlockChip（灰底、置中、15px）。 ── */
 .chip-edit {
   box-sizing: border-box;
-  width: 3.75rem;
+  /* 寬度完全由 :style 隨草稿即時撐開（最小＝1 字寬＋內距）；不設保底寬度 */
   height: 2.75rem;               /* 44px，與 compact chip 同高 */
   padding: 0 0.5rem;
   border: 1.5px solid rgba(125, 211, 252, 0.85);
