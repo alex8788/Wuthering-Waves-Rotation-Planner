@@ -19,6 +19,8 @@ interface Props {
   isDanger?: boolean
   /** 是否處於行內編輯（由父層控制：新增即編輯 / 雙擊編輯） */
   isEditing?: boolean
+  /** 文字反白：多選同步編輯時，批次成員鏡射輸入框的全選狀態 */
+  isLabelHighlighted?: boolean
   /** 是否正在播放刪除消失動畫 */
   isLeaving?: boolean
   /** 目前主軸選取總數（多選拖曳時，分身上顯示此數量徽章） */
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
   isSelected: false,
   isDanger: false,
   isEditing: false,
+  isLabelHighlighted: false,
   isLeaving: false,
   multiSelectCount: 0,
 })
@@ -143,6 +146,7 @@ function onKeydown(event: KeyboardEvent): void {
       :is-hovered="isHovered && !isSelected"
       :is-selected="isSelected"
       :is-danger="isDanger"
+      :is-label-highlighted="isLabelHighlighted"
     />
 
     <!-- 多選拖曳數量徽章：放在 chip 之外（不被 chip overflow 裁切），平時 display:none，
@@ -236,8 +240,10 @@ function onKeydown(event: KeyboardEvent): void {
   text-shadow:
     0 0 1px rgba(8, 12, 24, 0.85),
     0 1px 3px rgba(0, 0, 0, 0.45);
-  /* 游標(caret)用青色，於各屬性色底上都顯眼好定位 */
-  caret-color: #22d3ee;
+  /* 游標(caret)用深色：輸入框底為屬性塊色（多為飽和中亮色，且淺色如氣動綠、
+     衍射黃、凝夜青最需對比），深游標在這些淺底上都顯眼好定位（青游標在青/綠
+     底上會隱形，正是原本淺色區看不清的主因）。 */
+  caret-color: #06121a;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
   font-size: 1rem;
@@ -246,5 +252,14 @@ function onKeydown(event: KeyboardEvent): void {
   letter-spacing: 0.05em;
   outline: none;
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2);
+}
+
+/* 輸入框全選文字的反白：反相（深底＋白字），與 BlockChip
+   .block-chip__label--highlighted 同款，使多選同步編輯時主要區塊
+   與批次成員的反白看起來是同一個選取。半透明青底在淺色屬性塊上會糊掉，
+   故改用實心深底＋白字，在任何底色上都清楚。 */
+.rotation-block__input::selection {
+  background-color: rgba(8, 12, 24, 0.92);
+  color: #ffffff;
 }
 </style>

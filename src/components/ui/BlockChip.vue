@@ -17,6 +17,8 @@ interface Props {
   isSelected?: boolean
   /** true 時疊加紅色斜條紋警告動畫（即將丟棄提示） */
   isDanger?: boolean
+  /** true 時文字反白（多選同步編輯時，批次成員鏡射輸入框的全選狀態） */
+  isLabelHighlighted?: boolean
   /** true 時用較小尺寸（側邊欄預設/模板庫，相對主軸略縮小） */
   compact?: boolean
 }
@@ -25,6 +27,7 @@ withDefaults(defineProps<Props>(), {
   isHovered: false,
   isSelected: false,
   isDanger: false,
+  isLabelHighlighted: false,
   compact: false,
 })
 </script>
@@ -48,7 +51,11 @@ withDefaults(defineProps<Props>(), {
     <div v-if="isDanger" class="block-chip__danger-overlay" aria-hidden="true" />
 
     <!-- 文字層（永遠在最上層） -->
-    <span class="block-chip__label">{{ label }}</span>
+    <span
+      class="block-chip__label"
+      :class="{ 'block-chip__label--highlighted': isLabelHighlighted }"
+      >{{ label }}</span
+    >
   </div>
 </template>
 
@@ -121,6 +128,21 @@ withDefaults(defineProps<Props>(), {
   text-shadow:
     0 0 1px rgba(8, 12, 24, 0.85),
     0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* ── 狀態：文字反白（isLabelHighlighted）──────────────────────
+   多選同步編輯時，批次成員鏡射輸入框的「全選文字」視覺，提示這些字
+   會被一起取代。與 RotationBlock 輸入框的 ::selection 同款：改用「反相」
+   —— 不透明深底 + 白字 + 亮青外環。半透明青底在淺色屬性塊（氣動綠、衍射黃、
+   凝夜青）上會糊掉看不清，故改用實心深底，在任何底色上都清楚跳出；
+   深色塊上再靠亮青外環界定範圍。 */
+.block-chip__label--highlighted {
+  background-color: rgba(8, 12, 24, 0.92);
+  border-radius: 2px;
+  /* 內側微擴深底＋外側亮青環：深底保證對比，青環在深色塊上定界。 */
+  box-shadow:
+    0 0 0 2px rgba(8, 12, 24, 0.92),
+    0 0 0 3.5px #67e8f9;
 }
 
 /* ── 尺寸：精簡（compact）──────────────────────────────────────

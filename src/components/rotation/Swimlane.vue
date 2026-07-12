@@ -225,6 +225,18 @@ function displayLabel(entry: RotationEntry): string {
   return entry.block.label
 }
 
+// 文字反白：多選同步編輯時，批次成員（輸入框本體除外）鏡射輸入框的
+// 「全選文字」視覺，提示這些字會被一起取代；使用者實際打字後（dirty）
+// 選取被取代 → 反白同步退掉，改顯示鏡射草稿（與真輸入框行為一致）。
+function isLabelHighlighted(entry: RotationEntry): boolean {
+  return (
+    rotationStore.editingId !== null &&
+    entry.id !== rotationStore.editingId &&
+    !rotationStore.editingDraftDirty &&
+    rotationStore.editingBatchIds.includes(entry.id)
+  )
+}
+
 // 提交：寫入 store（空字串由 store.updateLabel 處理為刪除），結束編輯。
 // 多選同步編輯：使用者實際打過字（dirty）才把同一文字套用到全部批次成員
 // （同步批次 → 歷史合併為單一步）；沒打字就提交＝維持各自原字，只走單塊路徑
@@ -432,6 +444,7 @@ async function handleDeselectCharacter(): Promise<void> {
               :is-selected="rotationStore.isSelected(entry.id)"
               :multi-select-count="rotationStore.selectedIds.size"
               :is-editing="rotationStore.editingId === entry.id"
+              :is-label-highlighted="isLabelHighlighted(entry)"
               :is-leaving="rotationStore.isLeaving(entry.id)"
               :style="blockStyle(entry.id)"
               role="listitem"
