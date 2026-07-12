@@ -14,6 +14,8 @@
 //   Ctrl+A              → 全選當前輸出軸的所有區塊
 //   Ctrl+Z              → 復原（Undo）
 //   Ctrl+Shift+Z / Ctrl+Y → 重做（Redo）
+//   Ctrl+S              → 儲存變更至當前隊伍（自由模式＝開啟另存命名）
+//   Ctrl+Shift+S        → 另存新檔（開啟隊伍管理並進入命名）
 //   Space               → 在選取區塊之後插入空白區塊並進入編輯（無選取則不動作）
 //   Enter               → 編輯選取區塊的文字；多選＝同步編輯全部（無選取則不動作）
 //   Escape              → 清除所有選取
@@ -28,7 +30,11 @@ import { useBlockNavigation } from '@/composables/board/useBlockNavigation';
 import { useBoardScroll } from '@/composables/board/useBoardScroll';
 import { useSidebarCollapse } from '@/composables/state/useSidebarCollapse';
 import { useHistory } from '@/composables/state/useHistory';
+import { useSavedTeamStore } from '@/stores/useSavedTeamStore';
+import { useTeamManager } from '@/composables/state/useTeamManager';
+import { useToast } from '@/composables/state/useToast';
 import { getElementColor } from '@/constants/elements';
+import { t } from '@/i18n';
 
 export function useKeyboardShortcuts() {
   const rotationStore = useRotationStore();
@@ -38,6 +44,27 @@ export function useKeyboardShortcuts() {
   const sidebarCollapse = useSidebarCollapse();
   const { scrollEntryIntoView } = useBoardScroll();
   const history = useHistory();
+  const savedTeamStore = useSavedTeamStore();
+  const teamManager = useTeamManager();
+  const { showToast } = useToast();
+
+  /**
+   * Ctrl+S：儲存變更至當前隊伍。已綁定存檔＝直接覆蓋回存檔（無變更則提示）；
+   * 自由模式（未綁定）＝開啟隊伍管理並直接進入另存命名。
+   */
+  function saveTeamShortcut(): void {
+    const team = savedTeamStore.currentTeam;
+    if (!team) {
+      teamManager.openSaveAs();
+      return;
+    }
+    if (!savedTeamStore.isDirty) {
+      showToast(t('teams.saved'), 'info');
+      return;
+    }
+    savedTeamStore.saveToCurrent();
+    showToast(t('teams.savedToast', { name: team.name }), 'success');
+  }
 
   /**
    * Enter：編輯選取區塊的文字。輸入框掛在「第一個選取區塊」（時間序）上，
@@ -182,6 +209,14 @@ export function useKeyboardShortcuts() {
       case 'y': {
         event.preventDefault();
         history.redo();
+        break;
+      }
+
+      // Ctrl+S：儲存變更；Ctrl+Shift+S：另存新檔（皆禁用瀏覽器預設的存檔行為）
+      case 's': {
+        event.preventDefault();
+        if (event.shiftKey) teamManager.openSaveAs();
+        else saveTeamShortcut();
         break;
       }
 

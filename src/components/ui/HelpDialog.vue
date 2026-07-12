@@ -66,6 +66,13 @@ const sections = computed<Section[]>(() => [
     ],
   },
   {
+    titleKey: 'help.secTeam',
+    items: [
+      { keys: [mod, 'S'], descKey: 'help.saveTeam' },
+      { keys: [mod, 'Shift', 'S'], descKey: 'help.saveTeamAs' },
+    ],
+  },
+  {
     titleKey: 'help.secView',
     items: [
       { keys: ['Tab'], descKey: 'help.toggleSidebar' },

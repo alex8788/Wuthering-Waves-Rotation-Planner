@@ -23,6 +23,7 @@ import { showToast } from '@/composables/state/useToast'
 import { useRotationStore } from '@/stores/useRotationStore'
 import { useTemplateStore } from '@/stores/useTemplateStore'
 import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
+import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
 import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JSZip from 'jszip'
@@ -31,11 +32,16 @@ import type { RotationAxis } from '@/types/rotation'
 const rotationStore = useRotationStore()
 const templateStore = useTemplateStore()
 const generalBlockStore = useGeneralBlockStore()
+const savedTeamStore = useSavedTeamStore()
 const exportDialog = useExportDialog()
 const teamManager = useTeamManager()
 const helpDialog = useHelpDialog()
 const tour = useSpotlightTour()
 const { t } = useI18n()
+
+// 排軸內容非持久化，但當前隊伍綁定會保留；重整後把綁定存檔的內容補回工作區，
+// 避免空工作區被誤判為「有未存變更」（進而誤覆蓋成空）。
+savedTeamStore.hydrateCurrentTeam()
 
 // 首訪自動播放功能導覽（僅第一次；之後由使用說明視窗的「重新觀看」重播）。
 onMounted(() => {

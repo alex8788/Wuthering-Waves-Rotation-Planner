@@ -1,12 +1,66 @@
 <script setup lang="ts">
 // ============================================================
 // AppHeader.vue
-// 頂部導覽列。顯示專案名稱「鳴潮排軸編輯器」，搭配科幻裝飾元素
-// （發光指示燈、漸層分隔線、底部光暈細線）。
+// 頂部導覽列。左側顯示品牌標題「鳴潮排軸編輯器」，其下改以「當前隊伍名稱」
+// 取代原本的固定 eyebrow：綁定存檔時顯示隊伍名，可雙擊就地改名；
+// 自由模式（未綁定存檔）則顯示「隊伍未存檔」的特殊淡化樣式，且不可改名。
 //
-// 純展示元件，不持有任何狀態。右側保留 actions slot，
-// 供未來功能（如匯出、復原/重做按鈕）擴充使用。
+// 狀態來源：useSavedTeamStore（currentTeam 綁定 + renameTeam 改名）。
+// 右側保留 actions slot 供功能按鈕（隊伍/匯出/說明）擴充。
 // ============================================================
+import { ref, computed, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
+import { useToast } from '@/composables/state/useToast'
+
+const store = useSavedTeamStore()
+const { t } = useI18n()
+const { showToast } = useToast()
+
+// 當前綁定的隊伍（自由模式為 null）。
+const currentTeam = computed(() => store.currentTeam)
+
+// ── 就地改名狀態 ────────────────────────────────────────────
+const isRenaming = ref(false)
+const draftName = ref('')
+const inputRef = ref<HTMLInputElement | null>(null)
+
+// 雙擊隊伍名進入改名（僅綁定存檔時可用）。
+function beginRename(): void {
+  const team = currentTeam.value
+  if (!team) return
+  draftName.value = team.name
+  isRenaming.value = true
+  void nextTick(() => {
+    inputRef.value?.focus()
+    inputRef.value?.select()
+  })
+}
+
+// 送出改名：交由 store 驗證（空白/重名則忽略並提示）。
+function commitRename(): void {
+  const team = currentTeam.value
+  if (!team) {
+    isRenaming.value = false
+    return
+  }
+  const trimmed = draftName.value.trim()
+  // 名稱未變或空白 → 直接結束，不動存檔。
+  if (trimmed === '' || trimmed === team.name) {
+    isRenaming.value = false
+    return
+  }
+  if (store.isNameTaken(trimmed, team.id)) {
+    showToast(t('teams.nameTaken'), 'warning')
+    return
+  }
+  store.renameTeam(team.id, trimmed)
+  isRenaming.value = false
+}
+
+function cancelRename(): void {
+  isRenaming.value = false
+}
 </script>
 
 <template>
@@ -19,7 +73,29 @@
 
       <div class="app-header__titles">
         <h1 class="app-header__title">{{ $t('header.title') }}</h1>
-        <span class="app-header__eyebrow">WUWA · ROTATION PLANNER</span>
+
+        <!-- 當前隊伍名稱：綁定存檔顯示名稱（雙擊改名）；自由模式顯示未存檔樣式 -->
+        <input
+          v-if="isRenaming"
+          ref="inputRef"
+          v-model="draftName"
+          class="app-header__team-input"
+          type="text"
+          :placeholder="$t('teams.namePlaceholder')"
+          @keydown.enter.prevent="commitRename"
+          @keydown.esc.prevent="cancelRename"
+          @blur="commitRename"
+        />
+        <span
+          v-else-if="currentTeam"
+          class="app-header__team"
+          :title="$t('teams.renameTooltip')"
+          @dblclick="beginRename"
+        >{{ currentTeam.name }}</span>
+        <span
+          v-else
+          class="app-header__team app-header__team--unsaved"
+        >{{ $t('teams.unsaved') }}</span>
       </div>
     </div>
 
@@ -101,14 +177,41 @@
   white-space: nowrap;
 }
 
-/* Eyebrow：簡短的系統識別碼，呼應科幻 HUD 慣用排版 */
-.app-header__eyebrow {
-  font-size: 0.625rem;
+/* 當前隊伍名稱：呼應科幻 HUD 排版；雙擊可就地改名。 */
+.app-header__team {
+  max-width: 22ch;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.18em;
-  color: rgba(34, 211, 238, 0.55);
+  letter-spacing: 0.08em;
+  color: rgba(34, 211, 238, 0.75);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
 }
+
+/* 自由模式：未綁定存檔，改以淡化的中性色 + 斜體標示「未存檔」。 */
+.app-header__team--unsaved {
+  color: rgba(240, 244, 248, 0.4);
+  font-style: italic;
+  letter-spacing: 0.1em;
+}
+
+/* 就地改名輸入框：沿用青色系，貼齊名稱位置以求視覺連續。 */
+.app-header__team-input {
+  max-width: 22ch;
+  padding: 0.05rem 0.25rem;
+  background-color: #0A0F1E;
+  border: 1px solid rgba(34, 211, 238, 0.5);
+  border-radius: 3px;
+  color: rgba(240, 244, 248, 0.95);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-family: inherit;
+  outline: none;
+}
+.app-header__team-input:focus { border-color: rgba(34, 211, 238, 0.85); }
 
 /* ── 右側動作區（保留擴充） ───────────────────────────────── */
 .app-header__actions {
