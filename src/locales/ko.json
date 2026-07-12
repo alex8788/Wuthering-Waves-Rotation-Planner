@@ -152,6 +152,7 @@
     "saveTeamAs": "새 팀으로 저장",
     "secView": "인터페이스 및 스크롤",
     "navBlocks": "블록을 왼쪽／오른쪽으로 순차 선택",
+    "navLanes": "레인 전체를 위/아래로 순환 선택 (Space로 끝에 블록 추가)",
     "selectAll": "현재 로테이션의 모든 블록 선택",
     "clearSelection": "모든 선택 해제",
     "deleteBlocks": "선택한 블록 삭제",

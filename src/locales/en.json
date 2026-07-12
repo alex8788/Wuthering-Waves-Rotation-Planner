@@ -152,6 +152,7 @@
     "saveTeamAs": "Save as new team",
     "secView": "Interface & Scroll",
     "navBlocks": "Select blocks left/right one at a time",
+    "navLanes": "Cycle lane selection up/down (Space appends a block at the end)",
     "selectAll": "Select all blocks in the current rotation",
     "clearSelection": "Clear all selection",
     "deleteBlocks": "Delete selected blocks",

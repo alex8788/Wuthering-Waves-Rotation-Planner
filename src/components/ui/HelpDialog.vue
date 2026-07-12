@@ -42,6 +42,7 @@ const sections = computed<Section[]>(() => [
     titleKey: 'help.secNav',
     items: [
       { keys: ['A', 'D'], descKey: 'help.navBlocks' },
+      { keys: ['W', 'S'], descKey: 'help.navLanes' },
       { keys: [mod, 'A'], descKey: 'help.selectAll' },
       { keys: ['Esc'], descKey: 'help.clearSelection' },
     ],

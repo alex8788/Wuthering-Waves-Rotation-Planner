@@ -152,6 +152,7 @@
     "saveTeamAs": "另存新檔",
     "secView": "介面與捲動",
     "navBlocks": "逐塊向左／右選取區塊",
+    "navLanes": "上下循環選取整條泳道（Space 於末尾新增區塊）",
     "selectAll": "全選當前輸出軸的所有區塊",
     "clearSelection": "清除所有選取",
     "deleteBlocks": "刪除選取的區塊",

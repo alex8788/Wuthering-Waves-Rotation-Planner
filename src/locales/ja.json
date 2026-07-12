@@ -152,6 +152,7 @@
     "saveTeamAs": "新規チームとして保存",
     "secView": "画面とスクロール",
     "navBlocks": "ブロックを左／右へ順に選択",
+    "navLanes": "レーン全体を上下に循環選択（Space で末尾にブロック追加）",
     "selectAll": "現在のローテーションの全ブロックを選択",
     "clearSelection": "すべての選択を解除",
     "deleteBlocks": "選択したブロックを削除",

@@ -12,13 +12,20 @@
 //       A 以選取群「最左塊」為基準往左一格；D 以「最右塊」為基準往右一格。
 //   - 跨邊界循環：最左按 A 迴繞到最右；最右按 D 迴繞到最左。
 //   - 目標塊不在可視範圍時，鏡頭平滑跟隨（onlyIfNeeded）。
+//
+// 泳道巡覽（focusLaneStep，W/S）：依顯示順序在已選角泳道間循環選取整條泳道；
+// 泳道選取與區塊選取互斥（狀態見 rotationStore.selectedLaneIndex）。
 // ============================================================
 
 import { useRotationStore } from '@/stores/useRotationStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useBoardScroll } from '@/composables/board/useBoardScroll';
+import { useLaneOrder } from '@/composables/state/useLaneOrder';
 
 export function useBlockNavigation() {
   const rotationStore = useRotationStore();
+  const characterStore = useCharacterStore();
+  const { laneOrder } = useLaneOrder();
   const { scrollEntryIntoView } = useBoardScroll();
 
   /**
@@ -52,5 +59,30 @@ export function useBlockNavigation() {
     scrollEntryIntoView(id, { onlyIfNeeded: true });
   }
 
-  return { focusStep };
+  /**
+   * focusLaneStep：單一泳道巡覽（W/S）——依畫面上下顯示順序（laneOrder）在
+   * 「已選角」的泳道間循環選取整條泳道；一併清除區塊選取（selectLane 內處理）。
+   * @param direction -1 = 上（W）；1 = 下（S）
+   */
+  function focusLaneStep(direction: -1 | 1): void {
+    // 候選＝顯示順序中已選角的泳道（未選角泳道無區塊可操作，跳過）。
+    const candidates = laneOrder.value.filter(
+      (si) => characterStore.slots[si].character !== null,
+    );
+    if (candidates.length === 0) return;
+
+    const current = rotationStore.selectedLaneIndex;
+    const currentIdx = current === null ? -1 : candidates.indexOf(current);
+    const target =
+      currentIdx === -1
+        ? // 無泳道選取：S(下) → 最上；W(上) → 最下（循環起點，與 A/D 邏輯對稱）。
+          direction === 1
+          ? candidates[0]
+          : candidates[candidates.length - 1]
+        : candidates[(currentIdx + direction + candidates.length) % candidates.length];
+
+    rotationStore.selectLane(target);
+  }
+
+  return { focusStep, focusLaneStep };
 }

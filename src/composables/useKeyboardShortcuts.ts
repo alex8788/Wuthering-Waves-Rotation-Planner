@@ -6,6 +6,10 @@
 //
 // 快捷鍵一覽：
 //   A / D               → 區塊巡覽：逐塊向左／右循環選取（無選取時選最右／最左塊）
+//   W / S               → 泳道巡覽：上下循環選取整條泳道（並清除區塊選取）
+//                         泳道選取中：Space＝於全軸末尾新增區塊並自動捲入視野；
+//                         其他快捷鍵視同「該泳道所有區塊被選取」（先物化成
+//                         區塊選取再走原流程）；Esc／點軌道空白處取消
 //   Delete / Backspace  → 刪除選取的區塊
 //   Ctrl+C              → 複製選取的區塊
 //   Ctrl+X              → 剪下選取的區塊
@@ -118,6 +122,46 @@ export function useKeyboardShortcuts() {
     });
   }
 
+  /**
+   * 泳道選取的物化：把「選中整條泳道」轉成「選取該泳道所有區塊」。
+   * 讓刪除／剪貼簿／巡覽等既有快捷鍵零改動即可支援泳道選取語意
+   * （selectBlocks 內會一併清掉泳道選取狀態）。空泳道＝物化後無選取，
+   * 後續處理器自然 no-op。無泳道選取時為 no-op。
+   */
+  function materializeLaneSelection(): void {
+    const lane = rotationStore.selectedLaneIndex;
+    if (lane === null) return;
+    rotationStore.selectBlocks(
+      rotationStore.entries.filter((e) => e.slotIndex === lane).map((e) => e.id),
+    );
+  }
+
+  /**
+   * Space（泳道選取中）：於「全軸末尾」新增該泳道的空白區塊並進入行內編輯，
+   * 自動捲入視野。交易模式與 ＋ 按鈕／insertBlankAfterSelection 一致。
+   */
+  function appendBlankToSelectedLane(): void {
+    const lane = rotationStore.selectedLaneIndex;
+    if (lane === null) return;
+    const character = characterStore.slots[lane].character;
+    if (!character) return;
+
+    history.beginPending();
+    const newId = rotationStore.addFreeformBlock(
+      '',
+      getElementColor(character.element),
+      lane,
+      character.id,
+      rotationStore.entries.length - 1,
+    );
+    // 改選中新區塊（清掉泳道選取）→ 後續 Space/Enter 沿用區塊選取流程接續。
+    rotationStore.selectBlocks([newId]);
+    scrollEntryIntoView(newId, { onlyIfNeeded: true });
+    void nextTick(() => {
+      rotationStore.startEditing(newId);
+    });
+  }
+
   // ──────────────────────────────────────────
   // 事件處理器
   // ──────────────────────────────────────────
@@ -141,6 +185,7 @@ export function useKeyboardShortcuts() {
 
     // ── Delete / Backspace：刪除選取 ───────────────────────
     if ((key === 'Delete' || key === 'Backspace') && !isCtrl) {
+      materializeLaneSelection(); // 泳道選取＝視同該泳道全部區塊被選取
       if (rotationStore.selectedIds.size > 0) {
         event.preventDefault();
         rotationStore.deleteSelectedBlocks();
@@ -153,6 +198,7 @@ export function useKeyboardShortcuts() {
     // keydown 自行提交，且事件 target 為 input 會被 _shouldIgnore 提前排除，
     // 不會落到這裡；此分支只在「非編輯狀態、有選取」時進場。
     if (key === 'Enter' && !isCtrl && !event.altKey && !event.shiftKey) {
+      materializeLaneSelection(); // 泳道選取＝視同該泳道全部區塊被選取
       if (rotationStore.selectedIds.size > 0) {
         // preventDefault：焦點若停在按鈕（如 ＋）上，避免 Enter 同時觸發原生 click。
         event.preventDefault();
@@ -165,6 +211,12 @@ export function useKeyboardShortcuts() {
     // 有選取才攔截：preventDefault 擋掉 Space 的原生行為（頁面向下捲動、或焦點
     // 停在按鈕時觸發 click 造成雙重插入）。無選取則放行，保留原生捲動。
     if (key === ' ' && !isCtrl && !event.altKey && !event.shiftKey) {
+      // 泳道選取中：Space 改為「於全軸末尾新增該泳道區塊」（不做物化）。
+      if (rotationStore.selectedLaneIndex !== null) {
+        event.preventDefault();
+        appendBlankToSelectedLane();
+        return;
+      }
       if (rotationStore.selectedIds.size > 0) {
         event.preventDefault();
         insertBlankAfterSelection();
@@ -199,7 +251,21 @@ export function useKeyboardShortcuts() {
         if (now - _lastNavRepeatAt < NAV_REPEAT_MS) return;
         _lastNavRepeatAt = now;
       }
+      materializeLaneSelection(); // 泳道選取＝視同全部選中 → A/D 從群組邊緣起跳
       nav.focusStep(key.toLowerCase() === 'a' ? -1 : 1);
+      return;
+    }
+
+    // ── 泳道巡覽 W / S（純鍵；上下循環選取整條泳道，清除區塊選取）──
+    // 與 A/D 相同的長按節流，讓泳道高亮切換肉眼可跟。
+    if (!isCtrl && !event.altKey && (key.toLowerCase() === 'w' || key.toLowerCase() === 's')) {
+      event.preventDefault();
+      if (event.repeat) {
+        const now = performance.now();
+        if (now - _lastNavRepeatAt < NAV_REPEAT_MS) return;
+        _lastNavRepeatAt = now;
+      }
+      nav.focusLaneStep(key.toLowerCase() === 'w' ? -1 : 1);
       return;
     }
 
@@ -230,9 +296,10 @@ export function useKeyboardShortcuts() {
         break;
       }
 
-      // Ctrl+C：複製
+      // Ctrl+C：複製（泳道選取＝視同該泳道全部區塊，下同）
       case 'c': {
         event.preventDefault();
+        materializeLaneSelection();
         clipboard.copySelected();
         break;
       }
@@ -240,6 +307,7 @@ export function useKeyboardShortcuts() {
       // Ctrl+X：剪下
       case 'x': {
         event.preventDefault();
+        materializeLaneSelection();
         clipboard.cutSelected();
         break;
       }
@@ -247,6 +315,7 @@ export function useKeyboardShortcuts() {
       // Ctrl+V：貼上
       case 'v': {
         event.preventDefault();
+        materializeLaneSelection();
         clipboard.paste();
         break;
       }
@@ -254,6 +323,7 @@ export function useKeyboardShortcuts() {
       // Ctrl+D：向右複製（禁用瀏覽器預設的「加入書籤」行為）
       case 'd': {
         event.preventDefault();
+        materializeLaneSelection();
         clipboard.duplicateRight();
         break;
       }

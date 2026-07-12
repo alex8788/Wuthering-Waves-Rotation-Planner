@@ -152,6 +152,7 @@
     "saveTeamAs": "另存新档",
     "secView": "界面与滚动",
     "navBlocks": "逐块向左／右选择区块",
+    "navLanes": "上下循环选择整条泳道（Space 在末尾新增区块）",
     "selectAll": "全选当前输出轴的所有区块",
     "clearSelection": "清除所有选择",
     "deleteBlocks": "删除选中的区块",

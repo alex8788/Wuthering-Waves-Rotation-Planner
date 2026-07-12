@@ -57,6 +57,9 @@ export const useRotationStore = defineStore('rotation', () => {
   /** 被選中的區塊 id 集合（Set，has 為 O(1)）。 */
   const selectedIds = ref<Set<string>>(new Set());
 
+  /** 單一泳道選取（W/S 循環）：選中的 slotIndex，null＝無。與區塊選取互斥。 */
+  const selectedLaneIndex = ref<SlotIndex | null>(null);
+
   // 行內編輯的區塊 id 與即時草稿：集中於 store，讓隱藏量測列即時讀草稿重算欄寬
   // → 編輯時區塊寬度隨輸入即時變、鄰塊順延。editingId 為 null＝無編輯中。
   const editingId = ref<string | null>(null);
@@ -342,6 +345,7 @@ export const useRotationStore = defineStore('rotation', () => {
   }
 
   function selectBlock(id: string, isMultiSelect: boolean = false): void {
+    selectedLaneIndex.value = null; // 區塊選取與泳道選取互斥
     if (isMultiSelect) {
       // Ctrl/Cmd + 點擊：切換該區塊——已選則取消（多選中拔掉單顆），未選則加入。
       if (selectedIds.value.has(id)) selectedIds.value.delete(id);
@@ -356,12 +360,20 @@ export const useRotationStore = defineStore('rotation', () => {
 
   /** 批次選取一組區塊（框選用）；additive=false 先清空、true 累加。 */
   function selectBlocks(ids: string[], additive: boolean = false): void {
+    selectedLaneIndex.value = null; // 區塊選取與泳道選取互斥
     if (!additive) selectedIds.value.clear();
     ids.forEach((id) => selectedIds.value.add(id));
   }
 
+  /** 選取整條泳道（W/S 循環選取）；一併清除區塊選取。null＝取消泳道選取。 */
+  function selectLane(slotIndex: SlotIndex | null): void {
+    selectedIds.value.clear();
+    selectedLaneIndex.value = slotIndex;
+  }
+
   function clearSelection(): void {
     selectedIds.value.clear();
+    selectedLaneIndex.value = null;
   }
 
   function isSelected(id: string): boolean {
@@ -371,6 +383,7 @@ export const useRotationStore = defineStore('rotation', () => {
   /** 清空某泳道在「所有輸出軸」的區塊並移除其選取（換角色＝跨軸重開連招）。 */
   function clearSlot(slotIndex: SlotIndex): void {
     history.record();
+    if (selectedLaneIndex.value === slotIndex) selectedLaneIndex.value = null;
     axes.value.forEach((axis) => {
       axis.entries = axis.entries.filter((entry) => {
         if (entry.slotIndex === slotIndex) {
@@ -433,6 +446,7 @@ export const useRotationStore = defineStore('rotation', () => {
     activeAxis,
     entries,
     selectedIds,
+    selectedLaneIndex,
     editingId,
     editingDraft,
     editingBatchIds,
@@ -454,6 +468,7 @@ export const useRotationStore = defineStore('rotation', () => {
     isLeaving,
     selectBlock,
     selectBlocks,
+    selectLane,
     clearSelection,
     isSelected,
     clearSlot,
