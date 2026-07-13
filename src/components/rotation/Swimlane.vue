@@ -259,6 +259,11 @@ function handleCommitLabel(entryId: string, label: string): void {
   if (label.trim() === '') history.cancelPending()
   else history.commitPending()
   if (rotationStore.editingId === entryId) rotationStore.stopEditing()
+  // 編輯提交後保持選取狀態（空字串提交＝區塊已被刪除，過濾掉不存在者）。
+  const survivors = targets.filter((id) =>
+    rotationStore.entries.some((e) => e.id === id),
+  )
+  if (survivors.length > 0) rotationStore.selectBlocks(survivors)
 }
 
 // 取消：不動 store，結束編輯。若是剛新增的空白區塊（label 仍為空），順手刪除避免殘留空塊。

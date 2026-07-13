@@ -262,12 +262,13 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     if (team) applyTeamToWorkspace(team);
   }
 
-  /** 載入存檔：覆蓋當前工作區（可由 Undo 還原），並綁定為當前隊伍。 */
+  /** 載入存檔：覆蓋當前工作區並綁定為當前隊伍。 */
   function loadTeam(id: string): void {
     const team = teams.value.find((t) => t.id === id);
     if (!team) return;
-    // 套用前記錄快照 → 載入可被 Undo 還原（Snapshot 已含 axes/slots/laneOrder）。
-    useHistory().record();
+    // 切換隊伍＝進入全新編輯脈絡，清空歷史而非記錄一步：否則載入動作會殘留於
+    // undo 堆疊，Undo 會退回「上一個隊伍」的內容（脈絡外跳脫，混淆使用者）。
+    useHistory().clear();
     applyTeamToWorkspace(team);
     currentTeamId.value = id;
   }
