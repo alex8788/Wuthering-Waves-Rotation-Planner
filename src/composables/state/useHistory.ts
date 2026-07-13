@@ -30,10 +30,16 @@ import type { CharacterSlots, SlotIndex } from '@/types/character';
 function maxHistory(): number {
   return useSettings().settings.value.historyLimit;
 }
-/** 把佇列裁到目前上限（上限調低時亦於下次入列自動收斂）。 */
-function trimHistory(queue: Snapshot[]): void {
+/** 把佇列裁到目前上限（上限調低時亦於下次入列自動收斂）；
+ *  回傳是否有紀錄因超過上限而被捨棄。 */
+function trimHistory(queue: Snapshot[]): boolean {
   const max = maxHistory();
-  while (queue.length > max) queue.shift();
+  let dropped = false;
+  while (queue.length > max) {
+    queue.shift();
+    dropped = true;
+  }
+  return dropped;
 }
 
 interface Snapshot {
@@ -94,12 +100,15 @@ export function useHistory() {
     });
 
     past.value.push(_snapshot());
-    trimHistory(past.value);
+    if (trimHistory(past.value)) showToast(t('toast.historyLimitReached'), 'warning');
     future.value = []; // 新分支產生，清掉可重做的未來
   }
 
   function undo(): void {
-    if (past.value.length === 0) return;
+    if (past.value.length === 0) {
+      showToast(t('toast.nothingToUndo'), 'warning');
+      return;
+    }
     future.value.push(_snapshot());
     trimHistory(future.value);
     _apply(past.value.pop()!);
@@ -107,7 +116,10 @@ export function useHistory() {
   }
 
   function redo(): void {
-    if (future.value.length === 0) return;
+    if (future.value.length === 0) {
+      showToast(t('toast.nothingToRedo'), 'warning');
+      return;
+    }
     past.value.push(_snapshot());
     trimHistory(past.value);
     _apply(future.value.pop()!);
@@ -128,7 +140,7 @@ export function useHistory() {
   function commitPending(): void {
     if (!_pending) return;
     past.value.push(_pending);
-    trimHistory(past.value);
+    if (trimHistory(past.value)) showToast(t('toast.historyLimitReached'), 'warning');
     future.value = []; // 新分支產生，清掉可重做的未來
     _pending = null;
   }
