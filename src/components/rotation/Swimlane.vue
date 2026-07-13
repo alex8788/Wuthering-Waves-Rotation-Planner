@@ -646,10 +646,13 @@ async function handleDeselectCharacter(): Promise<void> {
   text-align: left;
   font-size: 0.75rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.35;
   color: rgba(245, 249, 252, 0.98);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   white-space: nowrap;
+  /* overflow:hidden 會沿 padding box 裁切，line-height 過緊時英文降部(g/y/p)會被切掉底緣；
+     放寬行高並留下微幅底部內距，確保降部完整顯示。 */
+  padding-bottom: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
