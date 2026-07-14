@@ -131,6 +131,12 @@ async function saveBlob(blob: Blob, filename: string, spec: SaveSpec): Promise<b
     } catch (err) {
       // 使用者按取消 → AbortError → 視為取消。
       if (err instanceof DOMException && err.name === 'AbortError') return false;
+      // 嵌入式環境(如 VS Code Simple Browser)會跳出對話框但 createWritable
+      // 被平台拒絕(NotAllowedError / SecurityError)→ 退回一般下載。
+      if (err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+        downloadBlob(blob, suggestedName);
+        return true;
+      }
       throw err;
     }
   }
