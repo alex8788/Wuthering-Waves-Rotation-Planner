@@ -166,7 +166,8 @@
     "redo": "다시 실행",
     "toggleSidebar": "사이드바 펼치기 / 접기",
     "horizontalScroll": "로테이션 가로 스크롤",
-    "replayTour": "둘러보기 다시 보기"
+    "replayTour": "둘러보기 다시 보기",
+    "githubLink": "GitHub"
   },
   "tour": {
     "prev": "이전",

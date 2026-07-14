@@ -166,7 +166,8 @@
     "redo": "重做",
     "toggleSidebar": "展開 / 收合側邊欄",
     "horizontalScroll": "橫向捲動輸出軸",
-    "replayTour": "重新觀看導覽"
+    "replayTour": "重新觀看導覽",
+    "githubLink": "GitHub"
   },
   "tour": {
     "prev": "上一步",

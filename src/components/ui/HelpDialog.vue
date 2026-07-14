@@ -127,14 +127,27 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               </ul>
             </section>
 
-            <!-- 重新觀看導覽 -->
-            <button type="button" class="help-replay" @click="replayTour">
-              <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true">
-                <path d="M15.5 6.5A6 6 0 1 0 16 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                <path d="M15.5 3.5v3.2h-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              {{ t('help.replayTour') }}
-            </button>
+            <!-- 底部動作列：重新觀看導覽＋GitHub 專案連結 -->
+            <div class="help-footer">
+              <button type="button" class="help-replay" @click="replayTour">
+                <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true">
+                  <path d="M15.5 6.5A6 6 0 1 0 16 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  <path d="M15.5 3.5v3.2h-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                {{ t('help.replayTour') }}
+              </button>
+              <a
+                class="help-github"
+                href="https://github.com/meteor4321/Wuthering-Waves-Rotation-Planner"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+                </svg>
+                {{ t('help.githubLink') }}
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -237,12 +250,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   color: rgba(34, 211, 238, 0.75);
 }
 
-/* 重新觀看導覽鈕：置於快捷鍵表下方，青色次要行動樣式 */
+/* 底部動作列：導覽鈕靠左、GitHub 連結靠右 */
+.help-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* 重新觀看導覽鈕：青色次要行動樣式 */
 .help-replay {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 1rem;
   padding: 0.4rem 0.85rem;
   border: 1px solid rgba(34, 211, 238, 0.45);
   border-radius: 4px;
@@ -259,6 +281,31 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   border-color: rgba(34, 211, 238, 0.7);
 }
 .help-replay:focus-visible {
+  outline: 1px solid rgba(34, 211, 238, 0.6);
+  outline-offset: 1px;
+}
+
+/* GitHub 專案連結：中性低調樣式，hover 提亮 */
+.help-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(240, 244, 248, 0.72);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.help-github:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.34);
+  color: rgba(240, 244, 248, 0.95);
+}
+.help-github:focus-visible {
   outline: 1px solid rgba(34, 211, 238, 0.6);
   outline-offset: 1px;
 }

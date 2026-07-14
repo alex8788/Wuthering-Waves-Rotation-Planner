@@ -166,7 +166,8 @@
     "redo": "やり直し",
     "toggleSidebar": "サイドバーを開閉",
     "horizontalScroll": "ローテーションを横スクロール",
-    "replayTour": "ツアーをもう一度見る"
+    "replayTour": "ツアーをもう一度見る",
+    "githubLink": "GitHub"
   },
   "tour": {
     "prev": "戻る",

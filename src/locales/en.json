@@ -166,7 +166,8 @@
     "redo": "Redo",
     "toggleSidebar": "Expand/collapse sidebar",
     "horizontalScroll": "Scroll the rotation horizontally",
-    "replayTour": "Replay the tour"
+    "replayTour": "Replay the tour",
+    "githubLink": "GitHub"
   },
   "tour": {
     "prev": "Back",

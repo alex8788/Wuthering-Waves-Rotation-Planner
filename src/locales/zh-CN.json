@@ -166,7 +166,8 @@
     "redo": "重做",
     "toggleSidebar": "展开 / 收起侧边栏",
     "horizontalScroll": "横向滚动输出轴",
-    "replayTour": "重新观看导览"
+    "replayTour": "重新观看导览",
+    "githubLink": "GitHub"
   },
   "tour": {
     "prev": "上一步",
