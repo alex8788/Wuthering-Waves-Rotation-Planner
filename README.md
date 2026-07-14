@@ -2,16 +2,16 @@
   <img src="public/Phoebe.svg" width="96" alt="logo" />
 </p>
 
-<h1 align="center">鳴潮排軸編輯器</h1>
+<h1 align="center">Wuthering Waves Rotation Planner</h1>
 
 <p align="center">
-  鳴潮視覺化排軸工具——拖曳即排軸,零上手成本,免安裝免登入。
+  A visual rotation planner for Wuthering Waves — drag to build your rotation, zero learning curve, no install or sign-up.
 </p>
 
 <p align="center">
-  <b>繁體中文</b> |
+  <a href="docs/README.zh-TW.md">繁體中文</a> |
   <a href="docs/README.zh-CN.md">简体中文</a> |
-  <a href="docs/README.en.md">English</a> |
+  <b>English</b> |
   <a href="docs/README.ja.md">日本語</a> |
   <a href="docs/README.ko.md">한국어</a>
 </p>
@@ -24,12 +24,12 @@
 </p>
 
 <p align="center">
-  <a href="#live-demo">網站連結</a> ·
-  <a href="#特色">特色</a> ·
-  <a href="#成品展示">成品展示</a> ·
-  <a href="#功能">功能</a> ·
-  <a href="#快捷鍵一覽">快捷鍵</a> ·
-  <a href="#技術棧">技術棧</a>
+  <a href="#live-demo">Live Demo</a> ·
+  <a href="#highlights">Highlights</a> ·
+  <a href="#showcase">Showcase</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#keyboard-shortcuts">Shortcuts</a> ·
+  <a href="#tech-stack">Tech Stack</a>
 </p>
 
 ---
@@ -40,86 +40,86 @@
 
 https://github.com/user-attachments/assets/9552c0a0-a7aa-43bf-8474-0b78d339fdd7
 
-## 特色
-* 純視覺化操作
-* 免安裝
-* 多語言支援
-* 使用教學導覽
-* 自動更新資料
-* 本地保存與匯出
+## Highlights
+* Fully visual, drag-based editing
+* No installation required
+* Multi-language support
+* Built-in interactive tutorial
+* Auto-updated character data
+* Local saves and image export
 
-## 成品展示
+## Showcase
 
-<img width="2680" height="1280" alt="愛長千" src="https://github.com/user-attachments/assets/35039615-6f91-4554-a435-eb67ab2a34f6" />
+<img width="2680" height="1280" alt="showcase" src="https://github.com/user-attachments/assets/35039615-6f91-4554-a435-eb67ab2a34f6" />
 
-## 功能
+## Features
 
-### 排軸
-- **拖曳式操作**：區塊可自由拖曳,且後方區塊會自動對齊、補位
-- **區塊編輯**：新增、刪除、複製、貼上、剪下、行內編輯文字
-- **多重選取**：Ctrl+點選、滑鼠框選、整條角色軸選取
-- **復原/重做**：每一步操作的快照會存入歷史紀錄中
+### Rotation
+- **Drag & drop**: blocks move freely, and following blocks automatically align and fill the gap
+- **Block editing**: add, delete, copy, paste, cut, and edit text inline
+- **Multi-select**: Ctrl+click, marquee selection, or select an entire character track
+- **Undo/redo**: a snapshot of every action is stored in the history
 
-### 資料持久化
-- **模板庫**：儲存角色常用的基礎招式組合
-- **隊伍存檔**：本地保存角色排軸,支援載入、重新命名、置頂、覆寫等操作
-- **多開輸出軸**：可為同一支隊伍建立多條輸出軸分頁
+### Persistence
+- **Template library**: save frequently used skill combos for each character
+- **Team saves**: store rotations locally, with load, rename, pin, and overwrite
+- **Multiple rotation tabs**: create several rotation tabs for the same team
 
-### 輸出
-- **圖片匯出**：合併成單張圖片或將多張圖片打包為 ZIP 檔案；支援多倍率 PNG 以及 SVG 格式
+### Export
+- **Image export**: merge into a single image or bundle multiple images into a ZIP; supports multi-scale PNG and SVG
 
-## 快捷鍵一覽
+## Keyboard Shortcuts
 
-| 按鍵 | 功能 |
+| Key | Action |
 | --- | --- |
-| `A` / `D` | 選取前 / 後一個區塊 |
-| `W` / `S` | 選取上 / 下一個角色軸 |
-| `Space` | 新增區塊 |
-| `Enter` | 編輯選取的區塊 |
-| `Delete` / `Backspace` | 刪除選取的區塊 |
-| `Ctrl+A` | 選取全部區塊 |
-| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` / `Ctrl+D` | 複製 / 剪下 / 貼上 / 向右複製 |
-| `Ctrl+Z` | 復原 |
-| `Ctrl+Shift+Z` / `Ctrl+Y` | 重做 |
-| `Escape` | 清除所有選取 |
-| `Tab` | 展開/收合側邊欄 |
+| `A` / `D` | Select the previous / next block |
+| `W` / `S` | Select the previous / next character track |
+| `Space` | Add a block |
+| `Enter` | Edit the selected block |
+| `Delete` / `Backspace` | Delete selected blocks |
+| `Ctrl+A` | Select all blocks |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` / `Ctrl+D` | Copy / cut / paste / duplicate to the right |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Shift+Z` / `Ctrl+Y` | Redo |
+| `Escape` | Clear all selection |
+| `Tab` | Toggle the sidebar |
 
-## 支援的語言
+## Supported Languages
 
-可於頁面右上角的齒輪圖示切換語言。
+Switch languages from the gear icon in the top-right corner.
 
 * 繁體中文
 * 简体中文
-* English (預設)
+* English (default)
 * 日本語
 * 한국어
 
-## 技術棧
+## Tech Stack
 
-- **框架**：Vue 3 + TypeScript + Vite + Pinia + TailwindCSS
-- **拖曳**：VueDraggablePlus
-- **匯出**：html-to-image + JSZip
-- **多語系**：vue-i18n
-- **導覽**：driver.js
-- **資料持久化**：LocalStorage
+- **Framework**: Vue 3 + TypeScript + Vite + Pinia + TailwindCSS
+- **Drag & drop**: VueDraggablePlus
+- **Export**: html-to-image + JSZip
+- **i18n**: vue-i18n
+- **Onboarding tour**: driver.js
+- **Persistence**: LocalStorage
 
-## API 使用
+## API Usage
 
-角色與屬性資料來源：[encore.moe](https://encore.moe/?lang=en)
+Character and attribute data source: [encore.moe](https://encore.moe/?lang=en)
 
-## 本地開發
+## Local Development
 
 ```bash
-npm install      # 安裝依賴
-npm run dev      # 啟動開發伺服器
-npm run build    # 型別檢查 + 產出
+npm install      # install dependencies
+npm run dev      # start the dev server
+npm run build    # type-check + build
 ```
 
 ## License
 
-本專案採用 [MIT License](LICENSE) 授權。
+This project is licensed under the [MIT License](LICENSE).
 
-## 其他說明
+## Notes
 
-1. 部分翻譯可能有誤，歡迎回報
-2. 使用 VS Code 內建瀏覽器匯出圖片時會彈出兩次儲存對話框，第一次會產生壞檔，第二次為正常檔案
+1. Some translations may contain errors; feedback is welcome.
+2. When exporting images from the VS Code built-in browser, the save dialog appears twice — the first produces a broken file, and the second is the correct one.
