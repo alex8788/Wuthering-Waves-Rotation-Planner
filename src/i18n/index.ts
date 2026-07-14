@@ -58,6 +58,19 @@ watch(
   },
 );
 
+// SEO：分頁標題與 meta description 隨語言同步（immediate 讓非預設語言的
+// 使用者首次載入即覆蓋 index.html 的靜態繁中版本）。
+watch(
+  () => i18n.global.locale.value,
+  () => {
+    document.title = i18n.global.t('seo.title');
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute('content', i18n.global.t('seo.description'));
+  },
+  { immediate: true },
+);
+
 /** 元件外（stores/composables）用的全域 t()。 */
 export const t = i18n.global.t;
 

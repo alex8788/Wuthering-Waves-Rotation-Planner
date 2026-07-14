@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wuthering-waves-rotation-planner.vercel.app/sitemap.xml

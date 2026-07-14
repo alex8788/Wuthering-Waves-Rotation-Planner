@@ -4,8 +4,43 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/Phoebe_resize.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="鳴潮三人輪切排軸輔助工具" />
-    <title>鳴潮排軸編輯器</title>
+    <meta name="description" content="鳴潮隊伍排軸規劃工具。區塊化拖曳編輯、自訂模板、隊伍存檔、實用快捷鍵、一鍵匯出圖片。無痛上手、功能完整、高自由度。支援繁中/簡中/英/日/韓。" />
+    <!-- SEO：宣告本站唯一正式網址，避免帶參數的變體網址被搜尋引擎視為重複頁面 -->
+    <link rel="canonical" href="https://wuthering-waves-rotation-planner.vercel.app/" />
+    <title>鳴潮排軸編輯器 | 視覺化的線上排軸工具</title>
+
+    <!--
+      Open Graph / Twitter Card：連結貼到 Discord / Threads / FB / 巴哈時
+      的預覽卡片（圖＋標題＋簡介）。爬蟲只讀靜態 HTML，故固定為繁中基準版。
+      og:image 必須是絕對網址；圖檔 public/og-image.png（1200×630）。
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wuthering-waves-rotation-planner.vercel.app/" />
+    <meta property="og:title" content="鳴潮排軸編輯器 | 視覺化的線上排軸工具" />
+    <meta property="og:description" content="鳴潮隊伍排軸規劃工具。區塊化拖曳編輯、自訂模板、隊伍存檔、實用快捷鍵、一鍵匯出圖片。無痛上手、功能完整、高自由度。支援繁中/簡中/英/日/韓。" />
+    <meta property="og:image" content="https://wuthering-waves-rotation-planner.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="WuWa Rotation Planner" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="鳴潮排軸編輯器 | 視覺化的線上排軸工具" />
+    <meta name="twitter:description" content="鳴潮隊伍排軸規劃工具。區塊化拖曳編輯、自訂模板、隊伍存檔、實用快捷鍵、一鍵匯出圖片。" />
+    <meta name="twitter:image" content="https://wuthering-waves-rotation-planner.vercel.app/og-image.png" />
+
+    <!-- JSON-LD 結構化資料：以 Google 可解析的格式自我分類為免費網頁應用 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "鳴潮排軸編輯器 (WuWa Rotation Planner)",
+        "url": "https://wuthering-waves-rotation-planner.vercel.app/",
+        "description": "鳴潮隊伍排軸規劃工具。區塊化拖曳編輯、自訂模板、隊伍存檔、實用快捷鍵、一鍵匯出圖片。無痛上手、功能完整、高自由度。支援繁中/簡中/英/日/韓。",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["zh-Hant", "zh-Hans", "en", "ja", "ko"],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
 
     <!--
       Google Fonts CDN
@@ -21,8 +56,14 @@
     />
   </head>
   <body>
-    <!-- Vue 應用程式掛載點 -->
-    <div id="app"></div>
+    <!-- Vue 應用程式掛載點。內部靜態文字僅供不執行 JS 的搜尋引擎爬蟲讀取，
+         Vue mount 時會整段替換，真人使用者永遠看不到。 -->
+    <div id="app">
+      <h1>鳴潮排軸編輯器 — WuWa Rotation Planner</h1>
+      <p>
+        免費的《鳴潮》(Wuthering Waves) 三人隊伍排軸規劃工具。以拖曳方式編排角色技能施放順序，支援自訂區塊模板、隊伍存檔、復原/重做、PNG/SVG圖片匯出。支援繁體中文、簡體中文、English、日本語、한국어。本工具為純前端應用，資料儲存在你的瀏覽器，無需安裝、註冊與登入。
+      </p>
+    </div>
     <!-- Vite 入口腳本 -->
     <script type="module" src="/src/main.ts"></script>
   </body>
