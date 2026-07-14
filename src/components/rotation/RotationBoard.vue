@@ -334,11 +334,18 @@ watch(
   },
 )
 
-// 跨三泳道矩形框選：與區塊拖曳徹底隔離（拖曳中停用；命中結果寫入選取）
-const { marquee } = useMarquee({
+// 跨三泳道矩形框選：與區塊拖曳徹底隔離（拖曳中停用；命中結果寫入選取）。
+// 框選進行中同樣啟用邊緣自動捲動（游標靠容器左右緣即捲動），每捲一步
+// 重算框選矩形——錨點釘在內容上，捲動時選取範圍隨之擴大到新露出的區塊。
+const { marquee, refreshRect: refreshMarqueeRect } = useMarquee({
   enabled: () => !dragState.isDragging,
   onSelect: (ids, additive) => rotationStore.selectBlocks(ids, additive),
+  scrollLeft: () => boardScrollRef.value?.scrollLeft ?? 0,
+  onActiveChange: (active) => (active ? marqueeAutoScroll.start() : marqueeAutoScroll.stop()),
 })
+
+// 框選專用的邊緣捲動實例（與拖曳實例分開，start/stop 生命週期互不干擾）
+const marqueeAutoScroll = useEdgeAutoScroll(boardScrollRef, () => refreshMarqueeRect())
 
 // ── 假資料初始化（開發模式驗證用）──────────────────────────
 

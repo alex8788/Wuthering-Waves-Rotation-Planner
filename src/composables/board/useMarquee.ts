@@ -5,6 +5,8 @@
 // 按在互動元素上直接 return、位移超過閾值才啟動、進行中才掛 move/up。
 // 框選結束後以 window capture 攔截緊接的 terminal click，避免
 // App.vue root @click 清掉剛選取的區塊。
+// 支援邊緣自動捲動：錨點以「內容座標」為準（記起手 scrollLeft），
+// 呼叫端於每次捲動後調用 refreshRect() 重算矩形。
 // 自行於 onMounted/onBeforeUnmount 掛卸全域監聽。
 // ============================================================
 
@@ -23,12 +25,19 @@ export function useMarquee(options: {
   enabled: () => boolean;
   /** 框選命中結果回呼（additive = Ctrl/Cmd 累加）。 */
   onSelect: (ids: string[], additive: boolean) => void;
+  /** 主軸捲動容器目前的 scrollLeft（供邊緣自動捲動時把錨點釘在內容上）。 */
+  scrollLeft?: () => number;
+  /** 框選啟動/結束通知（呼叫端據此開關邊緣自動捲動）。 */
+  onActiveChange?: (active: boolean) => void;
 }) {
   /** 框選矩形（fixed 視窗座標，元件據此渲染視覺框）。 */
   const marquee = ref<MarqueeRect>({ active: false, left: 0, top: 0, width: 0, height: 0 });
 
   let _startX = 0;
   let _startY = 0;
+  let _startScrollLeft = 0; // 起手當下的 scrollLeft：捲動後錨點視窗座標＝_startX−(now−start)
+  let _lastClientX = 0;
+  let _lastClientY = 0;
   let _additive = false;
   let _armed = false;
   let _active = false;
@@ -49,6 +58,7 @@ export function useMarquee(options: {
     }
     _startX = event.clientX;
     _startY = event.clientY;
+    _startScrollLeft = options.scrollLeft?.() ?? 0;
     _additive = event.ctrlKey || event.metaKey;
     _armed = true;
     _active = false;
@@ -56,19 +66,36 @@ export function useMarquee(options: {
     window.addEventListener('mouseup', onUp);
   }
 
-  function onMove(event: MouseEvent): void {
-    if (!_armed) return;
-    const dx = event.clientX - _startX;
-    const dy = event.clientY - _startY;
-    if (!_active && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
-    _active = true;
+  /** 以最新游標位置＋目前捲動量重算框選矩形（視窗座標）。
+   *  錨點釘在「內容」上：容器向右捲 delta 時，錨點視窗 x 同步左移 delta，
+   *  框選範圍才會隨捲動擴大到新露出的內容（僅水平，主軸不垂直捲）。 */
+  function updateRect(): void {
+    const scrollDelta = (options.scrollLeft?.() ?? 0) - _startScrollLeft;
+    const anchorX = _startX - scrollDelta;
     marquee.value = {
       active: true,
-      left: Math.min(_startX, event.clientX),
-      top: Math.min(_startY, event.clientY),
-      width: Math.abs(dx),
-      height: Math.abs(dy),
+      left: Math.min(anchorX, _lastClientX),
+      top: Math.min(_startY, _lastClientY),
+      width: Math.abs(_lastClientX - anchorX),
+      height: Math.abs(_lastClientY - _startY),
     };
+  }
+
+  /** 邊緣自動捲動每捲一步後由呼叫端調用：游標未動但內容在動，矩形需重算。 */
+  function refreshRect(): void {
+    if (_active) updateRect();
+  }
+
+  function onMove(event: MouseEvent): void {
+    if (!_armed) return;
+    _lastClientX = event.clientX;
+    _lastClientY = event.clientY;
+    if (!_active && Math.abs(event.clientX - _startX) < 5 && Math.abs(event.clientY - _startY) < 5) return;
+    if (!_active) {
+      _active = true;
+      options.onActiveChange?.(true);
+    }
+    updateRect();
   }
 
   function onUp(): void {
@@ -95,6 +122,7 @@ export function useMarquee(options: {
       setTimeout(() => { _justMarqueed = false; }, 0);
     }
 
+    if (_active) options.onActiveChange?.(false);
     _armed = false;
     _active = false;
     marquee.value = { active: false, left: 0, top: 0, width: 0, height: 0 };
@@ -125,5 +153,5 @@ export function useMarquee(options: {
     window.removeEventListener('mouseup', onUp);
   });
 
-  return { marquee };
+  return { marquee, refreshRect };
 }
