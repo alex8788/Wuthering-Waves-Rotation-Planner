@@ -13,11 +13,13 @@
 import { ref, watch } from 'vue'
 import { useExportDialog, type ExportMode, type ExportFormat } from '@/composables/state/useExportDialog'
 import { useRotationStore } from '@/stores/useRotationStore'
+import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
 import { useSettings } from '@/composables/state/useSettings'
 import { PNG_SCALE_OPTIONS, DEFAULT_PIXEL_RATIO } from '@/composables/useImageExport'
 
 const { state, submit, cancel } = useExportDialog()
 const rotationStore = useRotationStore()
+const savedTeamStore = useSavedTeamStore()
 const { settings } = useSettings()
 
 // ── 表單狀態 ────────────────────────────────────────────────
@@ -29,21 +31,23 @@ const scale = ref<number>(DEFAULT_PIXEL_RATIO)
 const scaleOptions = PNG_SCALE_OPTIONS
 
 // 視窗開啟時的預設：一律僅勾選作用中軸（軸 id 不跨 session 持久化，避免懸空）。
-// 「記住匯出設定」開啟時，檔名/合併模式沿用上次；否則回預設（檔名＝軸名、合併）。
+// 預設檔名＝當前綁定隊伍存檔的名稱；自由模式（工作區未存檔）則留空。
+// 「記住匯出設定」開啟時，檔名沿用上次（若上次為空則退回隊伍名）。
 watch(
   () => state.value.open,
   (open) => {
     if (!open) return
     const active = rotationStore.activeAxis
+    const defaultName = savedTeamStore.currentTeam?.name ?? ''
     selectedIds.value = new Set([active.id])
     if (settings.value.rememberExport) {
       const prefs = settings.value.exportPrefs
-      filename.value = prefs.filename || active.name
+      filename.value = prefs.filename || defaultName
       mode.value = prefs.mode
       format.value = prefs.format
       scale.value = prefs.scale
     } else {
-      filename.value = active.name
+      filename.value = defaultName
       mode.value = 'merge'
       format.value = 'png'
       scale.value = DEFAULT_PIXEL_RATIO
