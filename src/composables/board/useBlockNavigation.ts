@@ -7,6 +7,7 @@
 // ＝沿 entries 陣列前後移動一格。
 //
 // 行為（focusStep）：
+//   - 泳道選取中：A → 選該泳道最後一塊；D → 選該泳道第一塊（轉為單塊選取）。
 //   - 無選取：A(左) → 選最右塊；D(右) → 選最左塊（循環起點）。
 //   - 有選取：清除選取，改選單一相鄰塊。
 //       A 以選取群「最左塊」為基準往左一格；D 以「最右塊」為基準往右一格。
@@ -45,7 +46,17 @@ export function useBlockNavigation() {
     });
 
     let target: number;
-    if (selectedIdx.length === 0) {
+    const lane = rotationStore.selectedLaneIndex;
+    if (lane !== null) {
+      // 泳道選取中：A → 該泳道最後一塊；D → 該泳道第一塊。
+      // （selectBlock 會清除泳道選取，改為單塊選取。）
+      const laneIdx: number[] = [];
+      entries.forEach((e, i) => {
+        if (e.slotIndex === lane) laneIdx.push(i);
+      });
+      if (laneIdx.length === 0) return; // 泳道無區塊，維持泳道選取不動
+      target = direction === -1 ? laneIdx[laneIdx.length - 1] : laneIdx[0];
+    } else if (selectedIdx.length === 0) {
       // 無選取：A → 最右；D → 最左。
       target = direction === -1 ? n - 1 : 0;
     } else {

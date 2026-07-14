@@ -257,7 +257,7 @@ export function useKeyboardShortcuts() {
     if (!isCtrl && !event.altKey && (key.toLowerCase() === 'a' || key.toLowerCase() === 'd')) {
       event.preventDefault();
       if (!_passNavRepeatThrottle(event)) return;
-      materializeLaneSelection(); // 泳道選取＝視同全部選中 → A/D 從群組邊緣起跳
+      // 泳道選取中不物化：focusStep 對泳道選取有專屬行為（A→泳道尾塊、D→泳道頭塊）。
       nav.focusStep(key.toLowerCase() === 'a' ? -1 : 1);
       return;
     }
