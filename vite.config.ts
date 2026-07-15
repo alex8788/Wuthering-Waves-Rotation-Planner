@@ -1,11 +1,25 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
+import { fillHtml } from './scripts/seo-locales.mjs';
+
+// 多語 SEO：index.html 是含佔位符的模板（見該檔頂部註解）。
+// dev 時本插件即時填英文版讓頁面正常；build 不經此插件（apply: 'serve'），
+// 佔位符保留到 dist，由 scripts/generate-seo-pages.mjs 產出 5 份語言頁。
+function seoDevFill(): Plugin {
+  return {
+    name: 'seo-dev-fill',
+    apply: 'serve',
+    transformIndexHtml(html) {
+      return fillHtml(html, 'en');
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   // 掛載 Vue 核心插件，讓 Vite 能夠解析 .vue 單檔案元件
-  plugins: [vue()],
+  plugins: [vue(), seoDevFill()],
 
   // 模組路徑解析設定
   resolve: {

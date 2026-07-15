@@ -39,6 +39,21 @@ export const SUPPORTED_LOCALES = [
 
 const { settings } = useSettings();
 
+// 多語 SEO 網址 → 初始語言：/zh-tw/、/zh-cn/、/ja/、/ko/ 各為獨立語言頁
+// （build 時由 scripts/generate-seo-pages.mjs 產出），從這些網址進站時
+// 語言以網址為準（覆蓋 localStorage 記憶值）；根路徑「/」不覆蓋，
+// 回訪者維持自己選過的語言。
+const PATH_LOCALES: Record<string, LocaleCode> = {
+  'zh-tw': 'zh-TW',
+  'zh-cn': 'zh-CN',
+  ja: 'ja',
+  ko: 'ko',
+};
+const pathLocale = PATH_LOCALES[window.location.pathname.split('/')[1]?.toLowerCase() ?? ''];
+if (pathLocale && settings.value.language !== pathLocale) {
+  settings.value.language = pathLocale;
+}
+
 export const i18n = createI18n({
   legacy: false, // Composition API 模式
   globalInjection: true, // 模板可直接用 $t()
