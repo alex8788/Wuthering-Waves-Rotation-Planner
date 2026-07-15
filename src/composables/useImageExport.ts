@@ -6,8 +6,8 @@
 //   - savePng / saveSvg / saveZip：優先用 File System Access API 原生另存，不支援退回 <a download>。
 // ============================================================
 
-import { toBlob, toSvg } from 'html-to-image';
-
+// html-to-image 是重套件（僅匯出時才用到）：改於 nodeToPngBlob/nodeToSvgBlob
+// 內動態 import()，讓它被拆成獨立 chunk、首屏不載入。
 /** 匯出底色,比照 app 背景,避免透明圖在淺色檢視器下看不清。 */
 const EXPORT_BG = '#0A0F1E';
 
@@ -34,6 +34,7 @@ export async function nodeToPngBlob(
   pixelRatio: number = DEFAULT_PIXEL_RATIO,
 ): Promise<Blob> {
   await document.fonts.ready;
+  const { toBlob } = await import('html-to-image');
 
   const rect = node.getBoundingClientRect();
   const longest = Math.max(rect.width, rect.height) || 1;
@@ -58,6 +59,7 @@ export async function nodeToPngBlob(
  */
 export async function nodeToSvgBlob(node: HTMLElement): Promise<Blob> {
   await document.fonts.ready;
+  const { toSvg } = await import('html-to-image');
 
   const dataUrl = await toSvg(node, {
     backgroundColor: EXPORT_BG,

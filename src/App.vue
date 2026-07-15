@@ -26,7 +26,8 @@ import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
 import { nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import JSZip from 'jszip'
+// JSZip 是重套件（僅「多軸分開匯出」才用到）：改於下方打包處動態 import()，
+// 拆成獨立 chunk、首屏不載入。
 import type { RotationAxis } from '@/types/rotation'
 
 const rotationStore = useRotationStore()
@@ -45,7 +46,7 @@ savedTeamStore.hydrateCurrentTeam()
 
 // 首訪自動播放功能導覽（僅第一次；之後由使用說明視窗的「重新觀看」重播）。
 onMounted(() => {
-  if (!tour.hasSeenTour.value) tour.start()
+  if (!tour.hasSeenTour.value) void tour.start()
 })
 
 useKeyboardShortcuts()
@@ -111,6 +112,7 @@ async function handleExport(): Promise<void> {
       if (saved) showToast(t(format === 'svg' ? 'toast.exportedSvg' : 'toast.exportedPng'), 'success')
     } else {
       // 多軸分開:逐軸出圖 → 打包成單一 ZIP。
+      const { default: JSZip } = await import('jszip')
       const zip = new JSZip()
       const usedNames = new Set<string>()
       for (const axis of axes) {

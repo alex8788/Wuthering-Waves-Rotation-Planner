@@ -22,7 +22,7 @@ const { t } = useI18n()
 // 重新觀看導覽：關閉本視窗後啟動 Spotlight Tour（會自帶示範資料）。
 function replayTour(): void {
   close()
-  tour.start()
+  void tour.start()
 }
 
 const isMac = navigator.userAgent.toUpperCase().includes('MAC OS')

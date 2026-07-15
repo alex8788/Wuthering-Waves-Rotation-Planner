@@ -15,7 +15,10 @@
 // ============================================================
 
 import { ref, nextTick } from 'vue';
-import { driver, type Driver, type DriveStep } from 'driver.js';
+// driver.js 是重套件（僅首訪導覽/手動開啟導覽才用到）：只保留 type import
+// （型別於編譯期抹除、無執行期成本），真正的 driver 函式與其 CSS 於 start() 內
+// 動態 import()，拆成獨立 chunk、首屏不載入。
+import type { Driver, DriveStep } from 'driver.js';
 import { t } from '@/i18n';
 import { deepClone } from '@/utils/deepClone';
 import { generateUUID } from '@/utils/uuid';
@@ -391,7 +394,7 @@ function handleDestroyed(): void {
 }
 
 export function useSpotlightTour() {
-  function start(): void {
+  async function start(): Promise<void> {
     if (isActive.value) {
       // driver 仍在 → 真的進行中，忽略重複啟動。
       if (driverObj) return;
@@ -399,6 +402,11 @@ export function useSpotlightTour() {
       // 避免 isActive 卡 true 使導覽永遠無法再開。
       handleDestroyed();
     }
+
+    // 動態載入 driver.js 本體與其樣式（首屏不含）。await 期間尚未改動版面，
+    // 使用者最多感覺到首次開導覽的極短延遲（chunk 通常已被瀏覽器快取）。
+    const { driver } = await import('driver.js');
+    await import('driver.js/dist/driver.css');
 
     injectDemo();
     // 側邊欄若原本收合，導覽期間強制展開（step2/4 需要可見的側邊欄）；結束時還原。
