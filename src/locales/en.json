@@ -189,7 +189,7 @@
     "step5Title": "Delete Block",
     "step5Desc": "Delete the selected block using the <kbd>Delete</kbd> / <kbd>Backspace</kbd> key or by dragging.",
     "step6Title": "Block and Lane Navigation",
-    "step6Desc": "<kbd>A</kbd> / <kbd>D</kbd> selects the previous/next block; <kbd>W</kbd> / <kbd>S</kbd> switches to the previous/next character's lane; can be used in conjunction with related shortcut keys.",
+    "step6Desc": "<kbd>A</kbd> / <kbd>D</kbd> (or <kbd>←</kbd> / <kbd>→</kbd>) selects the previous/next block; <kbd>W</kbd> / <kbd>S</kbd> (or <kbd>↑</kbd> / <kbd>↓</kbd>) switches to the previous/next character's lane; can be used in conjunction with related shortcut keys.",
     "step7Title": "Clipboard and History Log",
     "step7Desc": "Use <kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>C</kbd> / <kbd>V</kbd> / <kbd>D</kbd> to cut, copy, paste, and copy to the right; Use <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> to undo and redo.",
     "step8Title": "Reorder Characters",

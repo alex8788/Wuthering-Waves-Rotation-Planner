@@ -189,7 +189,7 @@
     "step5Title": "刪除區塊",
     "step5Desc": "以 <kbd>Delete</kbd> / <kbd>Backspace</kbd> 鍵或拖曳來刪除選取的區塊。",
     "step6Title": "區塊與泳道巡覽",
-    "step6Desc": "<kbd>A</kbd> / <kbd>D</kbd> 選取上一個 / 下一個區塊；<kbd>W</kbd> / <kbd>S</kbd> 切換至上一個 / 下一個角色的泳道；可搭配相關快捷鍵使用。",
+    "step6Desc": "<kbd>A</kbd> / <kbd>D</kbd>（或 <kbd>←</kbd> / <kbd>→</kbd>）選取上一個 / 下一個區塊；<kbd>W</kbd> / <kbd>S</kbd>（或 <kbd>↑</kbd> / <kbd>↓</kbd>）切換至上一個 / 下一個角色的泳道；可搭配相關快捷鍵使用。",
     "step7Title": "剪貼簿與歷史紀錄",
     "step7Desc": "使用 <kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>C</kbd> / <kbd>V</kbd> / <kbd>D</kbd> 剪下、複製、貼上與向右複製；使用 <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> 復原與重做。",
     "step8Title": "調整角色順序",

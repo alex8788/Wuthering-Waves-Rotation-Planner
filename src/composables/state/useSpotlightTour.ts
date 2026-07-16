@@ -352,9 +352,9 @@ function onTourKeydown(event: KeyboardEvent): void {
   event.preventDefault();
   event.stopImmediatePropagation();
   const key = event.key.toLowerCase();
-  if (key === 'd') driverObj.moveNext();
+  if (key === 'd' || key === 'arrowright') driverObj.moveNext();
   // 第一步再往前會被 driver 視為關閉導覽 → 首步時忽略「上一步」。
-  else if (key === 'a' && (driverObj.getActiveIndex() ?? 0) > 0) driverObj.movePrevious();
+  else if ((key === 'a' || key === 'arrowleft') && (driverObj.getActiveIndex() ?? 0) > 0) driverObj.movePrevious();
 }
 
 /** 導覽期間任何輸入框一聚焦立即設唯讀：堵住示範輸入框出現到 readOnly 補設前的空窗，

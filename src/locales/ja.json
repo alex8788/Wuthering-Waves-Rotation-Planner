@@ -189,7 +189,7 @@
     "step5Title": "ブロックを削除",
     "step5Desc": "<kbd>Delete</kbd> / <kbd>Backspace</kbd> キーまたはドラッグで選択したブロックを削除します。",
     "step6Title": "ブロックとレーンの移動",
-    "step6Desc": "<kbd>A</kbd> / <kbd>D</kbd> で前 / 次のブロックを選択；<kbd>W</kbd> / <kbd>S</kbd> で前 / 次のキャラクターのレーンに切り替え；関連するショートカットキーと組み合わせて使えます。",
+    "step6Desc": "<kbd>A</kbd> / <kbd>D</kbd>（または <kbd>←</kbd> / <kbd>→</kbd>）で前 / 次のブロックを選択；<kbd>W</kbd> / <kbd>S</kbd>（または <kbd>↑</kbd> / <kbd>↓</kbd>）で前 / 次のキャラクターのレーンに切り替え；関連するショートカットキーと組み合わせて使えます。",
     "step7Title": "クリップボードと履歴記録",
     "step7Desc": "<kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>C</kbd> / <kbd>V</kbd> / <kbd>D</kbd> で切り取り・コピー・貼り付け・右側へコピー；<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> で元に戻す・やり直し。",
     "step8Title": "キャラクターの並び替え",

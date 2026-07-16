@@ -5,8 +5,8 @@
 //           一次，避免多元件重複觸發。
 //
 // 快捷鍵一覽：
-//   A / D               → 區塊巡覽：逐塊向左／右循環選取（無選取時選最右／最左塊）
-//   W / S               → 泳道巡覽：上下循環選取整條泳道（並清除區塊選取）
+//   A / D（或 ← / →）  → 區塊巡覽：逐塊向左／右循環選取（無選取時選最右／最左塊）
+//   W / S（或 ↑ / ↓）  → 泳道巡覽：上下循環選取整條泳道（並清除區塊選取）
 //                         泳道選取中：Space＝於全軸末尾新增區塊並自動捲入視野；
 //                         其他快捷鍵視同「該泳道所有區塊被選取」（先物化成
 //                         區塊選取再走原流程）；Esc／點軌道空白處取消
@@ -249,25 +249,29 @@ export function useKeyboardShortcuts() {
       return;
     }
 
-    // ── 區塊巡覽 A / D（純鍵，無修飾鍵時才觸發；Ctrl+A/Ctrl+D 維持原行為）──
+    // ── 區塊巡覽 A / D 與 ← / →（純鍵，無修飾鍵時才觸發；Ctrl+A/Ctrl+D 維持原行為）──
     // 長按時作業系統的鍵盤自動重複約 30ms 觸發一次，遠快於選中光暈的 0.15s
     // 過渡，導致每塊還沒亮起就跳走（看起來像「動畫一開始就被重置」）。
     // 對「重複事件（event.repeat）」節流至最短 NAV_REPEAT_MS，讓每一步的選中
     // 光暈有足夠時間浮現、肉眼能跟上焦點移動；首次按下（非重複）不受限。
-    if (!isCtrl && !event.altKey && (key.toLowerCase() === 'a' || key.toLowerCase() === 'd')) {
+    const isNavLeft = key.toLowerCase() === 'a' || key === 'ArrowLeft';
+    const isNavRight = key.toLowerCase() === 'd' || key === 'ArrowRight';
+    if (!isCtrl && !event.altKey && (isNavLeft || isNavRight)) {
       event.preventDefault();
       if (!_passNavRepeatThrottle(event)) return;
       // 泳道選取中不物化：focusStep 對泳道選取有專屬行為（A→泳道尾塊、D→泳道頭塊）。
-      nav.focusStep(key.toLowerCase() === 'a' ? -1 : 1);
+      nav.focusStep(isNavLeft ? -1 : 1);
       return;
     }
 
-    // ── 泳道巡覽 W / S（純鍵；上下循環選取整條泳道，清除區塊選取）──
+    // ── 泳道巡覽 W / S 與 ↑ / ↓（純鍵；上下循環選取整條泳道，清除區塊選取）──
     // 與 A/D 相同的長按節流，讓泳道高亮切換肉眼可跟。
-    if (!isCtrl && !event.altKey && (key.toLowerCase() === 'w' || key.toLowerCase() === 's')) {
+    const isNavUp = key.toLowerCase() === 'w' || key === 'ArrowUp';
+    const isNavDown = key.toLowerCase() === 's' || key === 'ArrowDown';
+    if (!isCtrl && !event.altKey && (isNavUp || isNavDown)) {
       event.preventDefault();
       if (!_passNavRepeatThrottle(event)) return;
-      nav.focusLaneStep(key.toLowerCase() === 'w' ? -1 : 1);
+      nav.focusLaneStep(isNavUp ? -1 : 1);
       return;
     }
 
