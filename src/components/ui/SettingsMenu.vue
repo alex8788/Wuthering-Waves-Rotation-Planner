@@ -18,6 +18,7 @@ import {
   clampSetting,
   HISTORY_LIMIT_BOUNDS,
   TRACK_GAP_BOUNDS,
+  CHIP_PADDING_BOUNDS,
 } from '@/composables/state/useSettings'
 import { useDialog } from '@/composables/state/useDialog'
 import { useTemplateStore } from '@/stores/useTemplateStore'
@@ -48,6 +49,15 @@ function stepHistory(dir: number): void {
 function stepTrackGap(dir: number): void {
   settings.value.trackGapPx = clampSetting(
     settings.value.trackGapPx + dir, TRACK_GAP_BOUNDS, settings.value.trackGapPx,
+  )
+}
+function onChipPaddingInput(e: Event): void {
+  const v = Number((e.target as HTMLInputElement).value)
+  settings.value.chipPaddingPx = clampSetting(v, CHIP_PADDING_BOUNDS, settings.value.chipPaddingPx)
+}
+function stepChipPadding(dir: number): void {
+  settings.value.chipPaddingPx = clampSetting(
+    settings.value.chipPaddingPx + dir, CHIP_PADDING_BOUNDS, settings.value.chipPaddingPx,
   )
 }
 const dialog = useDialog()
@@ -236,6 +246,28 @@ async function handleClearData(): Promise<void> {
             <span class="settings-menu__stepper" aria-hidden="true">
               <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(1)">▲</button>
               <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(-1)">▼</button>
+            </span>
+          </span>
+        </label>
+
+        <!-- 區塊文字邊距 -->
+        <label class="settings-menu__row">
+          <span class="settings-menu__label">
+            {{ $t('settings.chipPadding') }}
+            <span class="settings-menu__hint">{{ $t('settings.chipPaddingHint', { min: CHIP_PADDING_BOUNDS.min, max: CHIP_PADDING_BOUNDS.max }) }}</span>
+          </span>
+          <span class="settings-menu__number-field">
+            <input
+              class="settings-menu__number"
+              type="number"
+              :min="CHIP_PADDING_BOUNDS.min"
+              :max="CHIP_PADDING_BOUNDS.max"
+              :value="settings.chipPaddingPx"
+              @change="onChipPaddingInput"
+            />
+            <span class="settings-menu__stepper" aria-hidden="true">
+              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipPadding(1)">▲</button>
+              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipPadding(-1)">▼</button>
             </span>
           </span>
         </label>

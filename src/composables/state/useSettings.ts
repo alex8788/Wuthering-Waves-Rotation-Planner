@@ -24,6 +24,10 @@ const STORAGE_KEY = 'wuwa-rotation-settings';
 export const HISTORY_LIMIT_BOUNDS = { min: 5, max: 100 } as const;
 /** 區塊間距（px）的上下限。 */
 export const TRACK_GAP_BOUNDS = { min: 0, max: 16 } as const;
+/** 區塊文字左右邊距（px）的上下限。 */
+export const CHIP_PADDING_BOUNDS = { min: 4, max: 32 } as const;
+/** 區塊文字左右邊距預設值（px），與 BlockChip 原本寫死的 1rem 相同。 */
+export const DEFAULT_CHIP_PADDING_PX = 16;
 
 export interface ExportPrefs {
   filename: string;
@@ -43,6 +47,8 @@ export interface AppSettings {
   historyLimit: number;
   /** 主軸區塊間距（px）。 */
   trackGapPx: number;
+  /** 區塊文字左右邊距（px），影響區塊寬度。 */
+  chipPaddingPx: number;
   /** 記住匯出設定（每次調整即持久化）。 */
   rememberExport: boolean;
   /** 記住的匯出偏好。 */
@@ -55,6 +61,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   animationsEnabled: true,
   historyLimit: 30,
   trackGapPx: TRACK_GAP_PX,
+  chipPaddingPx: DEFAULT_CHIP_PADDING_PX,
   rememberExport: false,
   exportPrefs: { filename: '', mode: 'merge', format: 'png', scale: DEFAULT_PIXEL_RATIO },
 };
@@ -78,6 +85,7 @@ function loadSettings(): AppSettings {
     // 數值型設定載入時亦夾範圍（防手改 localStorage 造成異常值）。
     merged.historyLimit = clampSetting(merged.historyLimit, HISTORY_LIMIT_BOUNDS, DEFAULT_SETTINGS.historyLimit);
     merged.trackGapPx = clampSetting(merged.trackGapPx, TRACK_GAP_BOUNDS, DEFAULT_SETTINGS.trackGapPx);
+    merged.chipPaddingPx = clampSetting(merged.chipPaddingPx, CHIP_PADDING_BOUNDS, DEFAULT_SETTINGS.chipPaddingPx);
     return merged;
   } catch (e) {
     console.warn('[useSettings] 設定讀取失敗，使用預設值', e);
@@ -107,6 +115,17 @@ if (typeof document !== 'undefined') {
     () => settings.value.animationsEnabled,
     (on) => {
       document.documentElement.classList.toggle('force-reduce-motion', !on);
+    },
+    { immediate: true },
+  );
+
+  // 區塊文字左右邊距 → 於 <html> 注入 --chip-px-setting CSS 變數，
+  // BlockChip / RotationBlock 輸入框 / style.css 拖曳分身規則統一引用，
+  // 主軸、側邊欄、匯出視圖一次生效。immediate 使載入即生效。
+  watch(
+    () => settings.value.chipPaddingPx,
+    (px) => {
+      document.documentElement.style.setProperty('--chip-px-setting', `${px}px`);
     },
     { immediate: true },
   );

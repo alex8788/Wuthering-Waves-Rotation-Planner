@@ -92,6 +92,8 @@
     "historyLimitHint": "{min}–{max} 步",
     "trackGap": "区块间距",
     "trackGapHint": "{min}–{max} px",
+    "chipPadding": "区块文字边距",
+    "chipPaddingHint": "{min}–{max} px，影响区块宽度",
     "rememberExport": "记住导出设置",
     "rememberExportHint": "保留上次的文件名与合并方式",
     "clearData": "清除数据",

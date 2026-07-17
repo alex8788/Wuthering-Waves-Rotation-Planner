@@ -193,7 +193,7 @@ html.force-reduce-motion *::after {
    放 @layer 之外避免執行期 class 被 Tailwind purge 誤刪。 */
 .sortable-fallback.block-chip--compact {
   --chip-height: 3rem;   /* 48px，與主軸非 compact 一致 */
-  --chip-px: 1rem;
+  --chip-px: var(--chip-px-setting, 1rem);
   height: 3rem !important;
   width: auto !important;
 }
@@ -203,7 +203,7 @@ html.force-reduce-motion *::after {
 }
 .sortable-fallback.chip-wrapper .block-chip--compact {
   --chip-height: 3rem;
-  --chip-px: 1rem;
+  --chip-px: var(--chip-px-setting, 1rem);
 }
 .sortable-fallback.block-chip--compact .block-chip__label,
 .sortable-fallback.chip-wrapper .block-chip--compact .block-chip__label {

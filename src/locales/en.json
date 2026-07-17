@@ -92,6 +92,8 @@
     "historyLimitHint": "{min}–{max} steps",
     "trackGap": "Block spacing",
     "trackGapHint": "{min}–{max} px",
+    "chipPadding": "Block text padding",
+    "chipPaddingHint": "{min}–{max} px, affects block width",
     "rememberExport": "Remember export settings",
     "rememberExportHint": "Keep last filename and merge mode",
     "clearData": "Clear Data",

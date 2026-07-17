@@ -9,6 +9,7 @@
 
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, type Ref } from 'vue';
 import { useRotationStore } from '@/stores/useRotationStore';
+import { useSettings } from '@/composables/state/useSettings';
 
 // measurerRef 由元件建立並傳入：元件內以頂層 const ref 綁定 string template ref，
 // 才能被 vue-tsc 認定為「已使用」（避免 noUnusedLocals 誤報 TS6133）。
@@ -39,6 +40,10 @@ export function useColumnMeasure(measurerRef: Ref<HTMLElement | null> = ref(null
   watch(() => rotationStore.entries, remeasureAfterRender, { deep: true });
   // 行內編輯草稿變動時也重新量測，讓編輯中的區塊即時變寬
   watch(() => rotationStore.editingDraft, remeasureAfterRender);
+  // 區塊文字邊距設定變動時重量：--chip-px-setting 由 useSettings 的 watcher
+  // 同步寫入 <html>，nextTick 後讀到的即是新內距下的 chip 實寬。
+  const { settings } = useSettings();
+  watch(() => settings.value.chipPaddingPx, remeasureAfterRender);
 
   function handleResize(): void {
     void remeasureAfterRender();

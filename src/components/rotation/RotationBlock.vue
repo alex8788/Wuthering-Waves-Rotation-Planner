@@ -230,7 +230,7 @@ function onKeydown(event: KeyboardEvent): void {
   box-sizing: border-box;
   width: 100%;
   height: 3rem;
-  padding: 0 1rem;
+  padding: 0 var(--chip-px-setting, 1rem);
   border: 1.5px solid rgba(125, 211, 252, 0.85);
   border-radius: 3px;
   background-color: var(--chip-bg, #1e293b);

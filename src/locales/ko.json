@@ -92,6 +92,8 @@
     "historyLimitHint": "{min}–{max} 단계",
     "trackGap": "블록 간격",
     "trackGapHint": "{min}–{max} px",
+    "chipPadding": "블록 텍스트 여백",
+    "chipPaddingHint": "{min}–{max} px, 블록 너비에 영향",
     "rememberExport": "내보내기 설정 기억",
     "rememberExportHint": "마지막 파일 이름과 병합 방식 유지",
     "clearData": "데이터 삭제",

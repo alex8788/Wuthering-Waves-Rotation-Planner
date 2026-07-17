@@ -92,6 +92,8 @@
     "historyLimitHint": "{min}–{max} 回",
     "trackGap": "ブロック間隔",
     "trackGapHint": "{min}–{max} px",
+    "chipPadding": "ブロック文字の余白",
+    "chipPaddingHint": "{min}–{max} px、ブロック幅に影響",
     "rememberExport": "エクスポート設定を記憶",
     "rememberExportHint": "前回のファイル名と結合方法を保持",
     "clearData": "データを消去",

@@ -63,7 +63,7 @@ withDefaults(defineProps<Props>(), {
 .block-chip {
   --chip-bg: #22D3EE;            /* 由 Props color 覆寫 */
   --chip-height: 3rem;           /* 48px 固定高度（主軸；側邊欄 compact 為 44px） */
-  --chip-px: 1rem;               /* 左右內距 */
+  --chip-px: var(--chip-px-setting, 1rem); /* 左右內距（可由設定調整，注入於 <html>） */
   --chip-radius: 3px;
   --cyan: #22D3EE;
   --danger-red: #EF4444;
@@ -145,7 +145,9 @@ withDefaults(defineProps<Props>(), {
    與 label 字級（規則置於基底之後，等特異性下後者勝出）。 */
 .block-chip--compact {
   --chip-height: 2.75rem;   /* 44px（主軸為 52px） */
-  --chip-px: 0.875rem;
+  /* 側邊欄同步跟隨設定值，按 0.875 比例縮小（原 0.875rem/1rem 之比），
+     使拖出主軸前後的寬度感一致。 */
+  --chip-px: calc(var(--chip-px-setting, 1rem) * 0.875);
 }
 .block-chip--compact .block-chip__label {
   font-size: 0.9375rem;     /* 15px（主軸為 17px） */
