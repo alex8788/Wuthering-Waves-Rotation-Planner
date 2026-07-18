@@ -335,10 +335,7 @@ async function handleDeselectCharacter(): Promise<void> {
     class="swimlane"
     :class="[
       `swimlane--slot-${slotIndex}`,
-      {
-        'swimlane--drag-source': draggingAsSource,
-        'swimlane--lane-selected': rotationStore.selectedLaneIndex === slotIndex,
-      },
+      { 'swimlane--drag-source': draggingAsSource },
     ]"
     :style="{ '--track-gap': `${trackGapPx}px`, '--lane-color': laneColor }"
     :[DROP_ZONE_ATTRIBUTE]="true"
@@ -733,16 +730,8 @@ async function handleDeselectCharacter(): Promise<void> {
   color: rgba(34, 211, 238, 0.85);
 }
 
-/* 單一泳道選取（W/S 巡覽）：沿用「選中區塊」的青色語言（BlockChip 的
-   --chip--selected 邊框 #67E8F9 + 青色光暈），標示整條泳道被選取。
-   outline 內縮不佔版面（不動盒模型），與拖曳來源的虛線框同手法；
-   內陰影補一圈青色輝光呼應區塊選取的發光感。 */
-.swimlane--lane-selected {
-  background: rgba(34, 211, 238, 0.07);
-  outline: 1.5px solid #67E8F9;
-  outline-offset: -3px;
-  box-shadow: inset 0 0 16px rgba(34, 211, 238, 0.18);
-}
+/* 單一泳道選取（W/S 巡覽）的視覺已移至 RotationBoard 的 .lane-focus-ring
+   覆蓋層（單一元素在泳道間滑動，消除切換時的瞬移感）。 */
 
 /* 泳道拖曳中：來源泳道原位留空（內容隱藏、保留高度、虛線佔位框） */
 .swimlane--drag-source {

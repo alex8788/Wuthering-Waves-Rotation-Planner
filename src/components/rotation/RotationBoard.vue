@@ -369,6 +369,37 @@ function seedStoreWithStubData(): void {
   })
 }
 
+// ── 泳道選取焦點環（W/S 巡覽）────────────────────────────────
+// 選取視覺不掛在各 Swimlane 上，改由單一絕對定位覆蓋層承載：切換泳道時
+// 焦點環以 top 補間從舊泳道「滑動」到新泳道（主機式焦點導航），而非
+// 舊框消失、新框瞬現的跳格感。位置以選中 Swimlane 的 offsetTop/Height 量得
+// （offsetParent＝.board__content，需 position:relative）。
+// 首次出現（無舊位置可滑）與減少動態時直接落位，僅淡入。
+// 淡入淡出不用 <Transition>（隱藏分頁暫停 rAF 會卡住 enter class），改為
+// 元素常駐＋visible class 的純 CSS opacity 過渡；取消選取時保留最後位置淡出。
+const laneRing = ref<{ top: number; height: number } | null>(null)
+const laneRingVisible = ref(false)
+const laneRingNoSlide = ref(false)
+
+watch(
+  [() => rotationStore.selectedLaneIndex, laneOrder],
+  ([lane]) => {
+    if (lane === null) {
+      laneRingVisible.value = false
+      return
+    }
+    const el = boardContentRef.value?.querySelector<HTMLElement>(`.swimlane--slot-${lane}`)
+    if (!el) {
+      laneRingVisible.value = false
+      return
+    }
+    laneRingNoSlide.value = !laneRingVisible.value || prefersReducedMotion()
+    laneRing.value = { top: el.offsetTop, height: el.offsetHeight }
+    laneRingVisible.value = true
+  },
+  { flush: 'post' },
+)
+
 // ── 泳道垂直拖曳（R5 抽離至 useLaneReorder）──────────────────
 const rotationBoardRef = ref<HTMLElement | null>(null)
 const { laneDrag, onLaneDragStart } = useLaneReorder(rotationBoardRef)
@@ -398,6 +429,19 @@ onMounted(() => {
     <div ref="boardScrollRef" class="board__scroll">
       <!-- 橫向內容列：泳道群 + 尾端留白佔位（讓末端區塊可捲至畫面中央）。 -->
       <div ref="boardContentRef" class="board__content">
+        <!-- 泳道選取焦點環：置於泳道群「之前」，使泳道內的定位元素（區塊、
+             sticky header）在繪製順序上蓋過焦點環——維持原本「輝光在區塊後方」
+             的層次。top 補間滑動至選中泳道；淡入/淡出以 visible class 驅動。 -->
+        <div
+          v-if="laneRing"
+          class="lane-focus-ring"
+          :class="{
+            'lane-focus-ring--visible': laneRingVisible,
+            'lane-focus-ring--no-slide': laneRingNoSlide,
+          }"
+          :style="{ top: laneRing.top + 'px', height: laneRing.height + 'px' }"
+          aria-hidden="true"
+        />
         <!-- 泳道依 orderedSlots（laneOrder）排列；TransitionGroup 讓放開後的
              重排平滑滑動（move 過渡）。key 用 slotIndex（與 entries/欄位無關）。 -->
         <TransitionGroup tag="div" class="board__lanes" name="lane">
@@ -507,10 +551,64 @@ onMounted(() => {
 
 /* 橫向內容列：泳道群（撐滿可視寬、可再被內容撐寬）＋ 尾端留白佔位。 */
 .board__content {
+  position: relative; /* 泳道焦點環的定位基準（offsetParent） */
   display: flex;
   flex-direction: row;
   width: max-content;
   height: fit-content;
+}
+
+/* ── 泳道選取焦點環（W/S 巡覽）────────────────────────────────
+   視覺沿用原 .swimlane--lane-selected（青色邊框＋淡底＋內輝光），改為單一
+   覆蓋層以便在泳道間平滑滑動。右緣內縮 50cqw＝扣掉尾端留白，恰貼齊泳道
+   群右緣；pointer-events 穿透不擋任何互動。 */
+.lane-focus-ring {
+  position: absolute;
+  left: 0;
+  right: 50cqw;
+  pointer-events: none;
+  /* 滑動補間刻意用 top 而非 transform：transform 會使本體形成 stacking
+     context，把 ::after 的 z-index 困在內、永遠壓不過 header（z:5）。
+     單一小元素的 top 過渡（220ms）布局成本可忽略。 */
+  transition:
+    top 0.22s cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* 視覺拆到兩個偽元素、各自淡入淡出（本體恆 opacity:1——若在本體做整體
+   淡入，opacity<1 會使本體形成 stacking context，::after 的 z-index 被困在
+   內、壓不過 header，淡入完成瞬間邊框才跳到 header 上＝新的閃爍）：
+   - ::before：底色＋內輝光，z 維持在 sticky header（z:5）之下，
+     保持「輝光在區塊/header 後方」的原層次。
+   - ::after：整圈邊框，z 抬到 6＝header 之上——邊框（含 header 段）連續
+     繪製，滑動經過 header 與軌道的接縫不再被不透明 header 蓋掉一截而閃爍。
+     與拖曳把手同層但 DOM 較早 → 把手/取消鈕仍在上。
+     能壓過 header 的前提：.swimlane 及其祖先鏈不形成 stacking context。 */
+.lane-focus-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(34, 211, 238, 0.07);
+  box-shadow: inset 0 0 16px rgba(34, 211, 238, 0.18);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.lane-focus-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  outline: 1.5px solid #67E8F9;
+  outline-offset: -3px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.lane-focus-ring--visible::before,
+.lane-focus-ring--visible::after {
+  opacity: 1;
+}
+/* 首次出現／減少動態：位置直接落位（不滑動）；偽元素的淡入淡出不受影響 */
+.lane-focus-ring--no-slide {
+  transition: none;
 }
 
 .board__lanes {
