@@ -33,6 +33,7 @@ import {
   type SortableEventLike,
 } from '@/composables/blockDrag/state';
 import { resolveAfterIndex, clearHysteresis } from '@/composables/blockDrag/resolver';
+import { evaluateDropTarget } from '@/composables/blockDrag/evaluate';
 import { commitDrop } from '@/composables/blockDrag/commit';
 import { prefersReducedMotion } from '@/utils/reducedMotion';
 
@@ -54,17 +55,26 @@ function _handleDragOver(event: MouseEvent): void {
   _evaluateDropTarget(event.clientX, event.clientY, target);
 }
 
-// 落點與區域評估的純函式：座標與目標全由參數帶入（不讀 event），
-// 供 mousemove（_handleDragOver）與自動捲動（notifyAutoScroll）共用。
+// 落點與區域評估：座標與目標全由參數帶入（不讀 event），供 mousemove
+// （_handleDragOver）與自動捲動（notifyAutoScroll）共用。
+// 區域判定本體在 blockDrag/evaluate.ts 的純函式；此處只把判定結果套用成
+// 副作用（dragState 寫入、body class、遲滯清除、resolveAfterIndex）。
 function _evaluateDropTarget(clientX: number, _clientY: number, target: Element | null): void {
   const isRotationSource = _dragState.sourceType === 'rotation-instance';
+  const evaluation = evaluateDropTarget({
+    target,
+    isRotationSource,
+    draggingSlotIndex: _dragState.draggingSlotIndex,
+    sourceBlock: _dragState.draggingSourceBlock,
+    getCharacterIdBySlot: (slot) => useCharacterStore().getCharacterIdBySlot(slot),
+  });
+  const { zone } = evaluation;
 
-  // ── 前置：主軸區塊懸停於側邊欄序列化區 → 「拖回存成模板」落點（4.4d）──
-  // 走獨立分支：不畫禁止/刪除、不算主軸排序落點，僅標記 isOverSidebar 供 handleDragEnd
-  // 走 serializeManyToTemplates。只對主軸來源生效（側邊欄來源拖回側邊欄無意義，維持禁止）。
-  const overSidebar = isRotationSource && !!target?.closest(`[${SIDEBAR_ZONE_ATTRIBUTE}]`);
-  _dragState.isOverSidebar = overSidebar;
-  if (overSidebar) {
+  // ── 側邊欄序列化區 → 「拖回存成模板」落點（4.4d）──
+  // 獨立分支：不畫禁止/刪除、不算主軸排序落點，僅標記 isOverSidebar 供 handleDragEnd
+  // 走 serializeManyToTemplates。
+  _dragState.isOverSidebar = zone === 'sidebar';
+  if (zone === 'sidebar') {
     _dragState.isOverInvalidZone = true;
     _dragState.isOverDeleteZone = false;
     _dragState.previewInsertAfterIndex = null;
@@ -77,14 +87,8 @@ function _evaluateDropTarget(clientX: number, _clientY: number, target: Element 
   }
   document.body.classList.remove(SIDEBAR_ZONE_BODY_CLASS);
 
-  const overValid = !!target?.closest(`[${DROP_ZONE_ATTRIBUTE}]`);
-  // 中立區（泳道尾端留白佔位）優先於刪除區：它位於主軸面板（刪除區）內，
-  // 若不先排除會被 closest 誤判為可刪除 → 拖到留白鬆手誤刪。中立區＝禁止放置（彈回）。
-  const overNeutral = !overValid && !!target?.closest(`[${NEUTRAL_ZONE_ATTRIBUTE}]`);
-  const overDeleteZone =
-    !overValid && !overNeutral && !!target?.closest(`[${DELETE_ZONE_ATTRIBUTE}]`);
-  const overForbidden = !overValid && !overDeleteZone;
-
+  const overValid = zone === 'valid';
+  const overDeleteZone = zone === 'delete';
   _dragState.isOverInvalidZone = !overValid;
   _dragState.isOverDeleteZone = overDeleteZone;
 
@@ -92,7 +96,7 @@ function _evaluateDropTarget(clientX: number, _clientY: number, target: Element 
   document.body.classList.toggle(DELETE_ZONE_BODY_CLASS, isRotationSource && overDeleteZone);
   document.body.classList.toggle(
     FORBIDDEN_BODY_CLASS,
-    overForbidden || (!isRotationSource && overDeleteZone),
+    zone === 'neutral' || zone === 'forbidden' || (!isRotationSource && overDeleteZone),
   );
 
   if (!overValid) {
@@ -113,41 +117,15 @@ function _evaluateDropTarget(clientX: number, _clientY: number, target: Element 
     if (fallbackEl) _dragState.draggingWidth = fallbackEl.getBoundingClientRect().width;
   }
 
-  if (isRotationSource) {
-    // 主軸來源：歸屬泳道不變、全域位置可任意（不分泳道行）；虛框畫在自己泳道。
-    _dragState.previewInsertAfterIndex = resolveAfterIndex(clientX);
-    _dragState.previewSlotIndex = _dragState.draggingSlotIndex;
-  } else {
-    // 側邊欄來源：落點 x 同樣全域，但歸屬泳道＝游標所在泳道（需角色匹配）。
-    // 先驗證泳道/角色，再解析落點，避免不合法時誤推進遲滯狀態。
-    const lane = target?.closest(`[${DROP_ZONE_ATTRIBUTE}]`) ?? null;
-    const slotIndex = lane ? _readSlotIndex(lane) : null;
-    if (slotIndex === null) {
-      _dragState.previewInsertAfterIndex = null;
-      _dragState.previewSlotIndex = null;
-      clearHysteresis();
-      return;
-    }
-    const characterStore = useCharacterStore();
-    const charId = characterStore.getCharacterIdBySlot(slotIndex);
-    const src = _dragState.draggingSourceBlock;
-    if (!charId || (src && src.characterId !== null && src.characterId !== charId)) {
-      _dragState.previewInsertAfterIndex = null;
-      _dragState.previewSlotIndex = null;
-      clearHysteresis();
-      return;
-    }
-    _dragState.previewInsertAfterIndex = resolveAfterIndex(clientX);
-    _dragState.previewSlotIndex = slotIndex;
+  // 先完成泳道/角色驗證（canPreview）再解析落點，避免不合法時誤推進遲滯狀態。
+  if (!evaluation.canPreview) {
+    _dragState.previewInsertAfterIndex = null;
+    _dragState.previewSlotIndex = null;
+    clearHysteresis();
+    return;
   }
-}
-
-// 讀取泳道 DOM 上的 data-slot-index
-function _readSlotIndex(lane: Element): SlotIndex | null {
-  const raw = lane.getAttribute('data-slot-index');
-  if (raw === null) return null;
-  const n = Number(raw);
-  return n === 0 || n === 1 || n === 2 ? (n as SlotIndex) : null;
+  _dragState.previewInsertAfterIndex = resolveAfterIndex(clientX);
+  _dragState.previewSlotIndex = evaluation.previewSlotIndex;
 }
 
 // 自動捲動（4.4f）由 RotationBoard 的 RAF 迴圈在每幀實際捲動後呼叫。
