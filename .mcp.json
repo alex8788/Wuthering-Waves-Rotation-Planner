@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "uvx",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ],
+      "cwd": "C:\\Users\\kingd\\OneDrive\\\u684c\u9762\\wuwa-rotation-tool",
+      "type": "stdio"
+    }
+  }
+}
