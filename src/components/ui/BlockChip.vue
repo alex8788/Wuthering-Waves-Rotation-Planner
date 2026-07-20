@@ -111,7 +111,9 @@ withDefaults(defineProps<Props>(), {
   z-index: 2;
   /* 中文字型補在 monospace 之後：monospace 無 CJK glyph 時改用真粗體的黑體，
      避免 fallback 字型在高字重下假粗(faux-bold)使筆畫糊成一團。 */
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
+  /* CJK fallback 接在 var 之後：字型比對逐字進行，等寬鏈（含 generic）無 CJK
+     glyph 時會繼續往後找到黑體，故 var 內含 monospace generic 也不擋 CJK。 */
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace),
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
   font-size: 1rem;       /* 16px：主軸（側邊欄 compact 為 15px） */
   font-weight: 700;      /* 粗體；700 有真字模，中文不會假粗擠筆畫 */

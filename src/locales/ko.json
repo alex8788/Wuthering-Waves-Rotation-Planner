@@ -84,6 +84,8 @@
     "gearLabel": "설정",
     "heading": "설정",
     "language": "표시 언어",
+    "font": "표시 글꼴",
+    "fontSystem": "시스템 고정폭 글꼴",
     "capsLock": "대문자 잠금",
     "capsLockHint": "블록 텍스트 확정 시 자동 대문자화",
     "animations": "애니메이션",

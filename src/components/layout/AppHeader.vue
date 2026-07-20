@@ -122,7 +122,7 @@ function cancelRename(): void {
   height: 100%;
   padding: 0 1.5rem;
   background-color: #0A0F1E;
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
 }
 
 /* ── 左側品牌區 ─────────────────────────────────────────── */

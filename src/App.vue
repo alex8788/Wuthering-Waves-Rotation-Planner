@@ -243,7 +243,7 @@ function clearAllSelection(): void {
     background-color: rgba(34, 211, 238, 0.06);
     color: rgba(34, 211, 238, 0.95);
     font-size: 0.8125rem;
-    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
     letter-spacing: 0.04em;
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -297,7 +297,7 @@ function clearAllSelection(): void {
       0 0 24px -4px rgba(34, 211, 238, 0.4),
       0 24px 70px -12px rgba(0, 0, 0, 0.9);
     color: rgba(240, 244, 248, 0.92);
-    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
     max-width: 20rem;
   }
   /* spotlight 發光邊框：獨立 fixed 元素（見 useSpotlightTour startStageRing），

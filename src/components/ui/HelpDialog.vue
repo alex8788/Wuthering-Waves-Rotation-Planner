@@ -179,7 +179,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   border-radius: 8px;
   background-color: #0d1320;
   box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.8);
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
   overflow: hidden;
 }
 

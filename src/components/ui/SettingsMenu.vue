@@ -19,6 +19,7 @@ import {
   HISTORY_LIMIT_BOUNDS,
   TRACK_GAP_BOUNDS,
   CHIP_PADDING_BOUNDS,
+  FONT_OPTIONS,
 } from '@/composables/state/useSettings'
 import { useDialog } from '@/composables/state/useDialog'
 import { useTemplateStore } from '@/stores/useTemplateStore'
@@ -170,6 +171,16 @@ async function handleClearData(): Promise<void> {
           <select v-model="settings.language" class="settings-menu__select">
             <option v-for="loc in SUPPORTED_LOCALES" :key="loc.value" :value="loc.value">
               {{ loc.label }}
+            </option>
+          </select>
+        </label>
+
+        <!-- 介面字型：等寬字型候選（系統等寬選項名稱走 i18n，其餘為字型本名不翻譯） -->
+        <label class="settings-menu__row">
+          <span class="settings-menu__label">{{ $t('settings.font') }}</span>
+          <select v-model="settings.appFont" class="settings-menu__select">
+            <option v-for="f in FONT_OPTIONS" :key="f.value" :value="f.value">
+              {{ f.value === 'system-mono' ? $t('settings.fontSystem') : f.label }}
             </option>
           </select>
         </label>
@@ -360,7 +371,7 @@ async function handleClearData(): Promise<void> {
   border-radius: 6px;
   background-color: #111827;
   box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
   scrollbar-width: thin;
   scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
 }

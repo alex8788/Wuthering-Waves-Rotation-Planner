@@ -189,7 +189,7 @@ function onKeydown(event: KeyboardEvent): void {
   border-radius: 999px;
   background-color: #22d3ee;
   color: #06121a;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace, sans-serif;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace), sans-serif;
   font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1;
@@ -246,7 +246,7 @@ function onKeydown(event: KeyboardEvent): void {
      衍射黃、凝夜青最需對比），深游標在這些淺底上都顯眼好定位（青游標在青/綠
      底上會隱形，正是原本淺色區看不清的主因）。 */
   caret-color: #06121a;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace),
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
   font-size: 1rem;
   font-weight: 700;

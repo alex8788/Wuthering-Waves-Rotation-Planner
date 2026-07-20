@@ -99,7 +99,7 @@ const variantConfig = {
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
   /* ── 字型 ─── */
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
 }
 
 /* ── 左側指示條 ─────────────────────────────────────────────── */

@@ -115,7 +115,7 @@ function laneColor(slot: SlotIndex): string {
   display: inline-block;
   padding: 2rem 2.25rem;
   background-color: #0A0F1E;
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
 }
 
 .export-view__title {

@@ -249,7 +249,7 @@ onUnmounted(() => {
   border-radius: 3px;
   background-color: #1e293b;
   color: #ffffff;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace,
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace),
     'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
   font-size: 0.9375rem;          /* 15px，與 compact chip label 一致 */
   font-weight: 700;

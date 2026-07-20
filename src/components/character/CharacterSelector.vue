@@ -411,7 +411,7 @@ onUnmounted(() => {
 .char-selector {
   position: relative;
   width: 100%;
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
 }
 
 /* ── 觸發按鈕 ───────────────────────────────────────────── */

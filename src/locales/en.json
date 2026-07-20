@@ -84,6 +84,8 @@
     "gearLabel": "Settings",
     "heading": "Settings",
     "language": "Language",
+    "font": "Font",
+    "fontSystem": "System monospace",
     "capsLock": "Caps Lock",
     "capsLockHint": "Auto-uppercase block text on commit",
     "animations": "Animations",

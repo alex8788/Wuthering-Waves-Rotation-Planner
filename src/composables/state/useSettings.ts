@@ -29,6 +29,23 @@ export const CHIP_PADDING_BOUNDS = { min: 4, max: 32 } as const;
 /** 區塊文字左右邊距預設值（px），= BlockChip 的 1rem 基準。 */
 export const DEFAULT_CHIP_PADDING_PX = 16;
 
+/**
+ * 介面等寬字型選項。stack 注入 <html> 的 --app-font-mono，全站等寬字型
+ * （標題列/區塊標籤/對話框等）統一引用。Google Fonts 已於 index.html 預載
+ * 全部候選家族（@font-face 惰性下載：未用到的字型檔不會抓）。
+ * 寬度計算不受影響：FLIP/落點/合計寬皆量實際 DOM（getBoundingClientRect）。
+ */
+export const FONT_OPTIONS = [
+  { value: 'jetbrains-mono', label: 'JetBrains Mono', stack: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace" },
+  { value: 'fira-code', label: 'Fira Code', stack: "'Fira Code', 'JetBrains Mono', ui-monospace, monospace" },
+  { value: 'ibm-plex-mono', label: 'IBM Plex Mono', stack: "'IBM Plex Mono', ui-monospace, monospace" },
+  { value: 'source-code-pro', label: 'Source Code Pro', stack: "'Source Code Pro', ui-monospace, monospace" },
+  { value: 'roboto-mono', label: 'Roboto Mono', stack: "'Roboto Mono', ui-monospace, monospace" },
+  { value: 'system-mono', label: '', stack: "ui-monospace, Consolas, 'SFMono-Regular', Menlo, monospace" },
+] as const;
+export type FontOptionValue = (typeof FONT_OPTIONS)[number]['value'];
+const DEFAULT_FONT: FontOptionValue = 'jetbrains-mono';
+
 interface ExportPrefs {
   filename: string;
   mode: ExportMode;
@@ -49,6 +66,8 @@ interface AppSettings {
   trackGapPx: number;
   /** 區塊文字左右邊距（px），影響區塊寬度。 */
   chipPaddingPx: number;
+  /** 介面等寬字型（FONT_OPTIONS 之一）。 */
+  appFont: FontOptionValue;
   /** 記住匯出設定（每次調整即持久化）。 */
   rememberExport: boolean;
   /** 記住的匯出偏好。 */
@@ -62,6 +81,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   historyLimit: 30,
   trackGapPx: TRACK_GAP_PX,
   chipPaddingPx: DEFAULT_CHIP_PADDING_PX,
+  appFont: DEFAULT_FONT,
   rememberExport: false,
   exportPrefs: { filename: '', mode: 'merge', format: 'png', scale: DEFAULT_PIXEL_RATIO },
 };
@@ -86,6 +106,8 @@ function loadSettings(): AppSettings {
     merged.historyLimit = clampSetting(merged.historyLimit, HISTORY_LIMIT_BOUNDS, DEFAULT_SETTINGS.historyLimit);
     merged.trackGapPx = clampSetting(merged.trackGapPx, TRACK_GAP_BOUNDS, DEFAULT_SETTINGS.trackGapPx);
     merged.chipPaddingPx = clampSetting(merged.chipPaddingPx, CHIP_PADDING_BOUNDS, DEFAULT_SETTINGS.chipPaddingPx);
+    // 字型代碼驗證：未知值（如舊版存檔或手改）回退預設。
+    if (!FONT_OPTIONS.some((f) => f.value === merged.appFont)) merged.appFont = DEFAULT_FONT;
     return merged;
   } catch (e) {
     console.warn('[useSettings] 設定讀取失敗，使用預設值', e);
@@ -126,6 +148,17 @@ if (typeof document !== 'undefined') {
     () => settings.value.chipPaddingPx,
     (px) => {
       document.documentElement.style.setProperty('--chip-px-setting', `${px}px`);
+    },
+    { immediate: true },
+  );
+
+  // 介面字型 → 於 <html> 注入 --app-font-mono CSS 變數，全站等寬字型
+  // 宣告統一引用（var(--app-font-mono, ...)）。immediate 使載入即生效。
+  watch(
+    () => settings.value.appFont,
+    (code) => {
+      const opt = FONT_OPTIONS.find((f) => f.value === code) ?? FONT_OPTIONS[0];
+      document.documentElement.style.setProperty('--app-font-mono', opt.stack);
     },
     { immediate: true },
   );

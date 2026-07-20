@@ -84,6 +84,8 @@
     "gearLabel": "设置",
     "heading": "设置",
     "language": "界面语言",
+    "font": "界面字体",
+    "fontSystem": "系统等宽字体",
     "capsLock": "大写锁定",
     "capsLockHint": "区块文本提交时自动转大写",
     "animations": "动画效果",

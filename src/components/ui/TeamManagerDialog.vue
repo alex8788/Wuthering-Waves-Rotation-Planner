@@ -407,7 +407,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   border-radius: 6px;
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
   scrollbar-width: thin;
   scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
 }
@@ -632,7 +632,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 5px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
 }
 .team-menu__item {
   display: block;
