@@ -5,6 +5,7 @@
 
 import { ref, watch, nextTick } from 'vue'
 import BlockChip from '@/components/ui/BlockChip.vue'
+import DragCountBadge from '@/components/ui/DragCountBadge.vue'
 
 interface Props {
   /** 區塊 ID (供上拋事件辨識用) */
@@ -151,16 +152,9 @@ function onKeydown(event: KeyboardEvent): void {
       :is-editing-dimmed="isEditingDimmed"
     />
 
-    <!-- 多選拖曳數量徽章：放在 chip 之外（不被 chip overflow 裁切），平時 display:none，
-         只在 SortableJS 浮動分身（.sortable-fallback）上顯示（規則在 style.css）。
-         右上角、部分溢出 chip，z-index 高於 chip。 -->
-    <span
-      v-if="isSelected && multiSelectCount > 1"
-      class="rotation-block__drag-count"
-      aria-hidden="true"
-    >
-      {{ multiSelectCount }}
-    </span>
+    <!-- 多選拖曳數量徽章：放在 chip 之外（不被 chip overflow 裁切），
+         樣式與顯示機制見共用元件 DragCountBadge。 -->
+    <DragCountBadge v-if="isSelected && multiSelectCount > 1" :count="multiSelectCount" />
   </div>
 </template>
 
@@ -172,31 +166,7 @@ function onKeydown(event: KeyboardEvent): void {
   position: relative;
 }
 
-/* 多選拖曳數量徽章：右上角圓點，部分溢出 chip；平時隱藏，
-   只在浮動分身（.sortable-fallback）上顯示（顯示規則見 style.css）。 */
-.rotation-block__drag-count {
-  display: none;
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  z-index: 20; /* 高於 chip（label z-index 2、選中光暈等）*/
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding: 0 0.25rem;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background-color: #22d3ee;
-  color: #06121a;
-  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace), sans-serif;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1;
-  border: 1.5px solid rgba(6, 18, 26, 0.85);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-}
+/* 多選拖曳數量徽章樣式已收斂至共用元件 DragCountBadge.vue。 */
 
 /* 刪除消失動畫：刻意只動內層 .block-chip 的 opacity/transform，不碰 .rotation-block
    的 transform（該屬性保留給 SortableJS 浮動分身與拖曳 FLIP，見專案記憶）。

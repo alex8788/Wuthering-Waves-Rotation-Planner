@@ -42,3 +42,20 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes_tool` for code review.
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
+
+### Known Limitations (verified)
+
+- **Vue import edges are unreliable.** The parser does not resolve `@/`
+  alias imports in Vue SFCs, so `importers_of`/`imports_of` between `.vue`
+  components return empty even when the import exists. When tracing which
+  component uses another, **fall back to Grep** — do not trust the graph
+  for Vue-to-Vue import relationships.
+- **Incremental `update` misses untracked new files.** A newly added
+  `.vue` file that isn't committed yet won't appear in search/queries after
+  `update`. Run `code-review-graph build` (full rebuild) to pick it up, or
+  just use Grep for brand-new files.
+- **Semantic search needs the `embeddings` extra.** `semantic_search_nodes_tool`
+  / `embed` require `pip install code-review-graph[embeddings]` (local,
+  offline) or a cloud `--provider` (sends code-derived text, incurs cost).
+  It is **not installed** — keyword `search`, `query`, and `impact` work
+  without it, so prefer those unless embeddings get installed.
