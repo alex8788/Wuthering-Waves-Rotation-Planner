@@ -225,16 +225,20 @@ function restingIdToX(): Map<string, number> {
 
 function runFlip(newX: Map<string, number> | null): void {
   if (prefersReducedMotion()) return
-  if (!dragState.isDragging || !newX) {
+  if (!dragState.isDragging) {
     _flipPrevX = null
     return
   }
+  // 拖曳中但無預覽佈局（如側邊欄來源懸停禁區 → idToX 為 null，畫面回到靜止佈局）：
+  // 以「靜止佈局位置」作為新佈局照常做 FLIP——進禁區時收合平滑滑回、
+  // 再入泳道時 prev 基準也正確（若清空基準會被當拖曳首幀跳過動畫 → 瞬移）。
+  const targetX = newX ?? restingIdToX()
   const prev = _flipPrevX
-  _flipPrevX = newX
+  _flipPrevX = targetX
   if (!prev) return // 拖曳首幀：只記基準，不動畫
   const root = boardScrollRef.value
   if (!root) return
-  for (const [id, nx] of newX) {
+  for (const [id, nx] of targetX) {
     const ox = prev.get(id)
     if (ox === undefined) continue // 新出現（落點/剛入軸）→ 無起點，不滑
     const delta = ox - nx
