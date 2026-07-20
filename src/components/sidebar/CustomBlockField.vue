@@ -229,6 +229,17 @@ onUnmounted(() => {
                 compact
               />
 
+              <!-- 多選拖曳數量徽章：與主軸 RotationBlock 同款，平時 display:none，
+                   只在 SortableJS 浮動分身（.sortable-fallback）上顯示（規則在 style.css）。
+                   共用 .rotation-block__drag-count 類名以套用同一條全域 fallback 顯示規則。 -->
+              <span
+                v-if="templateStore.isTemplateSelected(template.id) && templateStore.selectedTemplateIds.size > 1"
+                class="rotation-block__drag-count"
+                aria-hidden="true"
+              >
+                {{ templateStore.selectedTemplateIds.size }}
+              </span>
+
               <button
                 class="delete-btn"
                 :aria-label="$t('sidebar.deleteTemplate', { label: template.label })"
@@ -407,6 +418,32 @@ onUnmounted(() => {
   color: rgba(34, 211, 238, 0.95);
   background: rgba(34, 211, 238, 0.08);
   outline: none;
+}
+
+/* 多選拖曳數量徽章：右上角圓點，平時隱藏，只在浮動分身（.sortable-fallback）上
+   顯示（顯示規則見 style.css，比照主軸 RotationBlock）。定位基準為 .chip-wrapper。 */
+.rotation-block__drag-count {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 20;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background-color: #22d3ee;
+  color: #06121a;
+  font-family: var(--app-font-mono, 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1.5px solid rgba(6, 18, 26, 0.85);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 /* 刪除按鈕 */
