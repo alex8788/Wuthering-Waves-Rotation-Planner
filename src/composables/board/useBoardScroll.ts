@@ -28,10 +28,14 @@ export function useBoardScroll() {
     options: ScrollOptions = {},
   ): void {
     if (!entryId) return;
+    scrollSelectorIntoView(`.rotation-block[data-entry-id="${entryId}"]`, options);
+  }
+
+  /** 通用版：等 DOM 更新後把任意選擇器命中的元素水平捲到可視軌道區中央
+   *  （熱鍵輸入模式用於置中幽靈格——落點非區塊、無 entryId 可查）。 */
+  function scrollSelectorIntoView(selector: string, options: ScrollOptions = {}): void {
     nextTick(() => {
-      const el = document.querySelector<HTMLElement>(
-        `.rotation-block[data-entry-id="${entryId}"]`,
-      );
+      const el = document.querySelector<HTMLElement>(selector);
       const scroll = document.querySelector<HTMLElement>('.board__scroll');
       if (!el || !scroll) return;
 
@@ -61,5 +65,5 @@ export function useBoardScroll() {
     });
   }
 
-  return { scrollEntryIntoView };
+  return { scrollEntryIntoView, scrollSelectorIntoView };
 }

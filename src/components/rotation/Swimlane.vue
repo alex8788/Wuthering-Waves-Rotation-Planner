@@ -17,6 +17,7 @@ import { useHistory } from '@/composables/state/useHistory'
 import { useDialog } from '@/composables/state/useDialog'
 import { getElementColor } from '@/constants/elements'
 import { useSettings } from '@/composables/state/useSettings'
+import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode'
 import { useI18n } from 'vue-i18n'
 import { characterDisplayName } from '@/i18n'
 import type { Character } from '@/types/character'
@@ -70,6 +71,14 @@ const {
   handleDragEnd,
   getRotationSortableOptions,
 } = useBlockDrag()
+
+// 熱鍵輸入模式：選中泳道於末端顯示幽靈格（下一塊會落在這的靜態提示）。
+// 幽靈格與 ＋ 按鈕同欄（皆為全軸末欄+1、grid-row:1 同格重疊），故模式中
+// 隱藏 ＋ 讓位（比照拖曳預覽的 visibility 隱藏，保留欄寬避免捲動跳動）。
+const hotkeyMode = useHotkeyInputMode()
+const showGhostCell = computed<boolean>(
+  () => hotkeyMode.active.value && rotationStore.selectedLaneIndex === props.slotIndex,
+)
 
 // 本泳道統一顏色＝角色屬性色（同屬性 header 色條/區塊顏色完全一致）。未選角給中性色。
 const laneColor = computed<string>(() => getElementColor(props.character?.element ?? null))
@@ -476,9 +485,17 @@ async function handleDeselectCharacter(): Promise<void> {
             <!-- ＋ 按鈕：定位在全軸最後一欄之後（共用 grid 內以 grid-column 釘位，三泳道垂直對齊）。
                  被 SortableJS draggable:'.rotation-block' 選擇器排除，不會被當成可拖項。
                  拖曳預覽期間隱藏，避免與落點空欄搶欄、或造成 grid 欄數變動。 -->
+            <!-- 熱鍵輸入模式幽靈格：只有選中泳道畫（欄同 ＋ 按鈕；切泳道時垂直移動） -->
+            <div
+              v-if="showGhostCell"
+              class="track__ghost-cell"
+              :style="{ gridColumn: String(addButtonColumn + 1) }"
+              aria-hidden="true"
+            >⌨</div>
+
             <button
               class="track__add-btn"
-              :class="{ 'track__add-btn--drag-hidden': dragState.isDragging }"
+              :class="{ 'track__add-btn--drag-hidden': dragState.isDragging || hotkeyMode.active.value }"
               :style="{ gridColumn: String(addButtonColumn + 1) }"
               :data-tour="slotIndex === 0 ? 'add-block' : undefined"
               type="button"
@@ -800,6 +817,26 @@ async function handleDeselectCharacter(): Promise<void> {
   border-radius: 3px;
   background: rgba(125, 211, 252, 0.10);
   pointer-events: none;
+}
+
+/* 熱鍵輸入模式幽靈格：末端「下一塊會落在這」的靜態提示。
+   與落點空欄同語彙（虛線青框）；grid-row:1 必釘（與隱藏的 ＋ 同欄重疊時
+   不被擠到第二列）。pointer-events 穿透（overlay 已接管滑鼠）。 */
+.track__ghost-cell {
+  grid-row: 1;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem; /* 固定正方形：不隨內容/欄寬變化 */
+  height: 3rem;
+  border: 1.5px dashed rgba(34, 211, 238, 0.65);
+  border-radius: 3px;
+  background: rgba(34, 211, 238, 0.08);
+  color: rgba(34, 211, 238, 0.6);
+  font-size: 0.875rem;
+  pointer-events: none;
+  user-select: none;
 }
 
 .track__empty-dropzone {
