@@ -80,6 +80,17 @@ const sections = computed<Section[]>(() => [
       { keys: ['Shift', t('help.wheel')], descKey: 'help.horizontalScroll' },
     ],
   },
+  {
+    // 熱鍵輸入模式：模式內專屬鍵位（對映鍵插入、1/2/3・滾輪切泳道、Delete 刪末塊、Esc 退出）。
+    titleKey: 'help.secHotkey',
+    items: [
+      { keys: ['F'], descKey: 'help.hkEnter' },
+      { keys: [t('help.hkMappedKey')], descKey: 'help.hkInsert' },
+      { keys: ['1', '2', '3', '|', t('help.wheel')], descKey: 'help.hkSwitchLane' },
+      { keys: ['Delete', '|', 'Backspace'], descKey: 'help.hkDelete' },
+      { keys: ['Esc'], descKey: 'help.hkExit' },
+    ],
+  },
 ])
 
 function onKeydown(event: KeyboardEvent): void {
