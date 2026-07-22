@@ -79,6 +79,11 @@ const hotkeyMode = useHotkeyInputMode()
 const showGhostCell = computed<boolean>(
   () => hotkeyMode.active.value && rotationStore.selectedLaneIndex === props.slotIndex,
 )
+// 幽靈格右側外置預顯文字（R3）：長按預顯優先，其次連點合併累積文字。
+// 外置（絕對定位、不佔 grid 欄寬）讓幽靈格保持固定正方 → 置中釘點不受文字長度影響。
+const ghostPreviewText = computed<string | null>(
+  () => hotkeyMode.holdPreviewLabel.value ?? hotkeyMode.tapCombineLabel.value,
+)
 
 // 本泳道統一顏色＝角色屬性色（同屬性 header 色條/區塊顏色完全一致）。未選角給中性色。
 const laneColor = computed<string>(() => getElementColor(props.character?.element ?? null))
@@ -505,18 +510,15 @@ async function handleDeselectCharacter(): Promise<void> {
                 <circle class="track__ghost-ring-track" cx="16" cy="16" r="9" />
                 <circle class="track__ghost-ring-fill" cx="16" cy="16" r="9" />
               </svg>
-              <!-- 中心內容：長按達閾值且有 hold 條目 → 預顯其 label（放開前就知會落哪塊）；
-                   否則顯示鍵盤圖標（按壓中由 CSS 淡出，見 --pressing）。 -->
+              <!-- 中心鍵盤圖標：閒置提示落點；按壓中由 CSS 淡出（--pressing），
+                   改由進度環承接視覺（長按達閾值後環保持填滿＝已武裝長按）。 -->
+              <span class="track__ghost-icon">⌨</span>
+              <!-- 外置預顯文字（R3）：長按 hold label／連點合併累積文字，顯示於
+                   幽靈格右緣外側（絕對定位不佔欄寬，格子保持固定正方不影響置中）。 -->
               <span
-                v-if="hotkeyMode.holdPreviewLabel.value !== null"
-                class="track__ghost-hold-label"
-              >{{ hotkeyMode.holdPreviewLabel.value }}</span>
-              <!-- 連點合併預顯：緩衝累積的串接文字（樣式同長按預顯；格寬隨文字動態變化） -->
-              <span
-                v-else-if="hotkeyMode.tapCombineLabel.value !== null"
-                class="track__ghost-hold-label"
-              >{{ hotkeyMode.tapCombineLabel.value }}</span>
-              <span v-else class="track__ghost-icon">⌨</span>
+                v-if="ghostPreviewText !== null"
+                class="track__ghost-preview"
+              >{{ ghostPreviewText }}</span>
             </div>
 
             <button
@@ -877,25 +879,29 @@ async function handleDeselectCharacter(): Promise<void> {
   opacity: 0;
 }
 
-/* 長按預顯 label：達閾值時取代圖標，顯示放開後會落的 hold 條目文字。
-   青色高亮、置於進度環之上；文字過長時不換行（幽靈格為固定正方，容納短招式名足矣）。 */
-.track__ghost-hold-label {
-  position: relative;
-  z-index: 1;
-  max-width: 100%;
-  padding: 0 0.15rem;
+/* 外置預顯文字（R3）：長按 hold label／連點合併累積文字，顯示於幽靈格
+   右緣外側的青色膠囊。絕對定位、不佔 grid 欄寬 → 幽靈格保持固定正方、
+   置中釘點不受文字長度影響；右側是尾端墊片留白，再長也不會撞到內容。
+   快速淡入（ease-out 前快後慢，約半程即清晰可辨，無慢半拍感）。 */
+.track__ghost-preview {
+  position: absolute;
+  /* 偏移須大於幽靈格右緣到泳道群右緣（＝焦點框右緣）的距離，膠囊左側才不會
+     壓在焦點框上；1.25rem 讓膠囊完全落在焦點框外的墊片留白區。 */
+  left: calc(100% + 1.25rem);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid rgba(34, 211, 238, 0.5);
+  border-radius: 0.375rem;
+  background: rgba(8, 51, 68, 0.85);
   font-size: 0.938rem;
   font-weight: 700;
   line-height: 1;
   color: rgba(190, 242, 255, 0.98);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* 文字快速淡入登場：ease-out 前快後慢、約半程即清晰可辨，消除「慢半拍」感；
-     環淡出（220ms）仍在背景收尾，兩者交疊自然。 */
-  animation: ghost-hold-label-in 120ms ease-out both;
+  animation: ghost-preview-in 120ms ease-out both;
 }
-@keyframes ghost-hold-label-in {
+@keyframes ghost-preview-in {
   from {
     opacity: 0;
   }
@@ -904,25 +910,14 @@ async function handleDeselectCharacter(): Promise<void> {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .track__ghost-cell--hold .track__ghost-ring {
-    transition: none;
-  }
-  .track__ghost-hold-label {
+  .track__ghost-preview {
     animation: none;
   }
 }
-/* 達閾值時底色略提亮，強化「已進入長按區」的狀態感。 */
-.track__ghost-cell--hold {
-  border-style: solid;
-  background: rgba(34, 211, 238, 0.16);
-}
-
-/* 連點合併預顯：視覺同長按預顯（實線提亮），但格寬改隨串接文字動態變化
-   （覆蓋固定 3rem 正方；min-width 保底避免比閒置格還窄）。 */
+/* 達閾值／合併累積中：底色略提亮＋實線，強化「輸入進行中」的狀態感
+   （格寬固定不變，寬度變化全由外置預顯承擔）。 */
+.track__ghost-cell--hold,
 .track__ghost-cell--combine {
-  width: max-content;
-  min-width: 3rem;
-  padding: 0 0.5rem;
   border-style: solid;
   background: rgba(34, 211, 238, 0.16);
 }
@@ -964,13 +959,8 @@ async function handleDeselectCharacter(): Promise<void> {
   animation: ghost-ring-fill 300ms linear forwards;
 }
 
-/* 環填滿（達閾值 → 進入 --hold，時點與 300ms 填滿動畫收尾對齊）後柔和淡出，
-   只留下中心的預顯文字：環已完成「倒數到落子點」的任務，繼續留著會與文字爭焦點。
-   同一/更高特異度且置於 --pressing 規則之後 → 覆蓋其 opacity:1。 */
-.track__ghost-cell--hold .track__ghost-ring {
-  opacity: 0;
-  transition: opacity 220ms ease;
-}
+/* 環填滿（達閾值 → 進入 --hold）後保持顯示：預顯文字已外置右側（R3），
+   格心不再有文字爭焦點，填滿的環即「長按已武裝、放開即落」的狀態燈。 */
 
 @keyframes ghost-ring-fill {
   from {
