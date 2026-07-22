@@ -7,6 +7,7 @@ import DialogHost from '@/components/ui/DialogHost.vue'
 import ExportDialog from '@/components/ui/ExportDialog.vue'
 import TeamManagerDialog from '@/components/ui/TeamManagerDialog.vue'
 import HelpDialog from '@/components/ui/HelpDialog.vue'
+import HotkeyMapDialog from '@/components/ui/HotkeyMapDialog.vue'
 import SettingsMenu from '@/components/ui/SettingsMenu.vue'
 import SidebarPanel from '@/components/sidebar/SidebarPanel.vue'
 import RotationBoard from '@/components/rotation/RotationBoard.vue'
@@ -209,6 +210,7 @@ function clearAllSelection(): void {
     <ExportDialog />
     <TeamManagerDialog />
     <HelpDialog />
+    <HotkeyMapDialog />
 
     <!-- 離螢幕匯出舞台:平時不渲染任何軸,匯出時才暫時掛上要輸出的軸供截圖。
          合併多軸時,export-merge-wrap 內縱向堆疊多個視圖,整塊截一張。 -->
@@ -386,6 +388,76 @@ function clearAllSelection(): void {
   }
   body.tour-active .dialog-overlay {
     z-index: 1000000014 !important;
+  }
+  /* 熱鍵模式導覽 step hk2：設定面板與對映表編輯視窗也要浮在 driver 遮罩之上。 */
+  body.tour-active .settings-menu__panel {
+    z-index: 1000000012 !important;
+  }
+  body.tour-active .hkmap-overlay {
+    z-index: 1000000014 !important;
+  }
+  /* 熱鍵模式導覽 step hk2：對映表編輯視窗開啟後，氣泡（hint box）釘到畫面左側
+     垂直置中，避免遮住置中的編輯視窗；抬高 z-index 使氣泡按鈕仍可點。 */
+  .driver-popover.tour-popover--left {
+    top: 50% !important;
+    left: 24px !important;
+    right: auto !important;
+    /* driver 定位可能留下 inline bottom/height；不重設會與強制 top 一起
+       把氣泡撐高，內容下方出現大片空白。 */
+    bottom: auto !important;
+    height: auto !important;
+    /* 限寬：避免氣泡右緣伸進畫面中段、蓋到對映表視窗左半。 */
+    max-width: 280px !important;
+    transform: translateY(-50%) !important;
+    z-index: 1000000020 !important;
+  }
+  .driver-popover.tour-popover--left .driver-popover-arrow {
+    display: none; /* 釘選定位後箭頭已不指向目標，隱藏避免誤導 */
+  }
+  /* 熱鍵模式導覽 step hk2：氣泡釘在左側時，對映表視窗改靠左對齊並留出「氣泡寬度」
+     的左內距，使視窗緊貼在氣泡右側（間距一致、不遮擋），而非被推到最右端留下大片空白。
+     左內距 ≈ 氣泡左緣(24px) + 最大寬(280px) + 小間距 ≈ 20rem。 */
+  body.tour-hk-editing .hkmap-overlay {
+    justify-content: flex-start;
+    padding-left: 20rem;
+  }
+  /* 熱鍵模式導覽 hk1 的 spotlight 代理框：fixed 定位、不可見、不擋事件；
+     只作為 driver 高亮目標（矩形＝泳道可視範圍，見 useTourDemo hotkeyLaneProxy）。 */
+  .tour-lane-proxy {
+    position: fixed;
+    pointer-events: none;
+  }
+  /* 熱鍵模式導覽：示範按鍵的鍵帽（錨定於幽靈格右上角外側，
+     底部錨定 translate(0,-100%)＝左下角貼齊幽靈格右上角）。 */
+  .tour-keycap {
+    position: fixed;
+    z-index: 1000000030;
+    transform: translate(0, -100%);
+    pointer-events: none;
+    min-width: 2.1rem;
+    padding: 0.25rem 0.55rem;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(240, 244, 248, 0.98);
+    background: linear-gradient(180deg, #223049, #17202f);
+    border: 1px solid rgba(34, 211, 238, 0.7);
+    border-radius: 7px;
+    box-shadow:
+      0 3px 0 rgba(34, 211, 238, 0.4),
+      0 0 14px rgba(34, 211, 238, 0.3),
+      0 5px 14px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  .tour-keycap--press {
+    transform: translate(0, calc(-100% + 3px));
+    box-shadow:
+      0 1px 0 rgba(34, 211, 238, 0.6),
+      0 0 20px rgba(34, 211, 238, 0.5),
+      0 3px 9px rgba(0, 0, 0, 0.5);
+    border-color: rgba(34, 211, 238, 1);
   }
   /* 真實拖曳期間：driver 的 disableActiveInteraction 會把高亮元件設為
      pointer-events:none!important，導致 App 的 elementFromPoint 取不到泳道、

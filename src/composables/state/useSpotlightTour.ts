@@ -30,23 +30,36 @@ import { useTemplateStore } from '@/stores/useTemplateStore';
 import { useLaneOrder } from '@/composables/state/useLaneOrder';
 import { useHistory } from '@/composables/state/useHistory';
 import { useSidebarCollapse } from '@/composables/state/useSidebarCollapse';
-import { runDemo, cancelDemo, setTourApi } from '@/composables/state/useTourDemo';
+import {
+  runDemo,
+  cancelDemo,
+  setTourApi,
+  hotkeyLaneProxy,
+  syncHotkeyLaneProxy,
+  removeHotkeyLaneProxy,
+} from '@/composables/state/useTourDemo';
+import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode';
+import { useHotkeyMap } from '@/composables/state/useHotkeyMap';
+import { useHotkeyMapDialog } from '@/composables/state/useHotkeyMapDialog';
+import type { HotkeyMapEntry, IntroHotkeyEntry } from '@/types/hotkey';
 import type { CharacterSlots, SlotIndex } from '@/types/character';
 import type { RotationAxis, RotationEntry } from '@/types/rotation';
 import type { InstanceBlock, TemplateBlock } from '@/types/block';
 
 const STORAGE_KEY = 'wuwa-rotation-tour-seen';
+// 熱鍵輸入模式導覽的首訪旗標（與主導覽獨立：各自首播、各自重播）。
+const HOTKEY_STORAGE_KEY = 'wuwa-rotation-hotkey-tour-seen';
 
-function loadSeen(): boolean {
+function loadSeen(key: string): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
+    return localStorage.getItem(key) === 'true';
   } catch {
     return false;
   }
 }
-function persistSeen(): void {
+function persistSeen(key: string): void {
   try {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    localStorage.setItem(key, 'true');
   } catch (e) {
     console.warn('[useSpotlightTour] 首訪旗標寫入失敗', e);
   }
@@ -54,7 +67,14 @@ function persistSeen(): void {
 
 // ── module 單例狀態 ─────────────────────────────────────────
 const isActive = ref(false);
-const hasSeenTour = ref(loadSeen());
+const hasSeenTour = ref(loadSeen(STORAGE_KEY));
+const hasSeenHotkeyTour = ref(loadSeen(HOTKEY_STORAGE_KEY));
+// 當前導覽變體：主導覽（首訪 12 步）或熱鍵輸入模式導覽（2 步）。
+type TourVariant = 'main' | 'hotkey';
+let variant: TourVariant = 'main';
+// 熱鍵導覽進入模式後，等側欄收合過渡（AppLayout 0.25s）定型的緩衝時長，
+// 定型後才 drive 並開始輸入，避免 spotlight 先套展開版面再跳位。
+const HOTKEY_LAYOUT_SETTLE_MS = 380;
 let driverObj: Driver | null = null;
 // 抑制旗標：demo 內用 driver.highlight 移動焦點時，driver 會內部觸發 onDeselected，
 // 若不抑制會誤把正在播放的 demo 取消。refocus 期間暫設 true。
@@ -67,7 +87,7 @@ function refocus(selector: string): void {
   if (!driverObj) return;
   const el = document.querySelector<HTMLElement>(selector);
   if (!el) return;
-  const steps = buildSteps();
+  const steps = variant === 'hotkey' ? buildHotkeySteps() : buildSteps();
   const idx = driverObj.getActiveIndex() ?? 0;
   const basePop = steps[idx]?.popover ?? {};
   suppressCancel = true;
@@ -101,6 +121,9 @@ interface BoardSnapshot {
   laneOrder: SlotIndex[];
   templates: TemplateBlock[];
   history: ReturnType<ReturnType<typeof useHistory>['snapshotStacks']>;
+  // 熱鍵導覽變體：使用者的對映表快照（示範期間暫換預設種子，結束還原）。
+  hotkeyEntries: HotkeyMapEntry[] | null;
+  introEntries: IntroHotkeyEntry[] | null;
 }
 let snapshot: BoardSnapshot | null = null;
 /** 示範版面基準（供每次示範動畫重設，確保可重複播放）。 */
@@ -157,6 +180,7 @@ function injectDemo(): void {
   const characterStore = useCharacterStore();
   const templateStore = useTemplateStore();
   const { laneOrder } = useLaneOrder();
+  const hotkeyMap = useHotkeyMap();
 
   snapshot = {
     slots: deepClone(characterStore.slots),
@@ -165,7 +189,11 @@ function injectDemo(): void {
     laneOrder: deepClone(laneOrder.value),
     templates: deepClone(templateStore.templates),
     history: useHistory().snapshotStacks(),
+    hotkeyEntries: variant === 'hotkey' ? deepClone(hotkeyMap.entries.value) : null,
+    introEntries: variant === 'hotkey' ? deepClone(hotkeyMap.introEntries.value) : null,
   };
+  // 熱鍵導覽：示範按鍵（E/Q/R/左鍵長按/長按2）須與旁白一致 → 暫換預設種子表。
+  if (variant === 'hotkey') hotkeyMap.resetToDefaults();
 
   const { slots, axis } = buildDemo();
   demoBaseline = { slots: deepClone(slots), axis: deepClone(axis), laneOrder: [0, 1, 2] };
@@ -193,10 +221,13 @@ function resetDemoBoard(): void {
   templateStore.templates = [];
   rotationStore.clearSelection();
   rotationStore.stopEditing();
-  // 側邊欄一律保持展開（步驟 2/4 需要）：避免任何步驟殘留的收合狀態影響後續步驟。
-  useSidebarCollapse().collapsed.value = false;
-  // 側邊欄分頁重設回預設「通用」：避免 n2 切到「自訂」的分頁殘留到後續步驟。
-  clickTab('tab-general');
+  // 熱鍵導覽變體：側欄開合由模式自己管（進入收合/退出還原），分頁與側欄不動。
+  if (variant === 'main') {
+    // 側邊欄一律保持展開（步驟 2/4 需要）：避免任何步驟殘留的收合狀態影響後續步驟。
+    useSidebarCollapse().collapsed.value = false;
+    // 側邊欄分頁重設回預設「通用」：避免 n2 切到「自訂」的分頁殘留到後續步驟。
+    clickTab('tab-general');
+  }
   // 水平捲動歸零：使 spotlight 邊框左緣與泳道 header 左緣對齊。前一步（n5 貼上/復原）
   // 會把 board 捲到最右端，導致 .board__lanes 左緣被捲出視窗外，step8 的高亮框左緣
   // 因而與 sticky 定位的泳道 header 左緣錯開。於 post-render 歸零讓兩者對齊。
@@ -219,6 +250,9 @@ function restore(): void {
   rotationStore.activeAxisId = snapshot.activeAxisId;
   laneOrder.value = deepClone(snapshot.laneOrder);
   templateStore.templates = deepClone(snapshot.templates);
+  // 熱鍵導覽變體：還原使用者自己的對映表（示範期間暫換過預設種子）。
+  if (snapshot.hotkeyEntries) useHotkeyMap().entries.value = deepClone(snapshot.hotkeyEntries);
+  if (snapshot.introEntries) useHotkeyMap().introEntries.value = deepClone(snapshot.introEntries);
   // 還原 undo/redo 佇列，清掉示範真實動作造成的歷史污染。
   useHistory().restoreStacks(snapshot.history);
   rotationStore.clearSelection();
@@ -304,6 +338,30 @@ function buildSteps(): DriveStep[] {
   ];
 }
 
+/**
+ * 熱鍵輸入模式導覽的步驟（2 步）。
+ *   hk1：聚焦泳道區（不含下方空白），示範模式內鍵盤/滑鼠輸入。
+ *   hk2：無 spotlight（以 .app-layout 當全景），示範開設定 → 進對映表編輯。
+ */
+function buildHotkeySteps(): DriveStep[] {
+  const step = (key: 'Hk1' | 'Hk2', element: string | Element, side: PopoverSide): DriveStep => ({
+    element,
+    popover: {
+      title: t(`tour.step${key}Title`),
+      description: t(`tour.step${key}Desc`),
+      side,
+      align: 'center',
+    },
+    onHighlighted: () => resetDemoBoard(),
+  });
+  return [
+    // hk1 高亮「代理框」而非 .board__lanes：示範插入會水平捲動軸面，
+    // 直接高亮泳道容器會讓聚光燈框跟著捲；代理框固定在可視範圍不動。
+    { ...step('Hk1', hotkeyLaneProxy(), 'bottom'), onHighlighted: () => { resetDemoBoard(); runDemo('hk1'); } },
+    { ...step('Hk2', '.app-layout', 'top'), onHighlighted: () => { resetDemoBoard(); runDemo('hk2'); } },
+  ];
+}
+
 // ── Spotlight 邊框環（掛在 body，避開 overflow 裁切）─────────────────
 // 高亮元素的 box-shadow 光暈會被 .rotation-board/.board__scroll 等 overflow:hidden
 // 祖先裁切、也被暗遮罩(z-index 10000)蓋住。改用獨立 fixed 元素畫發光框，
@@ -385,7 +443,12 @@ function handleDestroyed(): void {
   stopStageRing();
   setTourApi(null);
   suppressCancel = false;
-  cancelDemo();
+  cancelDemo(); // 也收掉熱鍵導覽的殘留（設定面板、對映表編輯視窗、氣泡釘選）
+  // 熱鍵導覽變體：先退出模式（清泳道選取、還原側欄），再還原版面與對映表。
+  if (variant === 'hotkey') {
+    useHotkeyInputMode().exit();
+    removeHotkeyLaneProxy();
+  }
   restore();
   // 還原導覽開始前的側邊欄收合狀態。
   useSidebarCollapse().collapsed.value = sidebarWasCollapsed;
@@ -394,7 +457,7 @@ function handleDestroyed(): void {
 }
 
 export function useSpotlightTour() {
-  async function start(): Promise<void> {
+  async function begin(v: TourVariant): Promise<void> {
     if (isActive.value) {
       // driver 仍在 → 真的進行中，忽略重複啟動。
       if (driverObj) return;
@@ -402,19 +465,30 @@ export function useSpotlightTour() {
       // 避免 isActive 卡 true 使導覽永遠無法再開。
       handleDestroyed();
     }
+    variant = v;
 
     // 動態載入 driver.js 本體與其樣式（首屏不含）。await 期間尚未改動版面，
     // 使用者最多感覺到首次開導覽的極短延遲（chunk 通常已被瀏覽器快取）。
     const { driver } = await import('driver.js');
     await import('driver.js/dist/driver.css');
 
+    // 熱鍵導覽：若使用者已在模式中（首次進入觸發路徑）先退出，
+    // 讓 hk1 的示範統一走「主動進入模式」的乾淨路徑。
+    if (variant === 'hotkey') useHotkeyInputMode().exit();
+
     injectDemo();
-    // 側邊欄若原本收合，導覽期間強制展開（step2/4 需要可見的側邊欄）；結束時還原。
     const sidebar = useSidebarCollapse();
     sidebarWasCollapsed = sidebar.collapsed.value;
-    sidebar.collapsed.value = false;
-    hasSeenTour.value = true;
-    persistSeen();
+    if (variant === 'main') {
+      // 側邊欄若原本收合，導覽期間強制展開（step2/4 需要可見的側邊欄）；結束時還原。
+      sidebar.collapsed.value = false;
+      hasSeenTour.value = true;
+      persistSeen(STORAGE_KEY);
+    } else {
+      // 熱鍵導覽的側欄由模式自己收合/還原；此處只記首訪旗標。
+      hasSeenHotkeyTour.value = true;
+      persistSeen(HOTKEY_STORAGE_KEY);
+    }
     isActive.value = true;
     // 導覽期間旗標：抬升被 Teleport 的真實 UI（角色下拉、確認框）與示範指標
     // 的 z-index，使其顯示於 driver 遮罩（z-index 1e9）之上。
@@ -445,7 +519,7 @@ export function useSpotlightTour() {
       prevBtnText: `${t('tour.prev')} (A)`,
       doneBtnText: t('tour.done'),
       progressText: '{{current}} / {{total}}',
-      steps: buildSteps(),
+      steps: variant === 'hotkey' ? buildHotkeySteps() : buildSteps(),
       // 離開任一步（切上一步/下一步）即取消正在播放的示範動畫；
       // 但 refocus 用 highlight 移動焦點時的內部 deselect 不算，故看 suppressCancel。
       onDeselected: () => { if (!suppressCancel) cancelDemo(); },
@@ -457,9 +531,32 @@ export function useSpotlightTour() {
     window.addEventListener('keydown', onTourKeydown, true);
     window.addEventListener('focusin', onTourFocusIn, true);
     TOUR_BLOCK_EVENTS.forEach((e) => window.addEventListener(e, onTourBlockInput, true));
-    // 等示範資料渲染出泳道/區塊元件後再啟動定位。
-    nextTick(() => driverObj?.drive());
+
+    if (variant === 'hotkey') {
+      // 熱鍵導覽 step 1：先進入模式，等側欄收合過渡（0.25s）定型後才 drive。
+      // 這樣「首次」spotlight 就直接落在收合後的正確泳道矩形，不會先套在展開版面
+      // 再跳位；drive 之後 demoHotkey1 才開始送出按鍵輸入。
+      useHotkeyInputMode().enter();
+      window.setTimeout(() => {
+        if (!isActive.value || !driverObj) return;
+        syncHotkeyLaneProxy(); // 以收合後的可視泳道範圍重算代理框
+        driverObj.drive();      // onHighlighted → runDemo('hk1')
+      }, HOTKEY_LAYOUT_SETTLE_MS);
+    } else {
+      // 等示範資料渲染出泳道/區塊元件後再啟動定位。
+      nextTick(() => driverObj?.drive());
+    }
   }
 
-  return { isActive, hasSeenTour, start };
+  /** 主導覽（首訪 12 步）。 */
+  function start(): Promise<void> {
+    return begin('main');
+  }
+
+  /** 熱鍵輸入模式導覽（2 步；首次進入模式或幫助中心重播）。 */
+  function startHotkeyTour(): Promise<void> {
+    return begin('hotkey');
+  }
+
+  return { isActive, hasSeenTour, hasSeenHotkeyTour, start, startHotkeyTour };
 }

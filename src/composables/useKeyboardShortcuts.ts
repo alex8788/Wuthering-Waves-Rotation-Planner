@@ -27,6 +27,8 @@
 //   Enter               → 編輯選取區塊的文字；多選＝同步編輯全部（無選取則不動作）
 //   Escape              → 清除所有選取
 //   Tab                 → 展開／收合側邊欄
+//   F                   → 進入熱鍵輸入模式（模式中所有既有快捷鍵停用，
+//                         按鍵改由 useHotkeyInputMode.handleModeKeydown 分派）
 // ============================================================
 
 import { nextTick, onMounted, onUnmounted } from 'vue';
@@ -40,6 +42,7 @@ import { useHistory } from '@/composables/state/useHistory';
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore';
 import { useTeamManager } from '@/composables/state/useTeamManager';
 import { useToast } from '@/composables/state/useToast';
+import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode';
 import { getElementColor } from '@/constants/elements';
 import { t } from '@/i18n';
 
@@ -74,6 +77,7 @@ export function useKeyboardShortcuts() {
   const savedTeamStore = useSavedTeamStore();
   const teamManager = useTeamManager();
   const { showToast } = useToast();
+  const hotkeyMode = useHotkeyInputMode();
 
   // ──────────────────────────────────────────
   // 動作 handler
@@ -259,6 +263,16 @@ export function useKeyboardShortcuts() {
       run: () => rotationStore.clearSelection(),
     },
 
+    // ── F：進入熱鍵輸入模式（模式中的按鍵已在分派器前段短路，不會回到這）──
+    {
+      matches: ({ event, key, isCtrl }) =>
+        key.toLowerCase() === 'f' && !isCtrl && !event.altKey && !event.shiftKey,
+      run: ({ event }) => {
+        event.preventDefault();
+        hotkeyMode.enter();
+      },
+    },
+
     // ── Tab：展開／收合側邊欄 ───────────────────────────────
     // preventDefault 攔下瀏覽器預設的焦點切換（_shouldIgnore 已排除輸入元素，
     // 故在 input/textarea 內的 Tab 仍維持正常跳格）。
@@ -401,6 +415,12 @@ export function useKeyboardShortcuts() {
   function _handleKeydown(event: KeyboardEvent): void {
     if (_shouldIgnore(event)) return;
 
+    // 熱鍵輸入模式中：既有快捷鍵全數停用，改由模式自己的分派器接管。
+    if (hotkeyMode.active.value) {
+      hotkeyMode.handleModeKeydown(event);
+      return;
+    }
+
     const isMac = navigator.userAgent.toUpperCase().includes('MAC OS');
     // Mac 使用 Meta（Command），Windows/Linux 使用 Ctrl
     const isCtrl = isMac ? event.metaKey : event.ctrlKey;
@@ -418,14 +438,23 @@ export function useKeyboardShortcuts() {
   // 生命週期掛載
   // ──────────────────────────────────────────
 
+  /** keyup 分派器：僅熱鍵輸入模式需要（tap/hold 於放開時落子，見 §3.3）。 */
+  function _handleKeyup(event: KeyboardEvent): void {
+    if (!hotkeyMode.active.value) return;
+    if (_shouldIgnore(event)) return;
+    hotkeyMode.handleModeKeyup(event);
+  }
+
   onMounted(() => {
     // 掛載到 window（而非 document），確保在所有場景下都能接收到事件
     window.addEventListener('keydown', _handleKeydown);
+    window.addEventListener('keyup', _handleKeyup);
   });
 
   onUnmounted(() => {
     // 元件卸除時移除監聽器，防止記憶體洩漏
     window.removeEventListener('keydown', _handleKeydown);
+    window.removeEventListener('keyup', _handleKeyup);
   });
 
   // 副作用全透過 store 反映，回傳空物件僅為呼叫端語意清晰。

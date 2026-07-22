@@ -24,6 +24,8 @@ interface Props {
   isEditingDimmed?: boolean
   /** 是否正在播放刪除消失動畫 */
   isLeaving?: boolean
+  /** 是否播放熱鍵輸入模式的「落下吸附」進場動畫（一次性，由父層旗標控制） */
+  isEntering?: boolean
   /** 目前主軸選取總數（多選拖曳時，分身上顯示此數量徽章） */
   multiSelectCount?: number
 }
@@ -34,6 +36,7 @@ const props = withDefaults(defineProps<Props>(), {
   isLabelHighlighted: false,
   isEditingDimmed: false,
   isLeaving: false,
+  isEntering: false,
   multiSelectCount: 0,
 })
 
@@ -119,7 +122,7 @@ function onKeydown(event: KeyboardEvent): void {
 <template>
   <div
     class="rotation-block"
-    :class="{ 'is-leaving': isLeaving }"
+    :class="{ 'is-leaving': isLeaving, 'is-entering': isEntering }"
     :data-entry-id="entryId"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
@@ -188,6 +191,31 @@ function onKeydown(event: KeyboardEvent): void {
 
 @media (prefers-reduced-motion: reduce) {
   .rotation-block.is-leaving :deep(.block-chip) {
+    animation: none;
+  }
+}
+
+/* 熱鍵輸入模式插入的「落下吸附」進場：比照刪除動畫，只動內層 .block-chip 的
+   opacity/transform，不碰 .rotation-block 的 transform（保留給 SortableJS，見專案記憶）。
+   由上方落下 → 過衝一下 → 回正，營造吸附落定的手感。時長與 useHotkeyInputMode
+   的 ENTER_ANIM_MS 對齊。 */
+.rotation-block.is-entering :deep(.block-chip) {
+  animation: block-enter 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes block-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-45%) scale(0.82);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotation-block.is-entering :deep(.block-chip) {
     animation: none;
   }
 }

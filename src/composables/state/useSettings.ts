@@ -5,6 +5,7 @@
 //   - language          ：介面語言（zh-CN / zh-TW / en / ja / ko，見 i18n/index.ts）。
 //   - autoUppercase     ：大寫鎖定 — 區塊文字提交時自動轉大寫（僅英文字母）。
 //   - animationsEnabled ：動畫效果總開關；關閉＝強制減少動態（等同 reduced-motion）。
+//   - hotkeyTapCombine  ：熱鍵模式快速連點合併 — 時間窗內的連續 tap 串接成單一區塊。
 //   - historyLimit      ：復原/重做步數上限（夾在 HISTORY_LIMIT_BOUNDS）。
 //   - trackGapPx        ：主軸區塊間距（px，夾在 TRACK_GAP_BOUNDS）。
 //   - rememberExport    ：記住匯出設定；開啟時匯出視窗每次調整即存 localStorage。
@@ -64,6 +65,8 @@ interface AppSettings {
   autoUppercase: boolean;
   /** 動畫效果總開關；false＝強制減少動態。 */
   animationsEnabled: boolean;
+  /** 熱鍵模式快速連點合併（時間窗見 useHotkeyInputMode 的 TAP_COMBINE_WINDOW_MS）。 */
+  hotkeyTapCombine: boolean;
   /** 復原/重做步數上限。 */
   historyLimit: number;
   /** 主軸區塊間距（px）。 */
@@ -84,6 +87,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   autoUppercase: false,
   animationsEnabled: true,
+  hotkeyTapCombine: false,
   historyLimit: 30,
   trackGapPx: TRACK_GAP_PX,
   chipPaddingPx: DEFAULT_CHIP_PADDING_PX,

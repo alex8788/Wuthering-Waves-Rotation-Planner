@@ -7,13 +7,16 @@
 //   - 指標（tour-cursor）僅為視覺提示，指向正在操作的元件；漣漪標示點擊。
 //   - 版面重設、歷史/狀態還原由 useSpotlightTour 負責；本檔只演操作。
 //   - 以遞增 runToken 實作取消：primitives 每次檢查 token，過期即拋出中止。
-//   - 步驟腳本見檔末 DEMOS（1~8 步各一支 demoStepN）。
+//   - 步驟腳本見檔末 DEMOS（主導覽 1~8 步各一支 demoStepN；
+//     熱鍵模式導覽 'hk1'/'hk2' 各一支 demoHotkeyN）。
 // ============================================================
 
 import { CHARACTER_MAP } from '@/constants/characters';
-import { characterDisplayName } from '@/i18n';
+import { characterDisplayName, t } from '@/i18n';
 import { useBlockNavigation } from '@/composables/board/useBlockNavigation';
 import { useRotationStore } from '@/stores/useRotationStore';
+import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode';
+import { useHotkeyMapDialog } from '@/composables/state/useHotkeyMapDialog';
 
 /** 導覽對外能力（由 useSpotlightTour 注入）：目前提供「移動 spotlight 焦點」。 */
 export interface TourApi {
@@ -119,6 +122,124 @@ function clickFx(p: Pt): void {
   setTimeout(() => rip.remove(), 620);
 }
 
+// ── 熱鍵導覽 hk1 的 spotlight 代理框 ─────────────────────────
+// 高亮 .board__lanes 會隨軸面水平捲動/變寬而位移，聚光燈框看起來跟著捲。
+// 改高亮一個 fixed 定位的代理元素：矩形＝泳道區與捲動視口的交集（可視範圍），
+// 示範插入造成的捲動不再帶動聚光燈框。
+let laneProxyEl: HTMLElement | null = null;
+
+/** 依當前版面重算代理框矩形（模式進入側欄收合定型後、或版面變動時呼叫）。 */
+export function syncHotkeyLaneProxy(): void {
+  if (!laneProxyEl) return;
+  const lanes = document.querySelector('.board__lanes');
+  if (!lanes) return;
+  const lr = lanes.getBoundingClientRect();
+  const sr = document.querySelector('.board__scroll')?.getBoundingClientRect() ?? lr;
+  const left = Math.max(lr.left, sr.left);
+  const right = Math.min(lr.right, sr.right);
+  const s = laneProxyEl.style;
+  s.left = `${left}px`;
+  s.top = `${lr.top}px`;
+  s.width = `${Math.max(0, right - left)}px`;
+  s.height = `${lr.height}px`;
+}
+
+/** 取得（必要時建立）代理框元素，回傳前先同步矩形。供 buildHotkeySteps 當高亮目標。 */
+export function hotkeyLaneProxy(): HTMLElement {
+  if (!laneProxyEl) {
+    laneProxyEl = document.createElement('div');
+    laneProxyEl.className = 'tour-lane-proxy';
+    document.body.appendChild(laneProxyEl);
+  }
+  syncHotkeyLaneProxy();
+  return laneProxyEl;
+}
+
+/** 移除代理框（導覽收尾呼叫；步驟間不可移除——driver 仍持有其參照）。 */
+export function removeHotkeyLaneProxy(): void {
+  laneProxyEl?.remove();
+  laneProxyEl = null;
+}
+
+// ── 鍵帽視覺（熱鍵模式導覽用）：畫面上彈出「按了哪顆鍵」的大鍵帽 ──
+let keycapEl: HTMLElement | null = null;
+let keycapFadeTimer: number | null = null;
+function ensureKeycap(): HTMLElement {
+  if (keycapEl) return keycapEl;
+  const el = document.createElement('div');
+  el.className = 'tour-keycap';
+  document.body.appendChild(el);
+  keycapEl = el;
+  return el;
+}
+
+/** 顯示鍵帽（按下態）：固定顯示在幽靈格（下一個落點）右上角，
+ *  與「輸入會落在哪」的視覺焦點綁在一起；連續按同鍵時重觸發按壓動畫。 */
+function keycapDown(label: string): void {
+  const el = ensureKeycap();
+  if (keycapFadeTimer !== null) {
+    clearTimeout(keycapFadeTimer);
+    keycapFadeTimer = null;
+  }
+  const anchor = document.querySelector('.track__ghost-cell') ?? document.querySelector('.board__lanes');
+  if (anchor) {
+    const r = anchor.getBoundingClientRect();
+    // 右上角外側偏移；夾在視窗內避免貼近右緣時被裁切。
+    el.style.left = `${Math.min(r.right + 10, window.innerWidth - 72)}px`;
+    el.style.top = `${Math.max(r.top - 6, 48)}px`;
+  }
+  el.textContent = label;
+  el.classList.remove('tour-keycap--press');
+  void el.offsetWidth; // 強制 reflow：同鍵連按也重播按壓動畫
+  el.classList.add('tour-keycap--press');
+  el.style.opacity = '1';
+}
+
+/** 鍵帽放開：解除按下態，停留片刻再淡出（太快消失會看不清按了什麼）。 */
+function keycapUp(): void {
+  if (!keycapEl) return;
+  keycapEl.classList.remove('tour-keycap--press');
+  if (keycapFadeTimer !== null) clearTimeout(keycapFadeTimer);
+  keycapFadeTimer = window.setTimeout(() => {
+    keycapFadeTimer = null;
+    if (keycapEl) keycapEl.style.opacity = '0';
+  }, 400);
+}
+
+/** 對 body 派發合成鍵盤事件（isTrusted=false 穿過導覽攔截；帶 code 供模式比對物理鍵）。 */
+function fireModeKey(type: 'keydown' | 'keyup', code: string, key: string): void {
+  document.body.dispatchEvent(
+    new KeyboardEvent(type, { key, code, bubbles: true, cancelable: true }),
+  );
+}
+
+/** 單擊一顆模式熱鍵：keydown → 短暫按住（<300ms 判 tap）→ keyup 落子；鍵帽同步顯示。 */
+async function tapModeKey(code: string, key: string, capLabel: string, token: number): Promise<void> {
+  checkToken(token);
+  // 先派發 keydown 再定位鍵帽：切泳道鍵（1/2/3）按下即移動幽靈格，
+  // 鍵帽才能錨定在「新」落點的右上角。
+  fireModeKey('keydown', code, key);
+  await sleep(30, token); // 等 Vue 重繪（幽靈格若因切泳道移動，鍵帽才錨得到新位置）
+  keycapDown(capLabel);
+  await sleep(120, token);
+  fireModeKey('keyup', code, key);
+  keycapUp();
+}
+
+/** 長按一顆模式熱鍵：按住 holdMs（≥300ms 判 hold）再放開；鍵帽維持按下態。 */
+async function holdModeKey(code: string, key: string, capLabel: string, holdMs: number, token: number): Promise<void> {
+  checkToken(token);
+  fireModeKey('keydown', code, key); // 先 keydown 再定位鍵帽（同 tapModeKey，跟上幽靈格切泳道）
+  try {
+    await sleep(30, token); // 等 Vue 重繪幽靈格新位置
+    keycapDown(capLabel);
+    await sleep(holdMs - 30, token);
+  } finally {
+    fireModeKey('keyup', code, key); // 取消時也放開，避免模式殘留按壓計時
+    keycapUp();
+  }
+}
+
 /** 緩動捲動列表容器，使 target 逼近垂直置中（真實 scroll，不關閉下拉）。 */
 async function scrollListboxTo(container: HTMLElement, target: HTMLElement, token: number): Promise<void> {
   for (let i = 0; i < 16; i++) {
@@ -130,6 +251,27 @@ async function scrollListboxTo(container: HTMLElement, target: HTMLElement, toke
     container.scrollTop += delta * 0.35;
     await sleep(55, token);
   }
+}
+
+/** rAF 逐幀平滑捲動容器，使 target 逼近垂直置中（easeInOutQuad）。
+ *  取代 scrollListboxTo 的逐段跳動（55ms 一跳會顯得卡頓），用於設定面板等長捲動。 */
+function smoothScrollTo(container: HTMLElement, target: HTMLElement, dur: number, token: number): Promise<void> {
+  const c = container.getBoundingClientRect();
+  const t = target.getBoundingClientRect();
+  const from = container.scrollTop;
+  const to = Math.max(0, from + (t.top + t.height / 2) - (c.top + c.height / 2));
+  const t0 = performance.now();
+  return new Promise((resolve, reject) => {
+    function frame(now: number): void {
+      if (token !== runToken) return reject(new CancelledError());
+      const p = Math.min(1, (now - t0) / dur);
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      container.scrollTop = from + (to - from) * e;
+      if (p < 1) requestAnimationFrame(frame);
+      else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
 }
 
 /** 逐字輸入到行內編輯框：每字設 value 並派發 input 事件（驅動 Vue v-model 與寬度重算），
@@ -796,7 +938,138 @@ async function demoStep8(token: number): Promise<void> {
   }
 }
 
-const DEMOS: Record<number, (token: number) => Promise<void>> = {
+/**
+ * 熱鍵模式導覽 step 1：模式內輸入示範（聚焦泳道區）。
+ *   1) 若不在熱鍵輸入模式 → 主動進入（側欄收合定型後重畫遮罩）。
+ *   2) 連續按兩次 E（速度中上）。
+ *   3) 按 3 切到泳道 3 → 按 Q、R → 長按滑鼠左鍵插入「Z」。
+ *   4) 長按 2 → 切到泳道 2 並插入入場技「Intro」。
+ *   註：鍵盤走合成 keydown/keyup（isTrusted=false 穿過導覽攔截，經
+ *       useKeyboardShortcuts 分派給模式）；滑鼠直接對 .hotkey-overlay 派發。
+ */
+async function demoHotkey1(token: number): Promise<void> {
+  const mode = useHotkeyInputMode();
+  hideCursor();
+
+  // 1) 確保處於熱鍵模式且版面已定型後，才套 spotlight 並開始輸入：
+  //    - 首次進入：begin() 已進入模式並等收合定型，這裡模式為 active → 不重進，
+  //      僅重算代理框、重畫遮罩。
+  //    - 從 step 2 切回：模式已被 demoHotkey2 退出 → 這裡主動進入並等收合定型，
+  //      以乾淨狀態重建（泳道選取回第一條、按壓計時清空、幽靈格置中）。
+  if (!mode.active.value) {
+    mode.enter();
+    await sleep(500, token); // 等側欄收合過渡（0.25s）定型
+  } else {
+    await sleep(200, token); // 等 reset 後版面渲染
+  }
+  // 補選泳道：每步進場的 resetDemoBoard→clearSelection 會把 selectedLaneIndex 清為 null，
+  // 而「首次進入」路徑下 begin() 已 enter 過、demoHotkey1 不再 enter，泳道選取不會被
+  // ensureLaneSelected 補回 → insertEntry 因 lane=null 提早 return（按鍵有送出、鍵帽出現，
+  // 但沒加區塊）。這裡明確選回第一條可選泳道，涵蓋所有進入路徑（首次/重播/步驟回退）。
+  const rotationStore = useRotationStore();
+  if (rotationStore.selectedLaneIndex === null) {
+    const lanes = mode.selectableLanes.value;
+    if (lanes.length > 0) rotationStore.selectLane(lanes[0]);
+  }
+  syncHotkeyLaneProxy();
+  tourApi?.refresh();
+  await sleep(650, token); // 聚光燈穩定顯示後再開始送出按鍵
+
+  // 2) 連續按兩次 E
+  await tapModeKey('KeyE', 'e', 'E', token);
+  await sleep(650, token);
+  await tapModeKey('KeyE', 'e', 'E', token);
+  await sleep(950, token);
+
+  // 3) 切到泳道 3 → Q、R → 長按左鍵（≥300ms 判 hold → 插入「Z」）
+  await tapModeKey('Digit3', '3', '3', token);
+  await sleep(800, token);
+  await tapModeKey('KeyQ', 'q', 'Q', token);
+  await sleep(650, token);
+  await tapModeKey('KeyR', 'r', 'R', token);
+  await sleep(800, token);
+
+  const overlay = document.querySelector('.hotkey-overlay') as HTMLElement | null;
+  const ghost = centerOf('.track__ghost-cell');
+  if (overlay) {
+    // 指標移到幽靈格（下一個落點）上按住左鍵，看得到長按進度環
+    if (ghost) await cursorEnter(ghost, 650, token);
+    keycapDown(t('hotkey.mouseLeft'));
+    ensureCursor().classList.add('tour-cursor--press');
+    overlay.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, cancelable: true, view: window, button: 0,
+      clientX: ghost?.x ?? 0, clientY: ghost?.y ?? 0,
+    }));
+    try {
+      await sleep(620, token);
+    } finally {
+      // 取消時也放開：模式的按壓計時（_pressStartAt）不殘留
+      overlay.dispatchEvent(new MouseEvent('mouseup', {
+        bubbles: true, cancelable: true, view: window, button: 0,
+        clientX: ghost?.x ?? 0, clientY: ghost?.y ?? 0,
+      }));
+      ensureCursor().classList.remove('tour-cursor--press');
+      keycapUp();
+    }
+    if (ghost) clickFx(ghost);
+  }
+  await sleep(1000, token);
+  hideCursor();
+
+  // 4) 長按 2：keydown 即切到泳道 2，按滿閾值放開 → 插入入場技「Intro」
+  await holdModeKey('Digit2', '2', '2', 620, token);
+  await sleep(1100, token);
+}
+
+/**
+ * 熱鍵模式導覽 step 2：熱鍵對映表入口（全程無 spotlight）。
+ *   1) 退出熱鍵輸入模式。
+ *   2) 指標自畫面中央出現 → 移到標題列齒輪鈕懸停 → 點開設定面板（速度中上）。
+ *   3) 面板往下捲到「熱鍵對映表」列（速度中等）。
+ *   4) 點「編輯對映表」開啟編輯視窗；hint box（driver 氣泡）移到畫面左側避免遮擋。
+ */
+async function demoHotkey2(token: number): Promise<void> {
+  const mode = useHotkeyInputMode();
+  await sleep(400, token);
+
+  // 1) 退出模式（側欄還原過渡 0.25s）
+  if (mode.active.value) mode.exit();
+  await sleep(500, token);
+
+  // 2) 指標從畫面中央滑到齒輪鈕（hover 為 CSS :hover 無法合成觸發，以停頓示意）
+  const gear = document.querySelector('.settings-menu__trigger') as HTMLElement | null;
+  if (!gear) return;
+  cursorInstant(window.innerWidth / 2, window.innerHeight / 2);
+  showCursor();
+  const gp = await moveToEl(gear, 750, token);
+  if (!gp) return;
+  await sleep(500, token);
+  clickFx(gp);
+  gear.click(); // 真實開啟設定面板（Teleport 到 body）
+  await sleep(650, token);
+
+  // 3) 面板平滑捲到「熱鍵對映表」列（唯一的 link-btn 即「編輯對映表」；速度中等）
+  const panel = document.querySelector('.settings-menu__panel') as HTMLElement | null;
+  const editBtn = panel?.querySelector('.settings-menu__link-btn') as HTMLElement | null;
+  if (!panel || !editBtn) return;
+  await smoothScrollTo(panel, editBtn, 1100, token);
+  await sleep(400, token);
+
+  // 4) 點「編輯對映表」；開窗前先把 driver 氣泡釘到畫面左側，避免蓋住編輯視窗
+  const bp = await moveToEl(editBtn, 650, token);
+  if (bp) {
+    await sleep(350, token);
+    clickFx(bp);
+  }
+  document.querySelector('.driver-popover')?.classList.add('tour-popover--left');
+  // 標記編輯視窗導覽中：讓對映表視窗向右讓位，避免被左側氣泡遮到左半（見 App.vue）。
+  document.body.classList.add('tour-hk-editing');
+  editBtn.click(); // 真實開啟對映表編輯視窗（設定面板隨之自動收合）
+  await sleep(900, token);
+  hideCursor();
+}
+
+const DEMOS: Record<number | string, (token: number) => Promise<void>> = {
   1: demoStep1,
   2: demoStep2,
   3: demoStep3,
@@ -805,10 +1078,12 @@ const DEMOS: Record<number, (token: number) => Promise<void>> = {
   6: demoStep6,
   7: demoStep7,
   8: demoStep8,
+  hk1: demoHotkey1,
+  hk2: demoHotkey2,
 };
 
 /** 播放指定步驟的示範動畫（若該步無腳本則無動作）。 */
-export function runDemo(step: number): void {
+export function runDemo(step: number | string): void {
   cancelDemo();
   const demo = DEMOS[step];
   if (!demo) return;
@@ -828,6 +1103,21 @@ export function runDemo(step: number): void {
 export function cancelDemo(): void {
   runToken++;
   hideCursor();
+  // 鍵帽立即隱藏（不走 keycapUp 的停留淡出，避免殘留到下一步）。
+  if (keycapFadeTimer !== null) {
+    clearTimeout(keycapFadeTimer);
+    keycapFadeTimer = null;
+  }
+  if (keycapEl) {
+    keycapEl.classList.remove('tour-keycap--press');
+    keycapEl.style.opacity = '0';
+  }
+  // 熱鍵導覽 step 2 的殘留：氣泡靠左釘選、視窗讓位標記、設定面板、對映表編輯視窗
+  //（主導覽不會開，無副作用）。
+  document.querySelector('.driver-popover')?.classList.remove('tour-popover--left');
+  document.body.classList.remove('tour-hk-editing');
+  if (document.querySelector('.settings-menu__panel')) document.body.click(); // 外點關閉設定面板
+  useHotkeyMapDialog().close();
   // 同步收掉進行中的真實拖曳（非提交式，不改動 store），避免中途切步驟後
   // commitDrop 於下一步 resetDemoBoard 之後才落地而污染版面。
   abortDrag?.();

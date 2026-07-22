@@ -23,6 +23,8 @@ import {
   FONT_OPTIONS,
 } from '@/composables/state/useSettings'
 import { useDialog } from '@/composables/state/useDialog'
+import { useHotkeyMapDialog } from '@/composables/state/useHotkeyMapDialog'
+import { useHotkeyMap } from '@/composables/state/useHotkeyMap'
 import { useTemplateStore } from '@/stores/useTemplateStore'
 import { useGeneralBlockStore } from '@/stores/useGeneralBlockStore'
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
@@ -72,7 +74,15 @@ function stepChipFontSize(dir: number): void {
   )
 }
 const dialog = useDialog()
+const hotkeyMapDialog = useHotkeyMapDialog()
+const hotkeyMap = useHotkeyMap()
 const templateStore = useTemplateStore()
+
+// 開啟熱鍵對映表編輯視窗（順手收合設定面板，避免兩層浮層疊在一起）。
+function openHotkeyMap(): void {
+  hotkeyMapDialog.open()
+  isOpen.value = false
+}
 const generalBlockStore = useGeneralBlockStore()
 const savedTeamStore = useSavedTeamStore()
 
@@ -130,6 +140,7 @@ async function handleClearData(): Promise<void> {
   })
   if (!ok) return
   generalBlockStore.resetToDefaults()
+  hotkeyMap.resetToDefaults()
   resetExportSettings()
   templateStore.clearAllTemplates()
   savedTeamStore.clearAllTeams()
@@ -327,6 +338,34 @@ async function handleClearData(): Promise<void> {
             class="settings-menu__switch"
             role="switch"
             :aria-checked="settings.rememberExport"
+          />
+        </label>
+
+        <div class="settings-menu__divider" aria-hidden="true" />
+
+        <!-- 熱鍵對映表：開啟獨立編輯視窗（條目 CRUD 於 HotkeyMapDialog） -->
+        <div class="settings-menu__row settings-menu__row--column">
+          <span class="settings-menu__label">
+            {{ t('hotkey.settingsLabel') }}
+            <span class="settings-menu__hint">{{ t('hotkey.settingsHint') }}</span>
+          </span>
+          <button type="button" class="settings-menu__link-btn" @click="openHotkeyMap">
+            {{ t('hotkey.settingsEdit') }}
+          </button>
+        </div>
+
+        <!-- 熱鍵模式：快速連點合併 -->
+        <label class="settings-menu__row settings-menu__row--clickable">
+          <span class="settings-menu__label">
+            {{ $t('settings.tapCombine') }}
+            <span class="settings-menu__hint">{{ $t('settings.tapCombineHint') }}</span>
+          </span>
+          <input
+            v-model="settings.hotkeyTapCombine"
+            type="checkbox"
+            class="settings-menu__switch"
+            role="switch"
+            :aria-checked="settings.hotkeyTapCombine"
           />
         </label>
 
@@ -582,6 +621,30 @@ async function handleClearData(): Promise<void> {
   height: 1px;
   margin: 0.375rem 0;
   background: rgba(255, 255, 255, 0.08);
+}
+
+/* 一般動作鈕（如開啟對映表視窗）：中性 + 青色 hover，與危險鈕區隔 */
+.settings-menu__link-btn {
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(240, 244, 248, 0.85);
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.settings-menu__link-btn:hover {
+  background-color: rgba(34, 211, 238, 0.12);
+  border-color: rgba(34, 211, 238, 0.5);
+  color: rgba(34, 211, 238, 0.95);
+}
+.settings-menu__link-btn:focus-visible {
+  outline: 1px solid rgba(34, 211, 238, 0.6);
+  outline-offset: 1px;
 }
 
 /* 清除資料：紅色警示鈕 */

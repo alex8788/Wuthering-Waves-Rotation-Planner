@@ -15,10 +15,18 @@ import { ref, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
 import { useToast } from '@/composables/state/useToast'
+import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode'
 
 const store = useSavedTeamStore()
 const { t } = useI18n()
 const { showToast } = useToast()
+const hotkeyMode = useHotkeyInputMode()
+
+// 熱鍵輸入模式中點擊頂列按鈕（隊伍/匯出/設定/說明等）：視同失焦，暫停接收輸入，
+// 避免操作標題列或其開啟的浮層時，按鍵誤落入軸面。回焦（點回軸面覆蓋層或視窗 focus）即恢復。
+function pauseModeOnHeaderInteraction(): void {
+  if (hotkeyMode.active.value) hotkeyMode.pause()
+}
 
 // 當前綁定的隊伍（自由模式為 null）。
 const currentTeam = computed(() => store.currentTeam)
@@ -105,7 +113,7 @@ function cancelRename(): void {
       </div>
     </div>
 
-    <div class="app-header__actions">
+    <div class="app-header__actions" @pointerdown="pauseModeOnHeaderInteraction">
       <slot name="actions" />
     </div>
 

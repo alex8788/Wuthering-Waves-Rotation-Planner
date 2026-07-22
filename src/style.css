@@ -314,6 +314,31 @@ body.dragging-over-delete .sortable-fallback .block-chip__bg {
   }
 }
 
+/* ── 熱鍵輸入模式刪末塊的消失動畫（delete-ghost 同款）──────────────
+   狀態即刪保持連按零延遲，useHotkeyInputMode._playDeleteGhost 把區塊克隆
+   固定在原螢幕位置補播淡出/縮小。無紅紋（非危險操作），純淡出。
+   克隆脫離版面、不占欄位，故淡出可拉長（0.45s）從容消失，不影響連按手感。
+   放 @layer 之外避免 Tailwind purge（wrapper 由 JS 執行期建立）。 */
+.hotkey-delete-fade {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  animation: hotkey-delete-fade-leave 0.45s ease forwards;
+}
+
+@keyframes hotkey-delete-fade-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hotkey-delete-fade {
+    display: none;
+  }
+}
+
 /* 側邊欄區塊拖到無效區：不可放置（放開彈回）。
    架構限制：forceFallback 的浮動分身設 pointer-events:none，真實游標其實落在
    底下元素上，故 cursor:not-allowed 對分身無效 → 必須用「圖標」表達禁止。

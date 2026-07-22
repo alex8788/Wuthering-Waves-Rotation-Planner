@@ -25,6 +25,12 @@ function replayTour(): void {
   void tour.start()
 }
 
+// 重新觀看熱鍵輸入模式導覽（獨立於主導覽的 2 步教學）。
+function replayHotkeyTour(): void {
+  close()
+  void tour.startHotkeyTour()
+}
+
 const isMac = navigator.userAgent.toUpperCase().includes('MAC OS')
 const mod = isMac ? '⌘' : 'Ctrl' // ⌘ / Ctrl
 
@@ -78,6 +84,16 @@ const sections = computed<Section[]>(() => [
     items: [
       { keys: ['Tab'], descKey: 'help.toggleSidebar' },
       { keys: ['Shift', t('help.wheel')], descKey: 'help.horizontalScroll' },
+    ],
+  },
+  {
+    // 熱鍵輸入模式：模式內專屬鍵位（對映鍵插入、1/2/3・滾輪切泳道、Delete 刪末塊、Esc 退出）。
+    titleKey: 'help.secHotkey',
+    items: [
+      { keys: ['F'], descKey: 'help.hkEnter' },
+      { keys: ['1', '2', '3', '|', t('help.wheel')], descKey: 'help.hkSwitchLane' },
+      { keys: ['Delete', '|', 'Backspace'], descKey: 'help.hkDelete' },
+      { keys: ['Esc'], descKey: 'help.hkExit' },
     ],
   },
 ])
@@ -135,6 +151,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                   <path d="M15.5 3.5v3.2h-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
                 {{ t('help.replayTour') }}
+              </button>
+              <button type="button" class="help-replay" @click="replayHotkeyTour">
+                <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true">
+                  <rect x="2" y="5.5" width="16" height="9.5" rx="1.6" stroke="currentColor" stroke-width="1.4" />
+                  <path d="M5 9h1.6M8.6 9h1.6M12.2 9h1.6M6 12h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                </svg>
+                {{ t('help.replayHotkeyTour') }}
               </button>
               <a
                 class="help-github"

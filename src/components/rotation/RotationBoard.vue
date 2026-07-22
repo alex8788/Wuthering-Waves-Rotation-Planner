@@ -15,6 +15,8 @@
 
 import { computed, onMounted, nextTick, ref, watch } from 'vue'
 import Swimlane from '@/components/rotation/Swimlane.vue'
+import HotkeyModeOverlay from '@/components/rotation/HotkeyModeOverlay.vue'
+import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useRotationStore } from '@/stores/useRotationStore'
@@ -41,6 +43,9 @@ const rotationStore = useRotationStore()
 const { laneOrder } = useLaneOrder()
 const { dragState, notifyAutoScroll } = useBlockDrag()
 const history = useHistory()
+
+// 熱鍵輸入模式：面板右上角進入鈕 ＋ active 時掛 overlay（控制列/滾輪切泳道）。
+const hotkeyMode = useHotkeyInputMode()
 
 // ── 泳道顯示順序 ─────────────────────────────────────────────
 // 依 laneOrder 把 slots 重新排成「上下顯示順序」。slots 以 slotIndex 為索引，
@@ -511,6 +516,19 @@ onMounted(() => {
       />
     </div>
 
+    <!-- 熱鍵輸入模式：右上角進入鈕（模式中隱藏，退出由 overlay 控制列負責） -->
+    <button
+      v-if="!hotkeyMode.active.value"
+      type="button"
+      class="hotkey-mode-trigger"
+      :title="$t('hotkey.triggerTitle')"
+      :aria-label="$t('hotkey.triggerLabel')"
+      @click.stop="hotkeyMode.enter()"
+    >⌨ {{ $t('hotkey.triggerText') }} <kbd>F</kbd></button>
+
+    <!-- 熱鍵輸入模式覆蓋層（控制列＋滾輪切泳道；區塊插入由全域 keydown 分派） -->
+    <HotkeyModeOverlay v-if="hotkeyMode.active.value" />
+
     <!-- 框選矩形（fixed，視窗座標）-->
     <div
       v-if="marquee.active"
@@ -712,6 +730,49 @@ onMounted(() => {
   pointer-events: none;
   display: flex;
   gap: 0.375rem;
+}
+
+/* ── 熱鍵輸入模式進入鈕：第三條泳道正下方、靠左貼齊 header 區 ───
+   top 寫死＝3 × 泳道高（Swimlane 的 --lane-height: 4rem）＋間距；泳道恆為
+   三條固定高，若日後改動泳道高度須同步調整。定位在 .rotation-board（非捲動
+   內容）上 → 不隨橫向捲動移動。 */
+.hotkey-mode-trigger {
+  position: absolute;
+  top: calc(3 * 4rem + 0.6rem);
+  left: 0.75rem;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  border-radius: 4px;
+  background-color: rgba(13, 19, 32, 0.85);
+  color: rgba(34, 211, 238, 0.95);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.hotkey-mode-trigger:hover {
+  background-color: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.7);
+}
+.hotkey-mode-trigger:focus {
+  outline: none;
+}
+.hotkey-mode-trigger:focus-visible {
+  outline: 1px solid rgba(34, 211, 238, 0.6);
+  outline-offset: 1px;
+}
+.hotkey-mode-trigger kbd {
+  padding: 0 0.3em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.625rem;
+  line-height: 1.5;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 3px;
+  background: rgba(34, 211, 238, 0.1);
 }
 
 /* ── 框選矩形（marquee） ────────────────────────────────────── */
