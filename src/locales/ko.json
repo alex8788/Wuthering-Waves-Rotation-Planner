@@ -186,6 +186,8 @@
     "savedToast": "저장되었습니다",
     "createdToast": "빈 팀을 만들었습니다",
     "moreLabel": "추가 작업",
+    "dragReorder": "드래그하여 순서 변경",
+    "dragPinned": "고정된 항목은 순서를 변경할 수 없습니다",
     "pin": "고정",
     "unpin": "고정 해제",
     "delete": "삭제",

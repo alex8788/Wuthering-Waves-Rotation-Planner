@@ -9,6 +9,7 @@
 // ============================================================
 
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useDraggable } from 'vue-draggable-plus'
 import { useTeamManager } from '@/composables/state/useTeamManager'
 import { useSavedTeamStore } from '@/stores/useSavedTeamStore'
 import { useDialog } from '@/composables/state/useDialog'
@@ -159,7 +160,10 @@ async function handlePin(team: SavedTeam): Promise<void> {
 }
 
 // 以目前工作區內容覆蓋此存檔（原內容遺失，先確認）。
+// 「覆蓋當前正在編輯的隊伍」＝與上方「儲存變更」等價 → 選單中該項禁用（見 template），
+// 此處防禦性再擋一次，避免自我覆蓋。
 async function handleOverwrite(team: SavedTeam): Promise<void> {
+  if (team.id === store.currentTeamId) return
   closeMenu()
   const ok = await confirm({
     title: t('teams.overwriteTitle'),
@@ -218,8 +222,50 @@ function handleClose(): void {
   close()
 }
 
+// ── 未置頂項的自由拖曳排序（比照泳道把手；置頂項把手禁用、不可拖） ──────────────
+// 清單容器 DOM 參照：僅在有存檔時渲染（v-else），初始可能為 null。
+const listRef = ref<HTMLElement | null>(null)
+
+// SortableJS 設定（兩參數／不受管形式）：落地時先還原 DOM，再交回 store 依資料重繪，
+// 維持「單一真相＝store」的慣例（同 Swimlane 泳道拖曳），避免 v-for 與套件互搶 DOM。
+const dragOptions = computed(
+  (): Record<string, unknown> => ({
+    immediate: false,
+    handle: '.team-row__drag',
+    draggable: '.team-row',
+    // 置頂項不可作為拖曳來源（其把手另以樣式呈現禁用灰）。
+    filter: '.team-row--pinned',
+    animation: 150,
+    // 阻止未置頂項被拖入置頂區段（置頂永遠在最上）。
+    onMove: (evt: { related: HTMLElement }) =>
+      !evt.related.classList.contains('team-row--pinned'),
+    onEnd: handleReorderEnd,
+  })
+)
+
+const { start: startDraggable, destroy: destroyDraggable } = useDraggable(listRef, dragOptions)
+
+// 清單容器出現／消失時掛上／銷毀拖曳實例。
+watch(listRef, (el) => {
+  if (el) startDraggable(el)
+  else destroyDraggable()
+})
+
+/** 拖曳落地：先把 SortableJS 對 DOM 的移動還原，再由 store 依新順序重排（Vue 重繪）。 */
+function handleReorderEnd(evt: { item: HTMLElement; from: HTMLElement; oldIndex?: number; newIndex?: number }): void {
+  const { oldIndex, newIndex, item, from } = evt
+  if (oldIndex == null || newIndex == null || oldIndex === newIndex) return
+  // 還原：把被拖節點移回原位（移除後依原索引插回），讓 Vue 保持 DOM 唯一真相。
+  item.remove()
+  from.insertBefore(item, from.children[oldIndex] ?? null)
+  store.reorderTeams(oldIndex, newIndex)
+}
+
 onMounted(() => document.addEventListener('click', onDocClick))
-onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocClick)
+  destroyDraggable()
+})
 </script>
 
 <template>
@@ -307,13 +353,34 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
           <div v-if="store.sortedTeams.length === 0" class="team-dialog__empty">
             {{ $t('teams.empty') }}
           </div>
-          <ul v-else class="team-list">
+          <ul v-else ref="listRef" class="team-list">
             <li
               v-for="team in store.sortedTeams"
               :key="team.id"
               class="team-row"
+              :class="{
+                'team-row--pinned': team.pinned,
+                'team-row--editing': team.id === store.currentTeamId,
+              }"
               @click="handleLoad(team)"
             >
+              <!-- 拖曳把手：未置頂項可拖曳排序；置頂項顯示禁用灰把手（不可拖）。 -->
+              <span
+                class="team-row__drag"
+                :class="{ 'team-row__drag--disabled': team.pinned }"
+                :aria-label="team.pinned ? $t('teams.dragPinned') : $t('teams.dragReorder')"
+                :title="team.pinned ? $t('teams.dragPinned') : $t('teams.dragReorder')"
+                @click.stop
+              >
+                <svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true">
+                  <circle cx="2.5" cy="3" r="1.1" fill="currentColor" />
+                  <circle cx="7.5" cy="3" r="1.1" fill="currentColor" />
+                  <circle cx="2.5" cy="8" r="1.1" fill="currentColor" />
+                  <circle cx="7.5" cy="8" r="1.1" fill="currentColor" />
+                  <circle cx="2.5" cy="13" r="1.1" fill="currentColor" />
+                  <circle cx="7.5" cy="13" r="1.1" fill="currentColor" />
+                </svg>
+              </span>
               <div class="team-row__main">
                 <div class="team-row__name-line">
                   <span class="team-row__name">{{ team.name }}</span>
@@ -364,7 +431,13 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       role="menu"
       @click.stop
     >
-      <button type="button" class="team-menu__item" role="menuitem" @click="handleOverwrite(openTeam)">
+      <button
+        type="button"
+        class="team-menu__item"
+        role="menuitem"
+        :disabled="openTeam.id === store.currentTeamId"
+        @click="handleOverwrite(openTeam)"
+      >
         {{ $t('teams.overwrite') }}
       </button>
       <button type="button" class="team-menu__item" role="menuitem" @click="handleRename(openTeam)">
@@ -559,6 +632,37 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   background: rgba(34, 211, 238, 0.06);
   border-color: rgba(34, 211, 238, 0.3);
 }
+/* 正在編輯（＝當前綁定）的隊伍：淡金色描邊環。用 box-shadow 而非 border-color，
+   使其在 hover 改動 border-color 時仍保留（不被覆蓋）。 */
+.team-row--editing {
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.45), 0 0 8px rgba(212, 175, 55, 0.12);
+}
+.team-row--editing:hover {
+  border-color: rgba(212, 175, 55, 0.75);
+}
+/* 拖曳把手：未置頂項可抓握（grab）；置頂項顯示禁用灰、不可拖。 */
+.team-row__drag {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  align-self: stretch;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: grab;
+  transition: color 0.15s ease;
+}
+.team-row__drag:hover { color: rgba(34, 211, 238, 0.85); }
+.team-row__drag:active { cursor: grabbing; }
+.team-row__drag--disabled {
+  color: rgba(255, 255, 255, 0.16);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+/* 拖曳中的浮動分身（SortableJS 掛於清單容器）。 */
+.team-list :deep(.sortable-ghost) { opacity: 0.4; }
+.team-list :deep(.sortable-drag) { opacity: 0.95; }
 .team-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 .team-row__name-line { display: flex; align-items: center; gap: 0.35rem; }
 .team-row__pin { font-size: 0.75rem; }
@@ -649,6 +753,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 .team-menu__item:hover { background: rgba(255, 255, 255, 0.08); }
+/* 禁用項（如「覆蓋」指向當前正在編輯的隊伍＝與儲存變更等價）：淡化且不可點。 */
+.team-menu__item:disabled { opacity: 0.35; cursor: not-allowed; }
+.team-menu__item:disabled:hover { background: transparent; }
 .team-menu__item--danger { color: rgba(248, 113, 113, 0.9); }
 .team-menu__item--danger:hover { background: rgba(248, 113, 113, 0.14); color: #f87171; }
 .team-menu__divider { height: 1px; margin: 0.25rem 0.3rem; background: rgba(255, 255, 255, 0.08); }

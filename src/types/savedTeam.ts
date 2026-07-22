@@ -21,6 +21,9 @@ export interface SavedTeam {
   updatedAt: number;
   /** 是否置頂。 */
   pinned: boolean;
+  /** 未置頂項的手動排序鍵（越小越前）；未經拖曳排序的舊存檔為 undefined，
+   *  此時退回 updatedAt 新→舊排序（見 useSavedTeamStore.sortedTeams）。 */
+  order?: number;
 
   // ── 完整狀態快照 ──────────────────────────────
   /** 三角色槽（tuple 固定長度 3）。 */

@@ -186,6 +186,8 @@
     "savedToast": "Saved",
     "createdToast": "Empty team created",
     "moreLabel": "More actions",
+    "dragReorder": "Drag to reorder",
+    "dragPinned": "Pinned items can't be reordered",
     "pin": "Pin",
     "unpin": "Unpin",
     "delete": "Delete",

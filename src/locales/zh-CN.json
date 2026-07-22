@@ -186,6 +186,8 @@
     "savedToast": "已保存",
     "createdToast": "已创建空队伍",
     "moreLabel": "更多操作",
+    "dragReorder": "拖动以重新排序",
+    "dragPinned": "置顶项目无法排序",
     "pin": "置顶",
     "unpin": "取消置顶",
     "delete": "删除",

@@ -94,10 +94,20 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     }
   });
 
-  /** 顯示用排序：置頂優先，其次依 updatedAt 新→舊。 */
+  /**
+   * 顯示用排序：置頂優先（其內部依 updatedAt 新→舊）；未置頂項依手動 order 升冪，
+   * 尚無 order 的（未曾拖曳過的舊存檔）退回 updatedAt 新→舊，且排在有 order 者之後。
+   */
   const sortedTeams = computed<SavedTeam[]>(() =>
     [...teams.value].sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (a.pinned) return b.updatedAt - a.updatedAt; // 兩者皆置頂
+      // 兩者皆未置頂：有手動 order 者優先，依 order 升冪；皆無則依 updatedAt。
+      const ao = a.order;
+      const bo = b.order;
+      if (ao != null && bo != null) return ao - bo;
+      if (ao != null) return -1;
+      if (bo != null) return 1;
       return b.updatedAt - a.updatedAt;
     })
   );
@@ -170,12 +180,18 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     if (trimmed === '' || isNameTaken(trimmed)) return null;
 
     const now = Date.now();
+    // 新存檔排在未置頂清單最前（order 取當前最小值再減一）；符合「最新在前」慣例。
+    const minOrder = teams.value.reduce(
+      (m, t) => (t.order != null && t.order < m ? t.order : m),
+      0
+    );
     const team: SavedTeam = {
       id: generateUUID(),
       name: trimmed,
       createdAt: now,
       updatedAt: now,
       pinned: false,
+      order: minOrder - 1,
       ...captureState(),
     };
     teams.value = [...teams.value, team];
@@ -295,6 +311,33 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     );
   }
 
+  /**
+   * 依 sortedTeams 的顯示索引，將未置頂項從 oldIndex 拖曳到 newIndex。
+   * 只作用於未置頂區段：置頂項不參與（呼叫端 UI 已禁止拖動置頂項）。
+   * 重排後把所有未置頂項的 order 正規化為 0..n-1，確保後續排序穩定。
+   */
+  function reorderTeams(oldIndex: number, newIndex: number): void {
+    const display = sortedTeams.value;
+    const moved = display[oldIndex];
+    if (!moved || moved.pinned) return;
+    const target = display[newIndex];
+    if (target?.pinned) return; // 不允許移入置頂區
+
+    const unpinned = display.filter((t) => !t.pinned);
+    const fromU = unpinned.findIndex((t) => t.id === moved.id);
+    let toU = target ? unpinned.findIndex((t) => t.id === target.id) : unpinned.length - 1;
+    if (fromU === -1 || toU === -1 || fromU === toU) return;
+
+    const arr = [...unpinned];
+    arr.splice(fromU, 1);
+    arr.splice(toU, 0, moved);
+    // 正規化 order：未置頂項依新順序賦 0..n-1。
+    const orderMap = new Map(arr.map((t, i) => [t.id, i]));
+    teams.value = teams.value.map((t) =>
+      orderMap.has(t.id) ? { ...t, order: orderMap.get(t.id) } : t
+    );
+  }
+
   /** 改名（重名則不變更）。 */
   function renameTeam(id: string, name: string): void {
     const trimmed = name.trim();
@@ -321,5 +364,6 @@ export const useSavedTeamStore = defineStore('savedTeams', () => {
     clearAllTeams,
     togglePin,
     renameTeam,
+    reorderTeams,
   };
 });
