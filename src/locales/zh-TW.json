@@ -116,7 +116,7 @@
     "resetConfirm": "還原",
     "cancel": "取消",
     "reservedKey": "「{key}」為保留鍵，不可綁定",
-    "captureHint": "正在錄入鍵位...按任意鍵綁定，{esc} 取消",
+    "captureHint": "正在錄入鍵位...{enter} 確認，{esc} 取消",
     "settingsLabel": "熱鍵對映表",
     "settingsHint": "設定熱鍵輸入模式下的按鍵對映",
     "settingsEdit": "編輯對映表",

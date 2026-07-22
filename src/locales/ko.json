@@ -116,7 +116,7 @@
     "resetConfirm": "복원",
     "cancel": "취소",
     "reservedKey": "\"{key}\"은(는) 예약 키이므로 바인딩할 수 없습니다",
-    "captureHint": "키 기록 중… 아무 키나 눌러 바인딩, {esc} 취소",
+    "captureHint": "키 기록 중… {enter} 확인, {esc} 취소",
     "settingsLabel": "단축키 매핑표",
     "settingsHint": "단축키 입력 모드의 키 매핑 설정",
     "settingsEdit": "매핑 편집",

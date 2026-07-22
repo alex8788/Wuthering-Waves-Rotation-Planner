@@ -116,7 +116,7 @@
     "resetConfirm": "戻す",
     "cancel": "キャンセル",
     "reservedKey": "「{key}」は予約キーのため割り当てできません",
-    "captureHint": "キーを記録中…任意のキーで割り当て、{esc} でキャンセル",
+    "captureHint": "キーを記録中…{enter} で確定、{esc} でキャンセル",
     "settingsLabel": "ホットキーマップ",
     "settingsHint": "ホットキー入力モードのキー割り当てを設定",
     "settingsEdit": "マップを編集",

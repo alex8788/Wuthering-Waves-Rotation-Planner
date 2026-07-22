@@ -116,7 +116,7 @@
     "resetConfirm": "Restore",
     "cancel": "Cancel",
     "reservedKey": "\"{key}\" is a reserved key and cannot be bound",
-    "captureHint": "Recording key… press any key to bind, {esc} to cancel",
+    "captureHint": "Recording key… {enter} to confirm, {esc} to cancel",
     "settingsLabel": "Hotkey Map",
     "settingsHint": "Configure key mappings for Hotkey Input Mode",
     "settingsEdit": "Edit Map",

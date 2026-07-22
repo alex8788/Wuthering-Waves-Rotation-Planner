@@ -39,6 +39,11 @@ const { t } = useI18n()
 const capturingId = ref<string | null>(null)
 // 擷取時的即時錯誤提示（保留鍵）；切換條目或成功即清除。
 const captureError = ref<string>('')
+// 已按下、待 Enter 確認的鍵位（null＝尚未按鍵）；擷取欄先顯示它，Enter 才提交。
+const pendingHotkey = ref<string | null>(null)
+// 剛成功綁定、正在閃爍回饋的條目 id（null＝無）；動畫結束即清除。
+const flashId = ref<string | null>(null)
+let flashTimer: ReturnType<typeof setTimeout> | undefined
 
 /** 該列要顯示在擷取欄左側的紅色警語：僅「正在擷取且錄到保留鍵」時出現（類型二）。
  *  重複鍵位（類型一）不走這裡，只靠擷取欄本身的紅框樣式 + 完成鈕旁單一訊息。 */
@@ -51,6 +56,7 @@ function startCapture(id: string): void {
   if (capturingId.value !== null) stopCapture()
   capturingId.value = id
   captureError.value = ''
+  pendingHotkey.value = null
   window.addEventListener('keydown', onCaptureKeydown, { capture: true })
   window.addEventListener('click', onCaptureClick, { capture: true })
   window.addEventListener('contextmenu', onCaptureContextMenu, { capture: true })
@@ -63,9 +69,10 @@ function stopCapture(): void {
   window.removeEventListener('contextmenu', onCaptureContextMenu, { capture: true })
   capturingId.value = null
   captureError.value = ''
+  pendingHotkey.value = null
 }
 
-/** 擷取中的 keydown：讀 event.code，擋保留鍵（顯示左側警語）、其餘寫入。 */
+/** 擷取中的 keydown：讀 event.code，擋保留鍵，其餘先暫存待確認；Enter 提交、Escape 取消。 */
 function onCaptureKeydown(event: KeyboardEvent): void {
   // 擋住全域快捷鍵與瀏覽器預設（錄入期間按鍵只作錄入用途）。
   event.preventDefault()
@@ -76,32 +83,40 @@ function onCaptureKeydown(event: KeyboardEvent): void {
     stopCapture()
     return
   }
-  // 純修飾鍵單獨按下：忽略，繼續等待實體鍵。
+  // Enter：提交已暫存的鍵位（尚未按任何鍵則忽略，繼續等待）。
+  if (event.code === 'Enter' || event.code === 'NumpadEnter') {
+    if (pendingHotkey.value !== null) applyCapture(pendingHotkey.value)
+    return
+  }
+  // 純修飾鍵／保留鍵單獨按下：顯示警語，不暫存。
   if (RESERVED_CODES.has(event.code)) {
     captureError.value = t('hotkey.reservedKey', { key: formatHotkey(event.code, t) })
     return
   }
 
-  applyCapture(event.code)
+  // 暫存待確認（顯示於擷取欄，Enter 才落定）。
+  captureError.value = ''
+  pendingHotkey.value = event.code
 }
 
 /**
- * 擷取中的 click（capture-phase）：左鍵錄入 MouseLeft。
- * 用 click（手勢終端事件）而非 mousedown → 當場 stopImmediatePropagation 即不外洩,
- * 不需再「吞下一次 click」（避免誤吞使用者後續的正常點擊）。
+ * 擷取中的 click（capture-phase）：左鍵暫存 MouseLeft（待 Enter 確認）。
+ * 當場 stopImmediatePropagation 即不外洩,不需再「吞下一次 click」。
  */
 function onCaptureClick(event: MouseEvent): void {
   event.preventDefault()
   event.stopImmediatePropagation()
   if (event.button !== 0) return
-  applyCapture(MOUSE_LEFT)
+  captureError.value = ''
+  pendingHotkey.value = MOUSE_LEFT
 }
 
-/** 擷取中的 contextmenu：錄入 MouseRight 並攔下右鍵選單（右鍵不會派送 click,故在此收）。 */
+/** 擷取中的 contextmenu：暫存 MouseRight（待 Enter 確認）並攔下右鍵選單。 */
 function onCaptureContextMenu(event: MouseEvent): void {
   event.preventDefault()
   event.stopImmediatePropagation()
-  applyCapture(MOUSE_RIGHT)
+  captureError.value = ''
+  pendingHotkey.value = MOUSE_RIGHT
 }
 
 /** 把擷取到的鍵位寫入目前條目並結束擷取（重複鍵位改由設定頁就地紅字處理,不在此擋）。 */
@@ -110,6 +125,12 @@ function applyCapture(hotkey: string): void {
   if (id === null) return
   updateEntry(id, { hotkey })
   stopCapture()
+  // 綁定後與既有條目撞鍵（同鍵同型別）：改由擷取欄紅框示警，不播綠色成功閃爍。
+  if (conflictIds.value.has(id)) return
+  // 成功綁定回饋：讓該擷取欄綠色邊框閃一下（動畫較慢、只閃一次，結束後清旗標）。
+  flashId.value = id
+  if (flashTimer) clearTimeout(flashTimer)
+  flashTimer = setTimeout(() => { flashId.value = null }, 1100)
 }
 
 /** 切換 pressType（tap ↔ hold）。 */
@@ -155,7 +176,10 @@ function handleClose(): void {
   close()
 }
 
-onUnmounted(stopCapture)
+onUnmounted(() => {
+  stopCapture()
+  if (flashTimer) clearTimeout(flashTimer)
+})
 </script>
 
 <template>
@@ -244,10 +268,11 @@ onUnmounted(stopCapture)
                   :class="{
                     'hkmap-capture--active': capturingId === entry.id,
                     'hkmap-capture--conflict': conflictIds.has(entry.id),
+                    'hkmap-capture--flash': flashId === entry.id,
                   }"
                   @click="capturingId === entry.id ? stopCapture() : startCapture(entry.id)"
                 >
-                  <template v-if="capturingId === entry.id">{{ $t('hotkey.capturePrompt') }}</template>
+                  <template v-if="capturingId === entry.id">{{ pendingHotkey ? formatHotkey(pendingHotkey, t) : $t('hotkey.capturePrompt') }}</template>
                   <template v-else-if="entry.hotkey">{{ formatHotkey(entry.hotkey, t) }}</template>
                   <template v-else>{{ $t('hotkey.keyUnset') }}</template>
                 </button>
@@ -301,6 +326,7 @@ onUnmounted(stopCapture)
           <template v-if="capturingId !== null">
             <div class="hkmap-spotlight" aria-hidden="true"></div>
             <i18n-t keypath="hotkey.captureHint" tag="div" class="hkmap-spotlight__hint" aria-hidden="true" scope="global">
+              <template #enter><kbd>Enter</kbd></template>
               <template #esc><kbd>Esc</kbd></template>
             </i18n-t>
           </template>
@@ -425,19 +451,47 @@ onUnmounted(stopCapture)
   border-style: solid;
   border-color: rgba(34, 211, 238, 0.7);
 }
-.hkmap-capture--active {
-  /* 錄入中：抬到聚光燈之上（z-index 6 > .hkmap-spotlight 的 5）並發光，
-     成為畫面上唯一透出、聚焦的欄位。
-     pointer-events:none → 點作用欄本身不觸發 @click（不會關掉錄入）,點擊穿透到
-     聚光燈層,由 window capture-phase click 收成 MouseLeft；取消改按 Esc（問題 3）。 */
-  position: relative;
+/* 錄入中：脫離原列、固定置中於視窗（比照 VSCode 快捷鍵錄入的置中面板），
+   抬到聚光燈之上（z-index 6 > .hkmap-spotlight 的 5）並發光，成為畫面上唯一
+   透出、聚焦的欄位 —— 不再停在原格,故不會被底部提示膠囊蓋住。
+   pointer-events:none → 點作用欄本身不觸發 @click（不會關掉錄入）,點擊穿透到
+   聚光燈層,由 window capture-phase click 收成 MouseLeft；取消改按 Esc（問題 3）。
+   用 fixed 對齊視窗中央,與聚光燈的可視中心一致（避免對映視窗捲動時錯位）。
+   選擇器疊 .hkmap-capture.hkmap-capture--active 提升權重,覆蓋較後定義的
+   .hkmap-keywrap .hkmap-capture 的 width:100%。 */
+.hkmap-keywrap .hkmap-capture.hkmap-capture--active {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 6;
+  width: 13rem;
+  max-width: calc(100vw - 3rem);
+  padding: 0.6rem 0.9rem;
   pointer-events: none;
   border-style: solid;
   border-color: rgba(34, 211, 238, 0.9);
   color: rgba(34, 211, 238, 0.95);
   background: #0d1320;
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.55), 0 0 16px rgba(34, 211, 238, 0.45);
+  font-size: 0.82rem;
+  text-align: center;
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.55), 0 0 24px rgba(34, 211, 238, 0.45), 0 16px 48px -8px rgba(0, 0, 0, 0.7);
+}
+
+/* 成功綁定回饋：僅擷取欄邊框綠色閃一下（不動底色/文字），動畫慢、只閃一次。
+   動畫在 flashId 命中期間掛載,結束由旗標清除卸下。 */
+.hkmap-capture--flash {
+  animation: hkmap-capture-flash 1s ease;
+}
+@keyframes hkmap-capture-flash {
+  0%   { border-color: rgba(255, 255, 255, 0.28); }
+  40%  { border-color: rgba(74, 222, 128, 0.95); }
+  100% { border-color: rgba(255, 255, 255, 0.28); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hkmap-capture--flash {
+    animation: none;
+  }
 }
 
 /* 重複鍵位衝突（類型一）：擷取欄轉紅警示；文字警語不在此,改置於完成鈕左側。 */
