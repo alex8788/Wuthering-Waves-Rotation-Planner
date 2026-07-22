@@ -143,7 +143,7 @@
     "chipFontSize": "블록 텍스트 크기",
     "chipFontSizeHint": "{min}–{max} px, 블록 너비에 영향",
     "rememberExport": "내보내기 설정 기억",
-    "rememberExportHint": "마지막 파일 이름과 병합 방식 유지",
+    "rememberExportHint": "마지막 파일 형식과 병합 방식 유지",
     "clearData": "데이터 삭제",
     "clearDataHint": "일반 블록과 내보내기 설정을 초기화하고 사용자 템플릿과 저장된 팀을 삭제(되돌릴 수 없음)",
     "clearBtn": "데이터 삭제",

@@ -143,7 +143,7 @@
     "chipFontSize": "區塊文字大小",
     "chipFontSizeHint": "{min}–{max} px，影響區塊寬度",
     "rememberExport": "記住匯出設定",
-    "rememberExportHint": "保留上次的檔名與合併方式",
+    "rememberExportHint": "儲存上次的檔案格式與合併方式",
     "clearData": "清除資料",
     "clearDataHint": "還原通用區塊與匯出設定，並刪除自訂模板與隊伍存檔（無法復原）",
     "clearBtn": "清除資料",

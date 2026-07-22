@@ -9,7 +9,7 @@
 //   - historyLimit      ：復原/重做步數上限（夾在 HISTORY_LIMIT_BOUNDS）。
 //   - trackGapPx        ：主軸區塊間距（px，夾在 TRACK_GAP_BOUNDS）。
 //   - rememberExport    ：記住匯出設定；開啟時匯出視窗每次調整即存 localStorage。
-//   - exportPrefs       ：記住的匯出偏好（檔名 / 合併模式）。
+//   - exportPrefs       ：記住的匯出偏好（檔案格式含解析度 / 合併模式；不含檔名）。
 //
 // 「清除資料」不屬設定值，由 SettingsMenu 直接呼叫對應 store 的清除動作。
 // ============================================================
@@ -52,7 +52,6 @@ export type FontOptionValue = (typeof FONT_OPTIONS)[number]['value'];
 const DEFAULT_FONT: FontOptionValue = 'jetbrains-mono';
 
 interface ExportPrefs {
-  filename: string;
   mode: ExportMode;
   format: ExportFormat;
   scale: number;
@@ -94,7 +93,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   chipFontSizePx: DEFAULT_CHIP_FONT_SIZE_PX,
   appFont: DEFAULT_FONT,
   rememberExport: false,
-  exportPrefs: { filename: '', mode: 'merge', format: 'png', scale: DEFAULT_PIXEL_RATIO },
+  exportPrefs: { mode: 'merge', format: 'png', scale: DEFAULT_PIXEL_RATIO },
 };
 
 /** 夾住數值於 [min, max]（NaN 回退預設）。 */

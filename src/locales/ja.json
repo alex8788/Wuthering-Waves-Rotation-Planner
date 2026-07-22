@@ -143,7 +143,7 @@
     "chipFontSize": "ブロック文字サイズ",
     "chipFontSizeHint": "{min}–{max} px、ブロック幅に影響",
     "rememberExport": "エクスポート設定を記憶",
-    "rememberExportHint": "前回のファイル名と結合方法を保持",
+    "rememberExportHint": "前回のファイル形式と結合方法を保持",
     "clearData": "データを消去",
     "clearDataHint": "汎用ブロックとエクスポート設定を初期化し、カスタムテンプレートとチーム保存を削除（元に戻せません）",
     "clearBtn": "データを消去",

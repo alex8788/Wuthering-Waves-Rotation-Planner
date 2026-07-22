@@ -31,8 +31,8 @@ const scale = ref<number>(DEFAULT_PIXEL_RATIO)
 const scaleOptions = PNG_SCALE_OPTIONS
 
 // 視窗開啟時的預設：一律僅勾選作用中軸（軸 id 不跨 session 持久化，避免懸空）。
-// 預設檔名＝當前綁定隊伍存檔的名稱；自由模式（工作區未存檔）則留空。
-// 「記住匯出設定」開啟時，檔名沿用上次（若上次為空則退回隊伍名）。
+// 檔名一律＝當前綁定隊伍存檔的名稱（自由模式留空）；不隨「記住匯出設定」持久化。
+// 「記住匯出設定」開啟時，僅還原檔案格式（含解析度倍率）與合併模式。
 watch(
   () => state.value.open,
   (open) => {
@@ -40,14 +40,13 @@ watch(
     const active = rotationStore.activeAxis
     const defaultName = savedTeamStore.currentTeam?.name ?? ''
     selectedIds.value = new Set([active.id])
+    filename.value = defaultName
     if (settings.value.rememberExport) {
       const prefs = settings.value.exportPrefs
-      filename.value = prefs.filename || defaultName
       mode.value = prefs.mode
       format.value = prefs.format
       scale.value = prefs.scale
     } else {
-      filename.value = defaultName
       mode.value = 'merge'
       format.value = 'png'
       scale.value = DEFAULT_PIXEL_RATIO
@@ -55,11 +54,11 @@ watch(
   }
 )
 
-// 「記住匯出設定」開啟時，檔名/模式/格式/倍率每次調整即寫回設定（→ 持久化到 localStorage）。
-watch([filename, mode, format, scale], () => {
+// 「記住匯出設定」開啟時，格式/倍率/合併模式每次調整即寫回設定（→ 持久化到 localStorage）。
+// 檔名刻意排除：每次匯出檔名依當前隊伍決定，不跨 session 記住。
+watch([mode, format, scale], () => {
   if (!state.value.open || !settings.value.rememberExport) return
   settings.value.exportPrefs = {
-    filename: filename.value,
     mode: mode.value,
     format: format.value,
     scale: scale.value,
