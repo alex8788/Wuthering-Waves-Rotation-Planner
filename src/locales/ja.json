@@ -106,7 +106,7 @@
     "numpad": "テンキー {n}",
     "pressTap": "単押し",
     "pressHold": "長押し",
-    "deleteEntry": "この項目を削除",
+    "deleteEntry": "削除",
     "addEntry": "＋ 項目を追加",
     "resetDefaults": "デフォルトに戻す",
     "conflictKey": "重複したホットキーを検出しました",
@@ -219,9 +219,7 @@
     "toggleSidebar": "サイドバーを開閉",
     "horizontalScroll": "ローテーションを横スクロール",
     "secHotkey": "ホットキー入力モード",
-    "hkMappedKey": "割り当てキー",
     "hkEnter": "ホットキー入力モードに入る",
-    "hkInsert": "選択中のキャラクター軸末尾に対応ブロックを挿入",
     "hkSwitchLane": "キャラクター軸を切り替える",
     "hkDelete": "キャラクター軸の末尾ブロックを削除",
     "hkExit": "ホットキー入力モードを終了",
@@ -261,7 +259,7 @@
     "stepHk1Title": "ホットキー入力モード",
     "stepHk1Desc": "マウスやキーボードの入力だけでブロックを挿入できます。ドラッグや編集は不要です。",
     "stepHk2Title": "ホットキーマップ",
-    "stepHk2Desc": "設定メニューの「ホットキーマップ」で、各キーに対応するブロックの文字と押し方をカスタマイズできます。"
+    "stepHk2Desc": "各キーに対応するブロックの文字と押し方をカスタマイズします。"
   },
   "dialog": {
     "ok": "OK",

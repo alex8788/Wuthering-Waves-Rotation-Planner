@@ -106,7 +106,7 @@
     "numpad": "數字鍵盤 {n}",
     "pressTap": "單擊",
     "pressHold": "長按",
-    "deleteEntry": "刪除這條",
+    "deleteEntry": "刪除",
     "addEntry": "＋ 新增條目",
     "resetDefaults": "還原預設",
     "conflictKey": "偵測到重複的熱鍵鍵位",
@@ -219,9 +219,7 @@
     "toggleSidebar": "展開 / 收合側邊欄",
     "horizontalScroll": "橫向捲動輸出軸",
     "secHotkey": "熱鍵輸入模式",
-    "hkMappedKey": "對映鍵",
     "hkEnter": "進入熱鍵輸入模式",
-    "hkInsert": "於選中角色軸末端插入對應區塊",
     "hkSwitchLane": "切換角色軸",
     "hkDelete": "刪除角色軸末端的區塊",
     "hkExit": "退出熱鍵輸入模式",
@@ -261,7 +259,7 @@
     "stepHk1Title": "熱鍵輸入模式",
     "stepHk1Desc": "直接透過滑鼠或鍵盤輸入插入區塊，無需拖曳與編輯。",
     "stepHk2Title": "熱鍵對映表",
-    "stepHk2Desc": "在設定選單的「熱鍵對映表」中，自訂每個按鍵對應的區塊文字與按法。"
+    "stepHk2Desc": "自訂每個按鍵對應的區塊文字與按法。"
   },
   "dialog": {
     "ok": "確定",

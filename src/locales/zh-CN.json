@@ -106,7 +106,7 @@
     "numpad": "小键盘 {n}",
     "pressTap": "单击",
     "pressHold": "长按",
-    "deleteEntry": "删除这条",
+    "deleteEntry": "删除",
     "addEntry": "＋ 新增条目",
     "resetDefaults": "还原默认",
     "conflictKey": "检测到重复的热键键位",
@@ -219,9 +219,7 @@
     "toggleSidebar": "展开 / 收起侧边栏",
     "horizontalScroll": "横向滚动输出轴",
     "secHotkey": "热键输入模式",
-    "hkMappedKey": "映射键",
     "hkEnter": "进入热键输入模式",
-    "hkInsert": "在选中角色轴末端插入对应区块",
     "hkSwitchLane": "切换角色轴",
     "hkDelete": "删除角色轴末端的区块",
     "hkExit": "退出热键输入模式",
@@ -261,7 +259,7 @@
     "stepHk1Title": "热键输入模式",
     "stepHk1Desc": "直接通过鼠标或键盘输入插入区块，无需拖拽与编辑。",
     "stepHk2Title": "热键映射表",
-    "stepHk2Desc": "在设置菜单的「热键映射表」中，自定义每个按键对应的区块文字与按法。"
+    "stepHk2Desc": "自定义每个按键对应的区块文字与按法。"
   },
   "dialog": {
     "ok": "确定",

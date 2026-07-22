@@ -21,6 +21,7 @@ import { useSidebarCollapse } from '@/composables/state/useSidebarCollapse';
 import { useBoardScroll } from '@/composables/board/useBoardScroll';
 import { useHotkeyMap } from '@/composables/state/useHotkeyMap';
 import { getElementColor } from '@/constants/elements';
+import { prefersReducedMotion } from '@/utils/reducedMotion';
 import type { SlotIndex } from '@/types/character';
 import type { HotkeyMapEntry, PressType } from '@/types/hotkey';
 
@@ -53,6 +54,9 @@ const _enteringId = ref<string | null>(null);
 let _enterTimer: number | null = null;
 // 進場動畫時長（與 RotationBlock 的 block-enter keyframes 對齊；含保險餘裕）。
 const ENTER_ANIM_MS = 260;
+// 刪除淡出克隆的移除時限（與 .hotkey-delete-fade 動畫時長對齊 + 保險餘裕）。
+// 克隆脫離版面、不占欄位，可從容淡出，故拉長營造更柔和的消失（非拖曳刪的 180ms 急收）。
+const DELETE_GHOST_MS = 520;
 // 側欄收合的欄寬過渡時長（AppLayout transition 0.25s）：進場置中捲動須等
 // 版面定型後再算，否則以過渡中的寬度計算會偏。
 const SIDEBAR_TRANSITION_MS = 300;
@@ -241,6 +245,32 @@ export function useHotkeyInputMode() {
     }, ENTER_ANIM_MS);
   }
 
+  /**
+   * 刪除末塊的淡出分身（delete-ghost 模式，同 useBlockDrag 拖曳刪除的解法）：
+   * 狀態「即刪」保持連按零延遲，消失動畫交給脫離版面的克隆在原螢幕位置補播。
+   * 前一版讓區塊留在 entries 中播 180ms 淡出（animateThenRemove），會使快速連按
+   * 期間版面遲遲不收合、落點置中捲動反覆重算，手感遲滯——故棄用。
+   */
+  function _playDeleteGhost(entryId: string): void {
+    if (prefersReducedMotion()) return;
+    const el = document.querySelector<HTMLElement>(
+      `.rotation-block[data-entry-id="${entryId}"]`,
+    );
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const node = el.cloneNode(true) as HTMLElement;
+    // 若刪的是剛插入、進場動畫未播畢的區塊，克隆會沿用 is-entering 而重播落下動畫，
+    // 疊在淡出上形成「邊掉邊淡」的怪異畫面——移除該 class，讓克隆只單純淡出。
+    node.classList.remove('is-entering');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'hotkey-delete-fade';
+    wrapper.style.left = `${rect.left}px`;
+    wrapper.style.top = `${rect.top}px`;
+    wrapper.appendChild(node);
+    document.body.appendChild(wrapper);
+    window.setTimeout(() => wrapper.remove(), DELETE_GHOST_MS);
+  }
+
   /** 刪除選中泳道的最後一個區塊（依 slotIndex 過濾後的最後一項）。 */
   function deleteLastInLane(): void {
     const lane = rotationStore.selectedLaneIndex;
@@ -248,6 +278,9 @@ export function useHotkeyInputMode() {
     const laneEntries = rotationStore.entries.filter((e) => e.slotIndex === lane);
     const last = laneEntries[laneEntries.length - 1];
     if (last) {
+      // 先克隆再即刪：版面立即收合（下一塊馬上成為新末塊，連按不卡），
+      // 淡出由固定在原螢幕位置的克隆呈現，與版面脫鉤。
+      _playDeleteGhost(last.id);
       rotationStore.deleteBlock(last.id);
       centerGhostCell(); // 欄位收合後落點重新置中
     }

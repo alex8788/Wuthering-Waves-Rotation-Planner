@@ -91,7 +91,6 @@ const sections = computed<Section[]>(() => [
     titleKey: 'help.secHotkey',
     items: [
       { keys: ['F'], descKey: 'help.hkEnter' },
-      { keys: [t('help.hkMappedKey')], descKey: 'help.hkInsert' },
       { keys: ['1', '2', '3', '|', t('help.wheel')], descKey: 'help.hkSwitchLane' },
       { keys: ['Delete', '|', 'Backspace'], descKey: 'help.hkDelete' },
       { keys: ['Esc'], descKey: 'help.hkExit' },

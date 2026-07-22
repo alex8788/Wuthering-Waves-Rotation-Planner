@@ -106,7 +106,7 @@
     "numpad": "숫자패드 {n}",
     "pressTap": "탭",
     "pressHold": "길게",
-    "deleteEntry": "이 항목 삭제",
+    "deleteEntry": "삭제",
     "addEntry": "＋ 항목 추가",
     "resetDefaults": "기본값 복원",
     "conflictKey": "중복된 단축키가 감지되었습니다",
@@ -219,9 +219,7 @@
     "toggleSidebar": "사이드바 펼치기 / 접기",
     "horizontalScroll": "로테이션 가로 스크롤",
     "secHotkey": "단축키 입력 모드",
-    "hkMappedKey": "매핑 키",
     "hkEnter": "단축키 입력 모드 진입",
-    "hkInsert": "선택한 캐릭터 축 끝에 해당 블록 삽입",
     "hkSwitchLane": "캐릭터 축 전환",
     "hkDelete": "캐릭터 축 끝의 블록 삭제",
     "hkExit": "단축키 입력 모드 종료",
@@ -261,7 +259,7 @@
     "stepHk1Title": "단축키 입력 모드",
     "stepHk1Desc": "마우스나 키보드 입력만으로 블록을 삽입할 수 있습니다. 드래그나 편집이 필요 없습니다.",
     "stepHk2Title": "단축키 매핑표",
-    "stepHk2Desc": "설정 메뉴의 「단축키 매핑표」에서 각 키에 대응하는 블록 텍스트와 누르는 방식을 사용자 지정할 수 있습니다."
+    "stepHk2Desc": "각 키에 대응하는 블록 텍스트와 누르는 방식을 사용자 지정합니다."
   },
   "dialog": {
     "ok": "확인",

@@ -106,7 +106,7 @@
     "numpad": "Numpad {n}",
     "pressTap": "Tap",
     "pressHold": "Hold",
-    "deleteEntry": "Delete this entry",
+    "deleteEntry": "Delete",
     "addEntry": "＋ Add Entry",
     "resetDefaults": "Restore Defaults",
     "conflictKey": "Duplicate hotkey binding detected",
@@ -219,9 +219,7 @@
     "toggleSidebar": "Expand/collapse sidebar",
     "horizontalScroll": "Scroll the rotation horizontally",
     "secHotkey": "Hotkey Input Mode",
-    "hkMappedKey": "Mapped key",
     "hkEnter": "Enter Hotkey Input Mode",
-    "hkInsert": "Insert the matching block at the end of the selected character axis",
     "hkSwitchLane": "Switch the character axis",
     "hkDelete": "Delete the last block of the character axis",
     "hkExit": "Exit Hotkey Input Mode",
@@ -261,7 +259,7 @@
     "stepHk1Title": "Hotkey Input Mode",
     "stepHk1Desc": "Insert blocks directly with mouse or keyboard input — no dragging or editing needed.",
     "stepHk2Title": "Hotkey Map",
-    "stepHk2Desc": "Customize which block each key inserts, and its press type, in the Hotkey Map found in the settings menu."
+    "stepHk2Desc": "Customize the block text and press type mapped to each key."
   },
   "dialog": {
     "ok": "OK",
