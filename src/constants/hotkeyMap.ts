@@ -44,8 +44,11 @@ export const INTRO_HOTKEY_SEED: ReadonlyArray<IntroHotkeyEntry> = [
 ];
 
 /**
- * 保留鍵（禁止綁定）的 event.code 集合。
- * Escape / Digit1-3 / Delete / Backspace / Ctrl・Meta（修飾鍵本身）。
+ * 保留鍵（禁止綁定）的 event.code 集合，含：
+ *   - 模式已徵用：Escape / Digit1-3 / Delete / Backspace。
+ *   - 修飾鍵本身：Ctrl / Meta / Alt / Shift（Shift 另徵用為「Shift＋滾輪檢視」）。
+ *   - 功能鍵與系統鍵：F1-F12、Tab、CapsLock、ContextMenu、Enter、NumLock 等
+ *     （屬瀏覽器／作業系統層行為，綁為熱鍵易誤觸或被攔截）。
  * 滾輪不是 keydown 事件、無 code，於錄入 UI 另行忽略。
  */
 export const RESERVED_CODES: ReadonlySet<string> = new Set([
@@ -55,6 +58,7 @@ export const RESERVED_CODES: ReadonlySet<string> = new Set([
   'Digit3',
   'Delete',
   'Backspace',
+  // 修飾鍵
   'ControlLeft',
   'ControlRight',
   'MetaLeft',
@@ -63,6 +67,25 @@ export const RESERVED_CODES: ReadonlySet<string> = new Set([
   'AltRight',
   'ShiftLeft',
   'ShiftRight',
+  // 功能鍵 F1-F12
+  'F1',
+  'F2',
+  'F3',
+  'F4',
+  'F5',
+  'F6',
+  'F7',
+  'F8',
+  'F9',
+  'F10',
+  'F11',
+  'F12',
+  // 系統／導覽鍵
+  'Tab',
+  'CapsLock',
+  'ContextMenu',
+  'Enter',
+  'NumLock',
 ]);
 
 /** 判斷 hotkey 是否為滑鼠鍵。 */
