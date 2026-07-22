@@ -334,8 +334,11 @@ export function useHotkeyInputMode() {
     paused.value = false;
   }
 
-  // 幽靈格是否顯示長按進度環（有對映鍵正被按住）。驅動 Swimlane 徑向進度動畫。
-  const pressing = computed<boolean>(() => _pressingHotkey.value !== null);
+  // 幽靈格是否顯示長按進度環：有鍵正被按住、且該鍵有長按動作才顯示。
+  // 只綁單擊的鍵不顯示進度環（長按該鍵＝取消輸入，無進度可示，見 §3.3）。
+  const pressing = computed<boolean>(
+    () => _pressingHotkey.value !== null && hotkeyMap.hasHold(_pressingHotkey.value),
+  );
   // 長按即時預顯的 label（達閾值且有 hold 條目才非空）。驅動 Swimlane 幽靈格文字。
   const holdPreviewLabel = computed<string | null>(() => _holdPreviewLabel.value);
   // 剛以熱鍵插入的區塊 id（進場動畫用；播畢為 null）。驅動 RotationBlock 落下吸附。
