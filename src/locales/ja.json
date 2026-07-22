@@ -233,7 +233,7 @@
     "secHotkey": "ホットキー入力モード",
     "hkEnter": "ホットキー入力モードに入る",
     "hkSwitchLane": "キャラクター軸を切り替える",
-    "hkDelete": "キャラクター軸の末尾ブロックを削除",
+    "hkDelete": "タイムライン全体の末尾ブロックを削除",
     "hkExit": "ホットキー入力モードを終了",
     "replayTour": "ツアーをもう一度見る",
     "replayHotkeyTour": "ホットキー入力モードのツアー",

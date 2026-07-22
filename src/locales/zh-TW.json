@@ -233,7 +233,7 @@
     "secHotkey": "熱鍵輸入模式",
     "hkEnter": "進入熱鍵輸入模式",
     "hkSwitchLane": "切換角色軸",
-    "hkDelete": "刪除角色軸末端的區塊",
+    "hkDelete": "刪除整條時間軸最末端的區塊",
     "hkExit": "退出熱鍵輸入模式",
     "replayTour": "重新觀看導覽",
     "replayHotkeyTour": "熱鍵輸入模式導覽",

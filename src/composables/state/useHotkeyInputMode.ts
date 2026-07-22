@@ -332,13 +332,10 @@ export function useHotkeyInputMode() {
     window.setTimeout(() => wrapper.remove(), DELETE_GHOST_MS);
   }
 
-  /** 刪除選中泳道的最後一個區塊（依 slotIndex 過濾後的最後一項）。 */
-  function deleteLastInLane(): void {
+  /** 刪除全時間軸的最後一個區塊（不分泳道；節奏遊戲式「倒帶一格」，幽靈格僅為插入指示）。 */
+  function deleteLastBlock(): void {
     flushTapBuffer(); // 先結算待合併內容再刪（刪除語意以已落子的末塊為準）
-    const lane = rotationStore.selectedLaneIndex;
-    if (lane === null) return;
-    const laneEntries = rotationStore.entries.filter((e) => e.slotIndex === lane);
-    const last = laneEntries[laneEntries.length - 1];
+    const last = rotationStore.entries[rotationStore.entries.length - 1];
     if (last) {
       // 先克隆再即刪：版面立即收合（下一塊馬上成為新末塊，連按不卡），
       // 淡出由固定在原螢幕位置的克隆呈現，與版面脫鉤。
@@ -392,7 +389,7 @@ export function useHotkeyInputMode() {
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
-      deleteLastInLane();
+      deleteLastBlock();
       return;
     }
 

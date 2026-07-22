@@ -233,7 +233,7 @@
     "secHotkey": "단축키 입력 모드",
     "hkEnter": "단축키 입력 모드 진입",
     "hkSwitchLane": "캐릭터 축 전환",
-    "hkDelete": "캐릭터 축 끝의 블록 삭제",
+    "hkDelete": "전체 타임라인 맨 끝의 블록 삭제",
     "hkExit": "단축키 입력 모드 종료",
     "replayTour": "둘러보기 다시 보기",
     "replayHotkeyTour": "단축키 입력 모드 둘러보기",

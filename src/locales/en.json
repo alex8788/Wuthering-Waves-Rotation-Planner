@@ -233,7 +233,7 @@
     "secHotkey": "Hotkey Input Mode",
     "hkEnter": "Enter Hotkey Input Mode",
     "hkSwitchLane": "Switch the character axis",
-    "hkDelete": "Delete the last block of the character axis",
+    "hkDelete": "Delete the last block of the whole timeline",
     "hkExit": "Exit Hotkey Input Mode",
     "replayTour": "Replay the tour",
     "replayHotkeyTour": "Hotkey Input Mode tour",
