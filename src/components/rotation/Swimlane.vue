@@ -891,8 +891,9 @@ async function handleDeselectCharacter(): Promise<void> {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* 環淡出的同時文字淡入登場，接棒承接視覺焦點（時長與環淡出對齊）。 */
-  animation: ghost-hold-label-in 220ms ease both;
+  /* 文字快速淡入登場：ease-out 前快後慢、約半程即清晰可辨，消除「慢半拍」感；
+     環淡出（220ms）仍在背景收尾，兩者交疊自然。 */
+  animation: ghost-hold-label-in 120ms ease-out both;
 }
 @keyframes ghost-hold-label-in {
   from {
