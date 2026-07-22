@@ -125,6 +125,14 @@
   "settings": {
     "gearLabel": "設定",
     "heading": "設定",
+    "section": {
+      "appearance": "インターフェース",
+      "editing": "編集",
+      "blockDisplay": "ブロック",
+      "export": "エクスポート",
+      "hotkeys": "ホットキー",
+      "data": "データ"
+    },
     "language": "表示言語",
     "font": "表示フォント",
     "fontSystem": "システム等幅フォント",

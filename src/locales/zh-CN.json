@@ -125,6 +125,14 @@
   "settings": {
     "gearLabel": "设置",
     "heading": "设置",
+    "section": {
+      "appearance": "界面",
+      "editing": "编辑",
+      "blockDisplay": "区块",
+      "export": "导出",
+      "hotkeys": "热键",
+      "data": "数据"
+    },
     "language": "界面语言",
     "font": "界面字体",
     "fontSystem": "系统等宽字体",

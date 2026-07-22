@@ -186,201 +186,225 @@ async function handleClearData(): Promise<void> {
         >
           <div class="settings-menu__heading">{{ $t('settings.heading') }}</div>
 
-        <!-- 語言切換：選項顯示各語言母語名（不翻譯），值同步 i18n locale -->
-        <label class="settings-menu__row">
-          <span class="settings-menu__label">{{ $t('settings.language') }}</span>
-          <select v-model="settings.language" class="settings-menu__select">
-            <option v-for="loc in SUPPORTED_LOCALES" :key="loc.value" :value="loc.value">
-              {{ loc.label }}
-            </option>
-          </select>
-        </label>
+        <!-- ── 區段：外觀與語言 ── -->
+        <section class="settings-menu__section">
+          <h3 class="settings-menu__section-title">{{ $t('settings.section.appearance') }}</h3>
 
-        <!-- 介面字型：等寬字型候選（系統等寬選項名稱走 i18n，其餘為字型本名不翻譯） -->
-        <label class="settings-menu__row">
-          <span class="settings-menu__label">{{ $t('settings.font') }}</span>
-          <select v-model="settings.appFont" class="settings-menu__select">
-            <option v-for="f in FONT_OPTIONS" :key="f.value" :value="f.value">
-              {{ f.value === 'system-mono' ? $t('settings.fontSystem') : f.label }}
-            </option>
-          </select>
-        </label>
+          <!-- 語言切換：選項顯示各語言母語名（不翻譯），值同步 i18n locale -->
+          <label class="settings-menu__row">
+            <span class="settings-menu__label">{{ $t('settings.language') }}</span>
+            <select v-model="settings.language" class="settings-menu__select">
+              <option v-for="loc in SUPPORTED_LOCALES" :key="loc.value" :value="loc.value">
+                {{ loc.label }}
+              </option>
+            </select>
+          </label>
 
-        <!-- 大寫鎖定 -->
-        <label class="settings-menu__row settings-menu__row--clickable">
-          <span class="settings-menu__label">
-            {{ $t('settings.capsLock') }}
-            <span class="settings-menu__hint">{{ $t('settings.capsLockHint') }}</span>
-          </span>
-          <input
-            v-model="settings.autoUppercase"
-            type="checkbox"
-            class="settings-menu__switch"
-            role="switch"
-            :aria-checked="settings.autoUppercase"
-          />
-        </label>
+          <!-- 介面字型：等寬字型候選（系統等寬選項名稱走 i18n，其餘為字型本名不翻譯） -->
+          <label class="settings-menu__row">
+            <span class="settings-menu__label">{{ $t('settings.font') }}</span>
+            <select v-model="settings.appFont" class="settings-menu__select">
+              <option v-for="f in FONT_OPTIONS" :key="f.value" :value="f.value">
+                {{ f.value === 'system-mono' ? $t('settings.fontSystem') : f.label }}
+              </option>
+            </select>
+          </label>
 
-        <!-- 動畫效果 -->
-        <label class="settings-menu__row settings-menu__row--clickable">
-          <span class="settings-menu__label">
-            {{ $t('settings.animations') }}
-            <span class="settings-menu__hint">{{ $t('settings.animationsHint') }}</span>
-          </span>
-          <input
-            v-model="settings.animationsEnabled"
-            type="checkbox"
-            class="settings-menu__switch"
-            role="switch"
-            :aria-checked="settings.animationsEnabled"
-          />
-        </label>
-
-        <div class="settings-menu__divider" aria-hidden="true" />
-
-        <!-- 復原步數 -->
-        <label class="settings-menu__row">
-          <span class="settings-menu__label">
-            {{ $t('settings.historyLimit') }}
-            <span class="settings-menu__hint">{{ $t('settings.historyLimitHint', { min: HISTORY_LIMIT_BOUNDS.min, max: HISTORY_LIMIT_BOUNDS.max }) }}</span>
-          </span>
-          <span class="settings-menu__number-field">
-            <input
-              class="settings-menu__number"
-              type="number"
-              :min="HISTORY_LIMIT_BOUNDS.min"
-              :max="HISTORY_LIMIT_BOUNDS.max"
-              :value="settings.historyLimit"
-              @change="onHistoryInput"
-            />
-            <span class="settings-menu__stepper" aria-hidden="true">
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepHistory(1)">▲</button>
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepHistory(-1)">▼</button>
+          <!-- 動畫效果 -->
+          <label class="settings-menu__row settings-menu__row--clickable">
+            <span class="settings-menu__label">
+              {{ $t('settings.animations') }}
+              <span class="settings-menu__hint">{{ $t('settings.animationsHint') }}</span>
             </span>
-          </span>
-        </label>
-
-        <!-- 區塊間距 -->
-        <label class="settings-menu__row">
-          <span class="settings-menu__label">
-            {{ $t('settings.trackGap') }}
-            <span class="settings-menu__hint">{{ $t('settings.trackGapHint', { min: TRACK_GAP_BOUNDS.min, max: TRACK_GAP_BOUNDS.max }) }}</span>
-          </span>
-          <span class="settings-menu__number-field">
             <input
-              class="settings-menu__number"
-              type="number"
-              :min="TRACK_GAP_BOUNDS.min"
-              :max="TRACK_GAP_BOUNDS.max"
-              :value="settings.trackGapPx"
-              @change="onTrackGapInput"
+              v-model="settings.animationsEnabled"
+              type="checkbox"
+              class="settings-menu__switch"
+              role="switch"
+              :aria-checked="settings.animationsEnabled"
             />
-            <span class="settings-menu__stepper" aria-hidden="true">
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(1)">▲</button>
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(-1)">▼</button>
-            </span>
-          </span>
-        </label>
+          </label>
+        </section>
 
-        <!-- 區塊文字邊距 -->
-        <label class="settings-menu__row">
-          <span class="settings-menu__label">
-            {{ $t('settings.chipPadding') }}
-            <span class="settings-menu__hint">{{ $t('settings.chipPaddingHint', { min: CHIP_PADDING_BOUNDS.min, max: CHIP_PADDING_BOUNDS.max }) }}</span>
-          </span>
-          <span class="settings-menu__number-field">
+        <!-- ── 區段：編輯行為 ── -->
+        <section class="settings-menu__section">
+          <h3 class="settings-menu__section-title">{{ $t('settings.section.editing') }}</h3>
+
+          <!-- 大寫鎖定 -->
+          <label class="settings-menu__row settings-menu__row--clickable">
+            <span class="settings-menu__label">
+              {{ $t('settings.capsLock') }}
+              <span class="settings-menu__hint">{{ $t('settings.capsLockHint') }}</span>
+            </span>
             <input
-              class="settings-menu__number"
-              type="number"
-              :min="CHIP_PADDING_BOUNDS.min"
-              :max="CHIP_PADDING_BOUNDS.max"
-              :value="settings.chipPaddingPx"
-              @change="onChipPaddingInput"
+              v-model="settings.autoUppercase"
+              type="checkbox"
+              class="settings-menu__switch"
+              role="switch"
+              :aria-checked="settings.autoUppercase"
             />
-            <span class="settings-menu__stepper" aria-hidden="true">
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipPadding(1)">▲</button>
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipPadding(-1)">▼</button>
-            </span>
-          </span>
-        </label>
+          </label>
 
-        <!-- 區塊文字大小 -->
-        <label class="settings-menu__row">
-          <span class="settings-menu__label">
-            {{ $t('settings.chipFontSize') }}
-            <span class="settings-menu__hint">{{ $t('settings.chipFontSizeHint', { min: CHIP_FONT_SIZE_BOUNDS.min, max: CHIP_FONT_SIZE_BOUNDS.max }) }}</span>
-          </span>
-          <span class="settings-menu__number-field">
+          <!-- 復原步數 -->
+          <label class="settings-menu__row">
+            <span class="settings-menu__label">
+              {{ $t('settings.historyLimit') }}
+              <span class="settings-menu__hint">{{ $t('settings.historyLimitHint', { min: HISTORY_LIMIT_BOUNDS.min, max: HISTORY_LIMIT_BOUNDS.max }) }}</span>
+            </span>
+            <span class="settings-menu__number-field">
+              <input
+                class="settings-menu__number"
+                type="number"
+                :min="HISTORY_LIMIT_BOUNDS.min"
+                :max="HISTORY_LIMIT_BOUNDS.max"
+                :value="settings.historyLimit"
+                @change="onHistoryInput"
+              />
+              <span class="settings-menu__stepper" aria-hidden="true">
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepHistory(1)">▲</button>
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepHistory(-1)">▼</button>
+              </span>
+            </span>
+          </label>
+        </section>
+
+        <!-- ── 區段：區塊顯示 ── -->
+        <section class="settings-menu__section">
+          <h3 class="settings-menu__section-title">{{ $t('settings.section.blockDisplay') }}</h3>
+
+          <!-- 區塊間距 -->
+          <label class="settings-menu__row">
+            <span class="settings-menu__label">
+              {{ $t('settings.trackGap') }}
+              <span class="settings-menu__hint">{{ $t('settings.trackGapHint', { min: TRACK_GAP_BOUNDS.min, max: TRACK_GAP_BOUNDS.max }) }}</span>
+            </span>
+            <span class="settings-menu__number-field">
+              <input
+                class="settings-menu__number"
+                type="number"
+                :min="TRACK_GAP_BOUNDS.min"
+                :max="TRACK_GAP_BOUNDS.max"
+                :value="settings.trackGapPx"
+                @change="onTrackGapInput"
+              />
+              <span class="settings-menu__stepper" aria-hidden="true">
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(1)">▲</button>
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepTrackGap(-1)">▼</button>
+              </span>
+            </span>
+          </label>
+
+          <!-- 區塊文字邊距 -->
+          <label class="settings-menu__row">
+            <span class="settings-menu__label">
+              {{ $t('settings.chipPadding') }}
+              <span class="settings-menu__hint">{{ $t('settings.chipPaddingHint', { min: CHIP_PADDING_BOUNDS.min, max: CHIP_PADDING_BOUNDS.max }) }}</span>
+            </span>
+            <span class="settings-menu__number-field">
+              <input
+                class="settings-menu__number"
+                type="number"
+                :min="CHIP_PADDING_BOUNDS.min"
+                :max="CHIP_PADDING_BOUNDS.max"
+                :value="settings.chipPaddingPx"
+                @change="onChipPaddingInput"
+              />
+              <span class="settings-menu__stepper" aria-hidden="true">
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipPadding(1)">▲</button>
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipPadding(-1)">▼</button>
+              </span>
+            </span>
+          </label>
+
+          <!-- 區塊文字大小 -->
+          <label class="settings-menu__row">
+            <span class="settings-menu__label">
+              {{ $t('settings.chipFontSize') }}
+              <span class="settings-menu__hint">{{ $t('settings.chipFontSizeHint', { min: CHIP_FONT_SIZE_BOUNDS.min, max: CHIP_FONT_SIZE_BOUNDS.max }) }}</span>
+            </span>
+            <span class="settings-menu__number-field">
+              <input
+                class="settings-menu__number"
+                type="number"
+                :min="CHIP_FONT_SIZE_BOUNDS.min"
+                :max="CHIP_FONT_SIZE_BOUNDS.max"
+                :value="settings.chipFontSizePx"
+                @change="onChipFontSizeInput"
+              />
+              <span class="settings-menu__stepper" aria-hidden="true">
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipFontSize(1)">▲</button>
+                <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipFontSize(-1)">▼</button>
+              </span>
+            </span>
+          </label>
+        </section>
+
+        <!-- ── 區段：匯出 ── -->
+        <section class="settings-menu__section">
+          <h3 class="settings-menu__section-title">{{ $t('settings.section.export') }}</h3>
+
+          <!-- 記住匯出設定 -->
+          <label class="settings-menu__row settings-menu__row--clickable">
+            <span class="settings-menu__label">
+              {{ $t('settings.rememberExport') }}
+              <span class="settings-menu__hint">{{ $t('settings.rememberExportHint') }}</span>
+            </span>
             <input
-              class="settings-menu__number"
-              type="number"
-              :min="CHIP_FONT_SIZE_BOUNDS.min"
-              :max="CHIP_FONT_SIZE_BOUNDS.max"
-              :value="settings.chipFontSizePx"
-              @change="onChipFontSizeInput"
+              v-model="settings.rememberExport"
+              type="checkbox"
+              class="settings-menu__switch"
+              role="switch"
+              :aria-checked="settings.rememberExport"
             />
-            <span class="settings-menu__stepper" aria-hidden="true">
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipFontSize(1)">▲</button>
-              <button type="button" class="settings-menu__step" tabindex="-1" @click.prevent="stepChipFontSize(-1)">▼</button>
+          </label>
+        </section>
+
+        <!-- ── 區段：熱鍵 ── -->
+        <section class="settings-menu__section">
+          <h3 class="settings-menu__section-title">{{ $t('settings.section.hotkeys') }}</h3>
+
+          <!-- 熱鍵對映表：開啟獨立編輯視窗（條目 CRUD 於 HotkeyMapDialog） -->
+          <div class="settings-menu__row settings-menu__row--column">
+            <span class="settings-menu__label">
+              {{ t('hotkey.settingsLabel') }}
+              <span class="settings-menu__hint">{{ t('hotkey.settingsHint') }}</span>
             </span>
-          </span>
-        </label>
-
-        <!-- 記住匯出設定 -->
-        <label class="settings-menu__row settings-menu__row--clickable">
-          <span class="settings-menu__label">
-            {{ $t('settings.rememberExport') }}
-            <span class="settings-menu__hint">{{ $t('settings.rememberExportHint') }}</span>
-          </span>
-          <input
-            v-model="settings.rememberExport"
-            type="checkbox"
-            class="settings-menu__switch"
-            role="switch"
-            :aria-checked="settings.rememberExport"
-          />
-        </label>
-
-        <div class="settings-menu__divider" aria-hidden="true" />
-
-        <!-- 熱鍵對映表：開啟獨立編輯視窗（條目 CRUD 於 HotkeyMapDialog） -->
-        <div class="settings-menu__row settings-menu__row--column">
-          <span class="settings-menu__label">
-            {{ t('hotkey.settingsLabel') }}
-            <span class="settings-menu__hint">{{ t('hotkey.settingsHint') }}</span>
-          </span>
-          <button type="button" class="settings-menu__link-btn" @click="openHotkeyMap">
-            {{ t('hotkey.settingsEdit') }}
-          </button>
-        </div>
-
-        <!-- 熱鍵模式：快速連點合併 -->
-        <label class="settings-menu__row settings-menu__row--clickable">
-          <span class="settings-menu__label">
-            {{ $t('settings.tapCombine') }}
-            <span class="settings-menu__hint">{{ $t('settings.tapCombineHint') }}</span>
-          </span>
-          <input
-            v-model="settings.hotkeyTapCombine"
-            type="checkbox"
-            class="settings-menu__switch"
-            role="switch"
-            :aria-checked="settings.hotkeyTapCombine"
-          />
-        </label>
-
-        <div class="settings-menu__divider" aria-hidden="true" />
-
-        <!-- 清除資料（危險操作） -->
-        <div class="settings-menu__row settings-menu__row--column">
-          <span class="settings-menu__label">
-            {{ $t('settings.clearData') }}
-            <span class="settings-menu__hint">{{ $t('settings.clearDataHint') }}</span>
-          </span>
-          <button type="button" class="settings-menu__danger-btn" @click="handleClearData">
-            {{ $t('settings.clearBtn') }}
-          </button>
+            <button type="button" class="settings-menu__link-btn" @click="openHotkeyMap">
+              {{ t('hotkey.settingsEdit') }}
+            </button>
           </div>
+
+          <!-- 熱鍵模式：快速連點合併 -->
+          <label class="settings-menu__row settings-menu__row--clickable">
+            <span class="settings-menu__label">
+              {{ $t('settings.tapCombine') }}
+              <span class="settings-menu__hint">{{ $t('settings.tapCombineHint') }}</span>
+            </span>
+            <input
+              v-model="settings.hotkeyTapCombine"
+              type="checkbox"
+              class="settings-menu__switch"
+              role="switch"
+              :aria-checked="settings.hotkeyTapCombine"
+            />
+          </label>
+        </section>
+
+        <!-- ── 區段：資料（危險操作） ── -->
+        <section class="settings-menu__section settings-menu__section--danger">
+          <h3 class="settings-menu__section-title">{{ $t('settings.section.data') }}</h3>
+
+          <!-- 清除資料（危險操作） -->
+          <div class="settings-menu__row settings-menu__row--column">
+            <span class="settings-menu__label">
+              {{ $t('settings.clearData') }}
+              <span class="settings-menu__hint">{{ $t('settings.clearDataHint') }}</span>
+            </span>
+            <button type="button" class="settings-menu__danger-btn" @click="handleClearData">
+              {{ $t('settings.clearBtn') }}
+            </button>
+          </div>
+        </section>
         </div>
       </Transition>
     </Teleport>
@@ -460,8 +484,8 @@ async function handleClearData(): Promise<void> {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(34, 211, 238, 0.75);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #22d3ee;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.25);
   margin-bottom: 0.5rem;
 }
 
@@ -617,10 +641,51 @@ async function handleClearData(): Promise<void> {
   outline-offset: 2px;
 }
 
-.settings-menu__divider {
-  height: 1px;
-  margin: 0.375rem 0;
-  background: rgba(255, 255, 255, 0.08);
+/* ── 區段：每組設定以標題 + 上分隔線分群 ─────────────────────
+   分隔線改用漸層（中間亮、兩端淡）強化可見度，取代原先幾乎看不見的
+   純色 1px 線；第一組不畫線（緊接主標題）。 */
+.settings-menu__section {
+  padding-top: 0.5rem;
+}
+.settings-menu__section + .settings-menu__section {
+  margin-top: 0.625rem;
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.04)
+  ) 1;
+}
+
+/* 區段小標題：刻意與主 heading（亮青全大寫）拉開層級差異——
+   改用中性淺灰文字 + 左側青色短豎條當視覺記號，不搶主標題的青色，
+   形成「主標題＝青字」「區段標題＝灰字帶青記號」的清楚階層。 */
+.settings-menu__section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0 0.25rem 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.82);
+}
+.settings-menu__section-title::before {
+  content: '';
+  width: 3px;
+  height: 0.75rem;
+  border-radius: 1px;
+  background: #22d3ee;
+}
+/* 危險區段：標題文字與記號條轉紅，預告其下為破壞性操作 */
+.settings-menu__section--danger .settings-menu__section-title {
+  color: rgba(252, 165, 165, 0.9);
+}
+.settings-menu__section--danger .settings-menu__section-title::before {
+  background: #f87171;
 }
 
 /* 一般動作鈕（如開啟對映表視窗）：中性 + 青色 hover，與危險鈕區隔 */

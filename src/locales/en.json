@@ -125,6 +125,14 @@
   "settings": {
     "gearLabel": "Settings",
     "heading": "Settings",
+    "section": {
+      "appearance": "Interface",
+      "editing": "Editing",
+      "blockDisplay": "Blocks",
+      "export": "Export",
+      "hotkeys": "Hotkeys",
+      "data": "Data"
+    },
     "language": "Language",
     "font": "Font",
     "fontSystem": "System monospace",
