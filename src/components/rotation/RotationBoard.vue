@@ -17,6 +17,7 @@ import { computed, onMounted, nextTick, ref, watch } from 'vue'
 import Swimlane from '@/components/rotation/Swimlane.vue'
 import HotkeyModeOverlay from '@/components/rotation/HotkeyModeOverlay.vue'
 import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode'
+import { useGhostCellFlip } from '@/composables/board/useGhostCellFlip'
 import BlockChip from '@/components/ui/BlockChip.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useRotationStore } from '@/stores/useRotationStore'
@@ -46,6 +47,8 @@ const history = useHistory()
 
 // 熱鍵輸入模式：面板右上角進入鈕 ＋ active 時掛 overlay（控制列/滾輪切泳道）。
 const hotkeyMode = useHotkeyInputMode()
+// 幽靈格 FLIP 平滑移動：落子右移／切泳道垂直移動時從舊位置滑過去（不再瞬移）。
+useGhostCellFlip()
 
 // ── 泳道顯示順序 ─────────────────────────────────────────────
 // 依 laneOrder 把 slots 重新排成「上下顯示順序」。slots 以 slotIndex 為索引，
