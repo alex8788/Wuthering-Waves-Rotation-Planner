@@ -44,7 +44,7 @@ https://github.com/user-attachments/assets/9552c0a0-a7aa-43bf-8474-0b78d339fdd7
 
 ### Hotkey Input Mode
 
-
+https://github.com/user-attachments/assets/bbc55605-ce35-4f11-9fdd-f8f708967fae
 
 ## Highlights
 * Fully visual, drag-based editing
