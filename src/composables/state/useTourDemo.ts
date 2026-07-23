@@ -192,21 +192,8 @@ async function holdModeKey(code: string, key: string, holdMs: number, token: num
   }
 }
 
-/** 緩動捲動列表容器，使 target 逼近垂直置中（真實 scroll，不關閉下拉）。 */
-async function scrollListboxTo(container: HTMLElement, target: HTMLElement, token: number): Promise<void> {
-  for (let i = 0; i < 16; i++) {
-    checkToken(token);
-    const c = container.getBoundingClientRect();
-    const t = target.getBoundingClientRect();
-    const delta = (t.top + t.height / 2) - (c.top + c.height / 2);
-    if (Math.abs(delta) < 4) break;
-    container.scrollTop += delta * 0.35;
-    await sleep(55, token);
-  }
-}
-
 /** rAF 逐幀平滑捲動容器，使 target 逼近垂直置中（easeInOutQuad）。
- *  取代 scrollListboxTo 的逐段跳動（55ms 一跳會顯得卡頓），用於設定面板等長捲動。 */
+ *  以每幀內插取代逐段跳動（55ms 一跳會顯得卡頓），用於角色下拉、設定面板等長捲動。 */
 function smoothScrollTo(container: HTMLElement, target: HTMLElement, dur: number, token: number): Promise<void> {
   const c = container.getBoundingClientRect();
   const t = target.getBoundingClientRect();
@@ -275,7 +262,7 @@ async function demoStep1(token: number): Promise<void> {
     );
 
   let opt = findOpt();
-  if (listbox && opt) await scrollListboxTo(listbox, opt, token);
+  if (listbox && opt) await smoothScrollTo(listbox, opt, 900, token);
   opt = findOpt();
   if (opt) {
     opt.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true })); // 高亮該選項
