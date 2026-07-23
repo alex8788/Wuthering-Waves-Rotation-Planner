@@ -131,6 +131,7 @@ async function handleLoad(team: SavedTeam): Promise<void> {
 // ── 每列「⋮」More 選單（teleport popover，仿 SettingsMenu 定位＋點外關閉） ──
 const openMenuId = ref<string | null>(null)
 const menuStyle = ref<Record<string, string>>({})
+const menuEl = ref<HTMLElement | null>(null)
 
 const openTeam = computed<SavedTeam | null>(
   () => store.sortedTeams.find((t) => t.id === openMenuId.value) ?? null
@@ -143,11 +144,23 @@ function toggleMenu(team: SavedTeam, event: MouseEvent): void {
   }
   const btn = event.currentTarget as HTMLElement
   const rect = btn.getBoundingClientRect()
+  // 先以「往下展開」定位，右緣對齊按鈕。
   menuStyle.value = {
     top: `${rect.bottom + 4}px`,
     right: `${window.innerWidth - rect.right}px`,
   }
   openMenuId.value = team.id
+  // 選單渲染後量測實高：若往下會超出視窗底緣，改為往上展開（貼齊按鈕上緣）。
+  nextTick(() => {
+    const menu = menuEl.value
+    if (!menu) return
+    const menuH = menu.offsetHeight
+    const margin = 8
+    if (rect.bottom + 4 + menuH > window.innerHeight - margin) {
+      const flippedTop = Math.max(margin, rect.top - 4 - menuH)
+      menuStyle.value = { ...menuStyle.value, top: `${flippedTop}px` }
+    }
+  })
 }
 
 function closeMenu(): void {
@@ -426,6 +439,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
       v-if="openTeam"
+      ref="menuEl"
       class="team-menu"
       :style="menuStyle"
       role="menu"
