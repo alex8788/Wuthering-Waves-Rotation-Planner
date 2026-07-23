@@ -42,6 +42,7 @@ https://github.com/user-attachments/assets/9552c0a0-a7aa-43bf-8474-0b78d339fdd7
 
 ## Highlights
 * Fully visual, drag-based editing
+* Fast hotkey input
 * No installation required
 * Multi-language support
 * Built-in interactive tutorial
@@ -58,6 +59,7 @@ https://github.com/user-attachments/assets/9552c0a0-a7aa-43bf-8474-0b78d339fdd7
 - **Drag & drop**: blocks move freely, and following blocks automatically align and fill the gap
 - **Block editing**: add, delete, copy, paste, cut, and edit text inline
 - **Multi-select**: Ctrl+click, marquee selection, or select an entire character track
+- **Hotkey input mode**: map custom keys to blocks and insert them rapidly at the end of a character track like a rhythm game — supports tap/hold and mouse buttons
 - **Undo/redo**: a snapshot of every action is stored in the history
 
 ### Persistence
@@ -81,8 +83,19 @@ https://github.com/user-attachments/assets/9552c0a0-a7aa-43bf-8474-0b78d339fdd7
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` / `Ctrl+D` | Copy / cut / paste / duplicate to the right |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Shift+Z` / `Ctrl+Y` | Redo |
+| `Ctrl+S` / `Ctrl+Shift+S` | Save changes / Save as |
 | `Escape` | Clear all selection |
 | `Tab` | Toggle the sidebar |
+| `Shift`+Wheel | Scroll the rotation horizontally |
+
+### Hotkey Input Mode
+
+| Key | Action |
+| --- | --- |
+| `F` | Enter hotkey input mode |
+| `1` / `2` / `3` (or wheel) | Switch character track |
+| `Delete` / `Backspace` | Delete the block at the very end of the timeline |
+| `Escape` | Exit hotkey input mode |
 
 ## Supported Languages
 
