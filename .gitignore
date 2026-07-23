@@ -28,3 +28,14 @@ dist-ssr
 *.sw?
 # Added by code-review-graph
 .code-review-graph/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
+# TypeScript incremental build
+*.tsbuildinfo
