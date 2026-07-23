@@ -269,7 +269,7 @@
     "stepHelpTitle": "使用说明中心",
     "stepHelpDesc": "点击这里可查询快捷键或重新观看使用教程。",
     "stepHk1Title": "热键输入模式",
-    "stepHk1Desc": "直接通过鼠标或键盘输入插入区块，无需拖拽与编辑。",
+    "stepHk1Desc": "直接通过鼠标或键盘输入插入区块，无需拖拽与编辑。按<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>或滚动鼠标可切换活动角色。",
     "stepHk2Title": "热键映射表",
     "stepHk2Desc": "自定义每个按键对应的区块文字与按法。"
   },
