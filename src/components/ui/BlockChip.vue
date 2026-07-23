@@ -124,10 +124,10 @@ withDefaults(defineProps<Props>(), {
      投影採雙層：第一層 0 0 1px 貼邊硬陰影＝在亮底鑲一圈緊實暗緣使字緣跳出；
      第二層 0 1px 3px 柔光暈＝深底下維持原本的厚度浮起感。 */
   color: #ffffff;
-  -webkit-text-stroke: 1px rgba(8, 12, 24, 0.78);
+  -webkit-text-stroke: 1.25px rgba(8, 12, 24, 0.88);
   paint-order: stroke fill;
   text-shadow:
-    0 0 1px rgba(8, 12, 24, 0.85),
+    0 0 1px rgba(8, 12, 24, 0.92),
     0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
