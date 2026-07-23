@@ -269,7 +269,7 @@
     "stepHelpTitle": "使用說明中心",
     "stepHelpDesc": "點擊這裡可查詢快捷鍵或重新觀看使用教學。",
     "stepHk1Title": "熱鍵輸入模式",
-    "stepHk1Desc": "直接透過滑鼠或鍵盤輸入插入區塊，無需拖曳與編輯。",
+    "stepHk1Desc": "直接透過滑鼠或鍵盤輸入插入區塊，無需拖曳與編輯。按<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>或滾動滑鼠可切換作用中角色。",
     "stepHk2Title": "熱鍵對映表",
     "stepHk2Desc": "自訂每個按鍵對應的區塊文字與按法。"
   },

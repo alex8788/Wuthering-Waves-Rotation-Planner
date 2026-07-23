@@ -39,6 +39,7 @@ import {
   removeHotkeyLaneProxy,
 } from '@/composables/state/useTourDemo';
 import { useHotkeyInputMode } from '@/composables/state/useHotkeyInputMode';
+import { suspendPersistence, resumePersistence } from '@/composables/state/persistenceGuard';
 import { computeCenterScrollLeft } from '@/composables/board/useBoardScroll';
 import { useHotkeyMap } from '@/composables/state/useHotkeyMap';
 import type { HotkeyMapEntry, IntroHotkeyEntry } from '@/types/hotkey';
@@ -79,8 +80,15 @@ let driverObj: Driver | null = null;
 // 抑制旗標：demo 內用 driver.highlight 移動焦點時，driver 會內部觸發 onDeselected，
 // 若不抑制會誤把正在播放的 demo 取消。refocus 期間暫設 true。
 let suppressCancel = false;
-// 導覽開始前的側邊欄收合狀態；導覽期間強制展開（step2/4 需要側邊欄），結束時還原。
-let sidebarWasCollapsed = false;
+// 導覽開始前的 UI 暫態快照（側欄收合狀態 + 作用中分頁）：導覽期間會被示範強制
+// 改動（展開側欄、切到「通用」分頁），結束由 restoreUiState 還原。刻意與 store
+// 切片分開處理——這些是 UI 局部狀態，且必須在「熱鍵導覽收合側欄之前」於 begin
+// 早期擷取，時機早於延後注入的 injectDemo，故不併入 buildRestorableSlices。
+interface UiSnapshot {
+  collapsed: boolean;
+  activeTab: 'tab-general' | 'tab-custom' | null;
+}
+let uiSnapshot: UiSnapshot | null = null;
 
 /** 把 spotlight 焦點移到選擇器指向的元件，保留當前步驟氣泡（供 demo 中途換焦點）。 */
 function refocus(selector: string): void {
@@ -113,19 +121,62 @@ function refocus(selector: string): void {
   queueMicrotask(() => { suppressCancel = false; });
 }
 
-/** 導覽開始前的版面快照（結束時還原）。 */
-interface BoardSnapshot {
-  slots: CharacterSlots;
-  axes: RotationAxis[];
-  activeAxisId: string;
-  laneOrder: SlotIndex[];
-  templates: TemplateBlock[];
-  history: ReturnType<ReturnType<typeof useHistory>['snapshotStacks']>;
-  // 熱鍵導覽變體：使用者的對映表快照（示範期間暫換預設種子，結束還原）。
-  hotkeyEntries: HotkeyMapEntry[] | null;
-  introEntries: IntroHotkeyEntry[] | null;
+/**
+ * 可還原切片：導覽期間會被示範資料覆蓋、結束須原樣還原的一份狀態。
+ *   - capture()：擷取當前值（一律深拷貝，reactive-safe）。
+ *   - restore(v)：把 capture 的值指派回原處。
+ * 設計目的（Phase 2）：以「登記表」取代手工列舉的快照結構——新增任何持久化
+ * 狀態時，只要在 buildRestorableSlices 註冊一個切片，就同時被快照與還原涵蓋，
+ * 不會再發生「加了新欄位卻忘了還原」的漏接。name 供除錯與未來漂移斷言用。
+ */
+interface RestorableSlice {
+  name: string;
+  capture: () => unknown;
+  restore: (value: unknown) => void;
 }
-let snapshot: BoardSnapshot | null = null;
+
+/**
+ * 建立導覽需快照/還原的所有狀態切片（每次呼叫即時綁定當前 store 實例）。
+ * 一律「全部快照、全部還原」，不依 variant 分歧：還原成相同值是無害的 no-op，
+ * 但少了條件分支就少了漏接的可能——這正是系統化邊界的重點。
+ */
+function buildRestorableSlices(): RestorableSlice[] {
+  const rotationStore = useRotationStore();
+  const characterStore = useCharacterStore();
+  const templateStore = useTemplateStore();
+  const { laneOrder } = useLaneOrder();
+  const history = useHistory();
+  const hotkeyMap = useHotkeyMap();
+  return [
+    { name: 'characterSlots',
+      capture: () => deepClone(characterStore.slots),
+      restore: (v) => { characterStore.slots = deepClone(v as CharacterSlots); } },
+    { name: 'axes',
+      capture: () => deepClone(rotationStore.axes),
+      restore: (v) => { rotationStore.axes = deepClone(v as RotationAxis[]); } },
+    { name: 'activeAxisId',
+      capture: () => rotationStore.activeAxisId,
+      restore: (v) => { rotationStore.activeAxisId = v as string; } },
+    { name: 'laneOrder',
+      capture: () => deepClone(laneOrder.value),
+      restore: (v) => { laneOrder.value = deepClone(v as SlotIndex[]); } },
+    { name: 'templates',
+      capture: () => deepClone(templateStore.templates),
+      restore: (v) => { templateStore.templates = deepClone(v as TemplateBlock[]); } },
+    { name: 'history',
+      capture: () => history.snapshotStacks(),
+      restore: (v) => history.restoreStacks(v as ReturnType<typeof history.snapshotStacks>) },
+    { name: 'hotkeyEntries',
+      capture: () => deepClone(hotkeyMap.entries.value),
+      restore: (v) => { hotkeyMap.entries.value = deepClone(v as HotkeyMapEntry[]); } },
+    { name: 'introEntries',
+      capture: () => deepClone(hotkeyMap.introEntries.value),
+      restore: (v) => { hotkeyMap.introEntries.value = deepClone(v as IntroHotkeyEntry[]); } },
+  ];
+}
+
+/** 導覽開始前的版面快照（切片名 → capture 值；結束時還原）。 */
+let snapshot: Record<string, unknown> | null = null;
 /** 示範版面基準（供每次示範動畫重設，確保可重複播放）。 */
 let demoBaseline: { slots: CharacterSlots; axis: RotationAxis; laneOrder: SlotIndex[] } | null = null;
 
@@ -178,22 +229,14 @@ function buildDemo(): { slots: CharacterSlots; axis: RotationAxis } {
 function injectDemo(): void {
   const rotationStore = useRotationStore();
   const characterStore = useCharacterStore();
-  const templateStore = useTemplateStore();
   const { laneOrder } = useLaneOrder();
-  const hotkeyMap = useHotkeyMap();
 
-  snapshot = {
-    slots: deepClone(characterStore.slots),
-    axes: deepClone(rotationStore.axes),
-    activeAxisId: rotationStore.activeAxisId,
-    laneOrder: deepClone(laneOrder.value),
-    templates: deepClone(templateStore.templates),
-    history: useHistory().snapshotStacks(),
-    hotkeyEntries: variant === 'hotkey' ? deepClone(hotkeyMap.entries.value) : null,
-    introEntries: variant === 'hotkey' ? deepClone(hotkeyMap.introEntries.value) : null,
-  };
+  // 系統化快照：逐一擷取登記表中每個切片（新增狀態只要註冊即自動涵蓋）。
+  snapshot = {};
+  for (const slice of buildRestorableSlices()) snapshot[slice.name] = slice.capture();
+
   // 熱鍵導覽：示範按鍵（E/Q/R/左鍵長按/長按2）須與旁白一致 → 暫換預設種子表。
-  if (variant === 'hotkey') hotkeyMap.resetToDefaults();
+  if (variant === 'hotkey') useHotkeyMap().resetToDefaults();
 
   const { slots, axis } = buildDemo();
   demoBaseline = { slots: deepClone(slots), axis: deepClone(axis), laneOrder: [0, 1, 2] };
@@ -243,20 +286,13 @@ function resetDemoBoard(): void {
 function restore(): void {
   if (!snapshot) return;
   const rotationStore = useRotationStore();
-  const characterStore = useCharacterStore();
-  const templateStore = useTemplateStore();
-  const { laneOrder } = useLaneOrder();
 
-  characterStore.slots = deepClone(snapshot.slots);
-  rotationStore.axes = deepClone(snapshot.axes);
-  rotationStore.activeAxisId = snapshot.activeAxisId;
-  laneOrder.value = deepClone(snapshot.laneOrder);
-  templateStore.templates = deepClone(snapshot.templates);
-  // 熱鍵導覽變體：還原使用者自己的對映表（示範期間暫換過預設種子）。
-  if (snapshot.hotkeyEntries) useHotkeyMap().entries.value = deepClone(snapshot.hotkeyEntries);
-  if (snapshot.introEntries) useHotkeyMap().introEntries.value = deepClone(snapshot.introEntries);
-  // 還原 undo/redo 佇列，清掉示範真實動作造成的歷史污染。
-  useHistory().restoreStacks(snapshot.history);
+  // 系統化還原：逐一把登記表切片指派回原處（涵蓋角色槽/軸/泳道順序/模板/
+  // undo-redo 佇列/熱鍵對映表）。順序與 capture 一致，彼此獨立無耦合。
+  const captured = snapshot;
+  for (const slice of buildRestorableSlices()) {
+    if (slice.name in captured) slice.restore(captured[slice.name]);
+  }
   rotationStore.clearSelection();
   rotationStore.stopEditing();
   snapshot = null;
@@ -266,6 +302,51 @@ function restore(): void {
 /** 切換側邊欄分頁（步驟 2/4 進場時呼叫）。 */
 function clickTab(id: 'tab-general' | 'tab-custom'): void {
   (document.getElementById(id) as HTMLElement | null)?.click();
+}
+
+/** 擷取 UI 暫態（側欄收合 + 作用中分頁）。分頁狀態為 SidebarPanel 局部 ref，
+ *  無全域入口，改讀 DOM 的 aria-selected 判定；讀不到（側欄未渲染）則記 null。 */
+function captureUiState(): void {
+  uiSnapshot = {
+    collapsed: useSidebarCollapse().collapsed.value,
+    activeTab: document.querySelector('#tab-custom[aria-selected="true"]')
+      ? 'tab-custom'
+      : document.querySelector('#tab-general[aria-selected="true"]')
+        ? 'tab-general'
+        : null,
+  };
+}
+
+/** 還原 UI 暫態：先還原分頁（趁側欄仍展開、DOM 尚在），再還原收合狀態。
+ *  修正舊實作只重設成「通用」卻從不還原使用者原分頁的缺漏。 */
+function restoreUiState(): void {
+  if (!uiSnapshot) return;
+  if (uiSnapshot.activeTab) clickTab(uiSnapshot.activeTab);
+  useSidebarCollapse().collapsed.value = uiSnapshot.collapsed;
+  uiSnapshot = null;
+}
+
+/** 進入導覽沙盒（begin 早期呼叫）：暫停持久化 + 擷取 UI 暫態快照。
+ *  示範資料注入（injectDemo）因主/熱鍵變體時機不同，仍由 begin 各自於適當時點呼叫。 */
+function enterSandbox(): void {
+  suspendPersistence();
+  captureUiState();
+}
+
+/** 離開導覽沙盒（handleDestroyed 呼叫，idempotent）：統一收拾所有暫態並還原。
+ *  順序：DOM/模式暫態 → 還原 store 切片 → 恢復持久化 → 還原 UI 暫態。 */
+function exitSandbox(): void {
+  cancelDemo(); // 收掉示範指標、進行中拖曳、角色下拉、確認框、熱鍵導覽殘留
+  // 熱鍵導覽變體：先退出模式（清泳道選取、還原側欄由模式自理），再移除代理框。
+  if (variant === 'hotkey') {
+    useHotkeyInputMode().exit();
+    removeHotkeyLaneProxy();
+  }
+  restore(); // 還原 store 切片（角色/軸/泳道順序/模板/歷史/熱鍵對映表）
+  // 還原真值已指派回各 ref → 恢復持久化：該指派觸發的 deep watch 會於下一輪
+  // 以「真值 + 已恢復寫入」重新寫檔，localStorage 與記憶體重新一致。
+  resumePersistence();
+  restoreUiState(); // 還原側欄收合與作用中分頁
 }
 
 type PopoverSide = 'top' | 'right' | 'bottom' | 'left';
@@ -445,15 +526,8 @@ function handleDestroyed(): void {
   stopStageRing();
   setTourApi(null);
   suppressCancel = false;
-  cancelDemo(); // 也收掉熱鍵導覽的殘留（設定面板、對映表編輯視窗、氣泡釘選）
-  // 熱鍵導覽變體：先退出模式（清泳道選取、還原側欄），再還原版面與對映表。
-  if (variant === 'hotkey') {
-    useHotkeyInputMode().exit();
-    removeHotkeyLaneProxy();
-  }
-  restore();
-  // 還原導覽開始前的側邊欄收合狀態。
-  useSidebarCollapse().collapsed.value = sidebarWasCollapsed;
+  // 統一從單一入口收拾所有暫態並還原（狀態切片 + 持久化 + UI 暫態 + 模式）。
+  exitSandbox();
   isActive.value = false;
   driverObj = null;
 }
@@ -474,6 +548,11 @@ export function useSpotlightTour() {
     const { driver } = await import('driver.js');
     await import('driver.js/dist/driver.css');
 
+    // 進入導覽沙盒：暫停持久化（避免示範資料覆蓋模板庫／熱鍵對映表落地）+ 擷取
+    // UI 暫態快照（側欄收合 + 作用中分頁）。須早於任何示範注入與側欄收合，
+    // 故置於變體分支之前（尤其熱鍵變體稍後會收合側欄）。exitSandbox 時反向還原。
+    enterSandbox();
+
     // 熱鍵導覽：若使用者已在模式中（首次進入觸發路徑）先退出，
     // 讓 hk1 的示範統一走「主動進入模式」的乾淨路徑。
     if (variant === 'hotkey') useHotkeyInputMode().exit();
@@ -482,7 +561,6 @@ export function useSpotlightTour() {
     // 必須等側欄收合定型後與瞬間置中同幀完成，否則會先看到夾回/位移。
     if (variant === 'main') injectDemo();
     const sidebar = useSidebarCollapse();
-    sidebarWasCollapsed = sidebar.collapsed.value;
     if (variant === 'main') {
       // 側邊欄若原本收合，導覽期間強制展開（step2/4 需要可見的側邊欄）；結束時還原。
       sidebar.collapsed.value = false;

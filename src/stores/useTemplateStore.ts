@@ -14,6 +14,7 @@ import { deepClone } from '../utils/deepClone';
 import { showToast } from '@/composables/state/useToast';
 import { t } from '@/i18n';
 import { useSettings } from '@/composables/state/useSettings';
+import { isPersistenceSuspended } from '@/composables/state/persistenceGuard';
 
 /** LocalStorage 儲存鍵名 */
 const STORAGE_KEY = 'wuwa-rotation-templates';
@@ -41,6 +42,7 @@ export const useTemplateStore = defineStore('templates', () => {
   watch(
     templates,
     (newTemplates) => {
+      if (isPersistenceSuspended()) return; // 導覽示範期間不落地（見 persistenceGuard）
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newTemplates));
       } catch (e) {

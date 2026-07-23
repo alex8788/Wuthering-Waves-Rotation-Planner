@@ -269,7 +269,7 @@
     "stepHelpTitle": "Help center",
     "stepHelpDesc": "Click here to look up shortcuts or replay the tutorial.",
     "stepHk1Title": "Hotkey Input Mode",
-    "stepHk1Desc": "Insert blocks directly with mouse or keyboard input — no dragging or editing needed.",
+    "stepHk1Desc": "Insert blocks directly with mouse or keyboard input — no dragging or editing needed. Press<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>or scroll to switch active character.",
     "stepHk2Title": "Hotkey Map",
     "stepHk2Desc": "Customize the block text and press type mapped to each key."
   },
