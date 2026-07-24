@@ -8,7 +8,8 @@
 // 合併規則:
 //   - 以 generated 為底，overrides 依 id 做欄位級覆蓋（{ ...gen, ...override }）。
 //   - overrides 有、generated 沒有的 id → 追加末尾（允許手動新增角色）。
-//   - 順序 = generated 陣列順序（已依「屬性分組、5★ 在 4★ 前」手排）+ overrides 新增者。
+//   - 順序 = generated 陣列順序（屬性分組、5★ 在 4★ 前、組內依 encore Id 降冪＝
+//     發布新→舊，故選單各組由上到下為新到舊）+ overrides 新增者。
 //
 // 設計原則（不變）:
 //   - 顏色一律由 element 經 getElementColor 決定，資料不存主題色。

@@ -14,7 +14,7 @@
 //      下載），摘要標記⚠提醒用 scripts/add-element.mjs 補色碼。
 //   4. 下載頭像 → public/assets/characters/<id>.webp（已存在即跳過）。
 //   5. 寫 src/data/characters.generated.json（屬性分組、5★ 在 4★ 前、組內依
-//      encore Id 升冪 → 輸出穩定、git diff 乾淨）。
+//      encore Id 降冪＝發布新→舊 → 輸出穩定、git diff 乾淨）。
 //   6. 印出 diff 摘要（新增 / 變更 / 移除），供 CI 塞進 commit 訊息。
 //
 // 用法：node scripts/crawl-characters.mjs [--skip-avatars]
@@ -243,12 +243,13 @@ async function main() {
     process.exit(1);
   }
 
-  // 5. 穩定排序：屬性順序（舊檔序＋新屬性在後）→ 5★ 前 4★ 後 → encore Id 升冪
+  // 5. 穩定排序：屬性順序（舊檔序＋新屬性在後）→ 5★ 前 4★ 後 →
+  //    encore Id 降冪（新角色在前，等同「發布日期新→舊」；選單組內由上到下即新到舊）。
   characters.sort(
     (a, b) =>
       elementOrder.indexOf(a.element) - elementOrder.indexOf(b.element) ||
       b.rarity - a.rarity ||
-      a.encoreId - b.encoreId,
+      b.encoreId - a.encoreId,
   );
   const output = characters.map(({ encoreId, ...c }) => c);
 

@@ -39,3 +39,6 @@ dist-ssr
 
 # TypeScript incremental build
 *.tsbuildinfo
+
+# 專案推廣資產
+推廣素材
