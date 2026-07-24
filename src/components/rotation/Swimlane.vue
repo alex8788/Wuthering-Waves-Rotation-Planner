@@ -79,17 +79,10 @@ const hotkeyMode = useHotkeyInputMode()
 const showGhostCell = computed<boolean>(
   () => hotkeyMode.active.value && rotationStore.selectedLaneIndex === props.slotIndex,
 )
-// 幽靈格右側外置預顯文字（R3）：連點合併累積文字優先，其次長按預顯，最後單擊即時預顯。
-// 合併緩衝擺第一：緩衝非空時按壓中一律顯示「已提交的緩衝」，放開才把這一按（tap／hold）
-// 串上去 → tap 與 hold 觀感一致（避免長按達閾值時 hold 預顯蓋掉已累積的緩衝而畫面跳動）。
-// 緩衝為空時，長按預顯仍會顯示單塊 hold label（tapCombineLabel 為 null 自然落到它）。
+// 幽靈格右側外置預顯文字（R3）：由 useHotkeyInputMode 統一計算——「已落子待合併緩衝」
+// 與「目前按著各鍵的即時預顯」合併後依按下序號排序串接（先按先排、後按不蓋先按未放開者）。
 // 外置（絕對定位、不佔 grid 欄寬）讓幽靈格保持固定正方 → 置中釘點不受文字長度影響。
-const ghostPreviewText = computed<string | null>(
-  () =>
-    hotkeyMode.tapCombineLabel.value ??
-    hotkeyMode.holdPreviewLabel.value ??
-    hotkeyMode.tapPreviewLabel.value,
-)
+const ghostPreviewText = computed<string | null>(() => hotkeyMode.ghostPreviewText.value)
 
 // 本泳道統一顏色＝角色屬性色（同屬性 header 色條/區塊顏色完全一致）。未選角給中性色。
 const laneColor = computed<string>(() => getElementColor(props.character?.element ?? null))
@@ -502,8 +495,7 @@ async function handleDeselectCharacter(): Promise<void> {
               class="track__ghost-cell"
               :class="{
                 'track__ghost-cell--pressing': hotkeyMode.pressing.value,
-                'track__ghost-cell--hold': hotkeyMode.holdPreviewLabel.value !== null,
-                'track__ghost-cell--combine': hotkeyMode.tapCombineLabel.value !== null,
+                'track__ghost-cell--combine': hotkeyMode.previewActive.value,
               }"
               :style="{ gridColumn: String(addButtonColumn + 1) }"
               aria-hidden="true"

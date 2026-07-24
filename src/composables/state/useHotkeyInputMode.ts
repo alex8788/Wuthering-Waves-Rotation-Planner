@@ -41,35 +41,38 @@ const HOLD_THRESHOLD_MS = 300;
 // 合併時間窗：每次 tap 落子（或新按壓開始）後重新起算；期間無新輸入才把
 // 緩衝內容「直接串接」成單一區塊落下（落子最多延遲此毫秒數）。調整手感改這裡。
 const TAP_COMBINE_WINDOW_MS = 200;
-// 待合併的 tap label 緩衝（依輸入順序；空陣列＝無待合併內容）。
-// 響應式：驅動 Swimlane 幽靈格的合併預顯文字。
-const _tapBufferLabels = ref<string[]>([]);
+// 已落子、待合併結算的緩衝：每筆帶「按下序號 seq」，一律依 seq（＝按下先後）排序落點。
+// 用 seq 而非放開順序，修正「先按住的鍵晚放開時，順序被後按的鍵插到前面」——
+// 例先按住 E 再快速點左鍵，左鍵按放極短會先放開先落 → 舊版得 AE；改依 seq 恆為 EA。
+// 響應式：與 _heldPreview 合併後驅動 Swimlane 幽靈格預顯文字。
+const _tapBuffer = ref<Array<{ seq: number; label: string }>>([]);
 // 合併結算計時器 id（每次 tap／起按重新起算；到期即結算落子）。
 let _tapCombineTimer: number | null = null;
-// 進行中的按壓：鍵位（event.code 或 MouseLeft/Right）→ 起按時刻（performance.now）。
+// 全域遞增的按下序號來源：每次新按壓（keydown／mousedown）取一枚，作為落點與預顯排序鍵。
+let _pressSeqCounter = 0;
+// 進行中的按壓：鍵位（event.code 或 MouseLeft/Right）→ { 起按時刻, 按下序號 }。
 // 模組層級共用：鍵盤 keydown/keyup 走 useKeyboardShortcuts、滑鼠走 overlay，
 // 兩路各自 useHotkeyInputMode() 但共享此表，落子一律在 keyup/mouseup 判型別後。
-const _pressStartAt = new Map<string, number>();
+const _pressStartAt = new Map<string, { at: number; seq: number }>();
 // 已於「達長按閾值時」把 hold label 入緩衝、待放開的鍵位（快速連點合併開啟時）。
 // 長按一達閾值即入緩衝（依按壓順序落點），放開時 endPress 據此不重複入緩衝、僅起靜默窗。
 // 用 Set（非單一 ref）以容忍同時按住多鍵（鍵盤＋滑鼠）各自越閾值。
 const _holdCommitted = new Set<string>();
-// 目前正被按住、且有對映的鍵位（同時只驅動一枚幽靈格長按進度動畫）。
+// 目前正被按住、且有對映的鍵位（最新一枚驅動幽靈格長按進度環）。
 // 為 null＝無按壓（幽靈格顯示鍵盤圖標）；非 null＝按壓中（顯示徑向進度環，見 §3.3 Stage 3-2）。
 const _pressingHotkey = ref<string | null>(null);
-// 長按即時預顯（§3.3）：按住超過閾值且該鍵有 hold 條目時，填入其 label，
-// 讓使用者在放開前就知道會落哪一塊。為 null＝未達閾值或該鍵無 hold 條目。
-const _holdPreviewLabel = ref<string | null>(null);
-// 單擊即時預顯：起按瞬間顯示該鍵 tap 條目的 label（放開落子前就知道會落哪一塊）。
-// 與合併緩衝預顯互補：關閉快速連點合併時落子不經緩衝，這是唯一的預顯來源。
-// 達長按閾值即清（tap 窗已過：有 hold 條目換 hold 預顯；tap-only 鍵長按＝取消，無可預顯）。
-const _tapPreviewLabel = ref<string | null>(null);
+// 目前按著、尚未放開之「各鍵」的即時預顯：每筆帶按下序號 seq 與預測 label。
+// isHold＝是否已達長按閾值（僅關閉合併時用：決定顯示 hold label 與是否高亮）。
+// 改為同時保留所有按著的鍵（非舊版單一 label）：後按的鍵不再蓋掉先按且未放開的鍵，
+// 消除「E→Q 中途只閃 Q」的預顯抖動；與緩衝合併後一律依 seq 排序顯示。
+const _heldPreview = ref<Array<{ seq: number; label: string; isHold: boolean }>>([]);
 // 單擊落子後預顯續留時間：與合併緩衝窗同值，讓「關閉快速連點合併」時的淡入淡出
 // 與「合併」路徑一致——快速一擊的按壓極短（數十毫秒），若隨放開即清，120ms 淡入
 // 來不及完成就轉淡出，只會閃一下；續留此毫秒數再淡出，預顯才會完整呈現。
 const TAP_PREVIEW_LINGER_MS = TAP_COMBINE_WINDOW_MS;
-// 單擊落子後續留計時器 id（到期清 _tapPreviewLabel；新按壓／暫停／退出時提前清）。
-let _tapPreviewLingerTimer: number | null = null;
+// 落子後續留的預顯 label 與其計時器（關閉合併時用；到期清空，新按壓／暫停／退出提前清）。
+const _lingerLabel = ref<string | null>(null);
+let _lingerTimer: number | null = null;
 // 達閾值計時器 id（跨鍵盤／滑鼠共用單一計時器；起按設、放開／暫停／退出清）。
 let _holdTimer: number | null = null;
 // 刪除訊號（遞增計數）：每次熱鍵刪除 +1，驅動垂直焦點框直柱閃紅一次
@@ -181,7 +184,7 @@ export function useHotkeyInputMode() {
     _pressStartAt.clear(); // 清掉未放開的按壓，避免下次進入誤判
     _holdCommitted.clear(); // 清掉待放開的已入緩衝長按標記
     _pressingHotkey.value = null;
-    _clearHoldPreview();
+    _clearAllPreview();
     rotationStore.selectLane(null);
     sidebarCollapse.collapsed.value = _sidebarWasCollapsed;
   }
@@ -239,9 +242,9 @@ export function useHotkeyInputMode() {
       clearTimeout(_tapCombineTimer);
       _tapCombineTimer = null;
     }
-    if (_tapBufferLabels.value.length === 0) return;
-    const combined = _tapBufferLabels.value.join('');
-    _tapBufferLabels.value = [];
+    if (_tapBuffer.value.length === 0) return;
+    const combined = _tapBuffer.value.map((e) => e.label).join('');
+    _tapBuffer.value = [];
     insertLabel(combined);
   }
 
@@ -254,20 +257,45 @@ export function useHotkeyInputMode() {
     }, TAP_COMBINE_WINDOW_MS);
   }
 
-  /** 把一段 label 追加進合併緩衝（只入緩衝、不動計時器）；幽靈格同步預顯累積文字。 */
-  function _appendTapLabel(label: string): void {
-    _tapBufferLabels.value = [..._tapBufferLabels.value, label];
-    // 幽靈格變寬的跟隨由 useGhostConveyor 監聽預顯文字觸發。
+  /**
+   * 依「按下序號 seq」把一筆 label 插入合併緩衝（維持緩衝恆為按下先後排序）。
+   * 從尾端往前找第一個 seq 不大於本筆者插在其後 → 後放開但先按下的鍵仍排在前面。
+   * 只入緩衝、不動計時器；幽靈格變寬的跟隨由 useGhostConveyor 監聽預顯文字觸發。
+   */
+  function _insertBuffer(seq: number, label: string): void {
+    const arr = [..._tapBuffer.value];
+    let i = arr.length;
+    while (i > 0 && arr[i - 1].seq > seq) i--;
+    arr.splice(i, 0, { seq, label });
+    _tapBuffer.value = arr;
   }
 
-  /** 把一次 tap 排入合併緩衝並重新計時（放開時的一般入緩衝路徑）。 */
-  function bufferTap(label: string): void {
-    _appendTapLabel(label);
-    _restartTapCombineTimer();
+  /** 把一鍵的即時預顯加入 held 清單（tap-only／hold-only／intro 解析後可能無 label 則不加）。 */
+  function _addHeld(seq: number, label: string): void {
+    _heldPreview.value = [..._heldPreview.value, { seq, label, isHold: false }];
+  }
+
+  /** 局部更新 held 清單中某 seq 的預顯（達閾值時把 label 換 hold、標記 isHold）。 */
+  function _updateHeld(seq: number, patch: Partial<{ label: string; isHold: boolean }>): void {
+    _heldPreview.value = _heldPreview.value.map((e) => (e.seq === seq ? { ...e, ...patch } : e));
+  }
+
+  /** 移除 held 清單中某 seq 的預顯（放開／達閾值移交緩衝／取消時）。 */
+  function _removeHeld(seq: number): void {
+    _heldPreview.value = _heldPreview.value.filter((e) => e.seq !== seq);
+  }
+
+  /** 清掉落子後的續留預顯（新按壓／暫停／退出時）。 */
+  function _clearLinger(): void {
+    if (_lingerTimer !== null) {
+      clearTimeout(_lingerTimer);
+      _lingerTimer = null;
+    }
+    _lingerLabel.value = null;
   }
 
   /**
-   * 起按：記錄該鍵位的起按時刻（keydown／mousedown 共用）。
+   * 起按：記錄該鍵位的起按時刻與按下序號（keydown／mousedown 共用）。
    * 回 true＝此鍵位有對映（呼叫端據此 preventDefault）。暫停中或無對映不記。
    * 已在按住（含作業系統自動重複）則不覆蓋起按時刻。
    */
@@ -275,7 +303,8 @@ export function useHotkeyInputMode() {
     if (paused.value) return false;
     if (!hotkeyMap.hasHotkey(hotkey)) return false;
     if (!_pressStartAt.has(hotkey)) {
-      _pressStartAt.set(hotkey, performance.now());
+      const seq = _pressSeqCounter++;
+      _pressStartAt.set(hotkey, { at: performance.now(), seq });
       // 按壓進行中凍結合併結算（同 OS 雙擊判定：分組只看「放開後的靜默間隔」，
       // 按壓多久都不切分）。清掉倒數計時器、暫停結算；放開時 endPress 再依 tap／hold
       // 重啟計時或結算。若不凍結，單次按壓時長落在合併窗（TAP_COMBINE_WINDOW_MS）~長按閾值（HOLD_THRESHOLD_MS）之間
@@ -284,13 +313,15 @@ export function useHotkeyInputMode() {
         clearTimeout(_tapCombineTimer);
         _tapCombineTimer = null;
       }
-      // 新一輪按壓起始：驅動幽靈格徑向進度環從 0 開始填（作業系統自動重複不覆蓋）。
+      // 新一輪按壓起始：清掉上一次落子的續留預顯（改由本鍵預顯接手），
+      // 並讓最新鍵驅動幽靈格徑向進度環從 0 開始填（作業系統自動重複不覆蓋）。
+      _clearLinger();
       _pressingHotkey.value = hotkey;
-      _scheduleHoldPreview(hotkey);
-      // 單擊即時預顯：起按就顯示 tap 條目 label（hold-only 鍵與 Digit 入場技解析為 null 不顯示）。
-      // 須在 _scheduleHoldPreview 之後設（其開頭的 _clearHoldPreview 會連同本值一起清）。
+      _scheduleHoldPreview(hotkey, seq);
+      // 單擊即時預顯：起按就把 tap 條目 label 加入 held 清單（hold-only 鍵與 Digit 入場技
+      // 解析為 null 則不加，無可預顯）。同時按多鍵時各自保留，依 seq 併排顯示。
       const tapEntry = hotkeyMap.resolveByCodeAndPress(hotkey, 'tap');
-      _tapPreviewLabel.value = tapEntry ? tapEntry.label : null;
+      if (tapEntry) _addHeld(seq, tapEntry.label);
     }
     return true;
   }
@@ -303,52 +334,58 @@ export function useHotkeyInputMode() {
    *     所見即所得。按住期間不起靜默窗（比照 beginPress 凍結），放開由 endPress 起窗。
    *   - 關閉合併：僅顯示長按即時預顯，實際落子仍於放開時 insertLabel。
    */
-  function _scheduleHoldPreview(hotkey: string): void {
-    _clearHoldPreview();
+  function _scheduleHoldPreview(hotkey: string, seq: number): void {
+    _clearHoldTimer();
     _holdTimer = window.setTimeout(() => {
       _holdTimer = null;
       if (_pressingHotkey.value !== hotkey) return; // 已放開／換鍵
-      // 達閾值＝tap 窗已過：清掉單擊預顯（tap-only 鍵長按＝取消輸入，放開不落子）。
-      _tapPreviewLabel.value = null;
-      // 僅在「真的有 hold 條目」時處理（resolveByCodeAndPress('hold') 對 tap-only 鍵回 null）。
+      // 達閾值＝tap 窗已過：僅在「真的有 hold 條目」時處理
+      //（resolveByCodeAndPress('hold') 對 tap-only 鍵回 null）。
       const entry = hotkeyMap.resolveByCodeAndPress(hotkey, 'hold');
-      if (!entry || entry.pressType !== 'hold' || entry.label.trim() === '') return;
+      if (!entry || entry.pressType !== 'hold' || entry.label.trim() === '') {
+        // tap-only 鍵長按＝取消輸入（放開不落子）：移除其單擊即時預顯。
+        _removeHeld(seq);
+        return;
+      }
       if (settings.value.hotkeyTapCombine) {
-        // 達閾值即入緩衝；標記待放開，endPress 據此不重複入緩衝。預顯改由 tapCombineLabel
-        // 承接（已含此 hold label），故不另設 _holdPreviewLabel。
-        _appendTapLabel(entry.label);
+        // 達閾值即依 seq 入緩衝；held 預顯移交緩衝、標記待放開，endPress 據此不重複入。
+        _removeHeld(seq);
+        _insertBuffer(seq, entry.label);
         _holdCommitted.add(hotkey);
       } else {
-        _holdPreviewLabel.value = entry.label;
+        // 關閉合併：把此鍵的 held 預顯換成 hold label 並標記已達閾值（觸發幽靈格高亮）。
+        _updateHeld(seq, { label: entry.label, isHold: true });
       }
     }, HOLD_THRESHOLD_MS);
   }
 
-  /** 清掉按壓預顯（長按計時器＋長按/單擊 label）。放開／暫停／退出／換鍵時呼叫。 */
-  function _clearHoldPreview(): void {
+  /** 只清長按辨識計時器（放開／換鍵時；不動 held／緩衝預顯內容）。 */
+  function _clearHoldTimer(): void {
     if (_holdTimer !== null) {
       clearTimeout(_holdTimer);
       _holdTimer = null;
     }
-    _holdPreviewLabel.value = null;
-    _tapPreviewLabel.value = null;
-    if (_tapPreviewLingerTimer !== null) {
-      clearTimeout(_tapPreviewLingerTimer);
-      _tapPreviewLingerTimer = null;
-    }
+  }
+
+  /** 全清按壓相關預顯狀態（暫停／退出時）：長按計時器＋held 清單＋落子續留。 */
+  function _clearAllPreview(): void {
+    _clearHoldTimer();
+    _heldPreview.value = [];
+    _clearLinger();
   }
 
   /**
    * 單擊落子後讓預顯續留一小段再淡出（關閉快速連點合併時使用）。
-   * 與 endPress 同一同步流程中，_clearHoldPreview 先把 label 清為 null、本函式隨即
-   * 再設回——同 tick 淨值不變，故不觸發離場，預顯自按壓起連續呈現至此續留結束才淡出。
+   * 與 endPress 同一同步流程中，_removeHeld 先把該鍵的 held 預顯移除、本函式隨即
+   * 把同一 label 設進 _lingerLabel——同 tick 併合後預顯字串淨值不變，故不觸發離場，
+   * 預顯自按壓起連續呈現至此續留結束才淡出。
    */
   function _lingerTapPreview(label: string): void {
-    if (_tapPreviewLingerTimer !== null) clearTimeout(_tapPreviewLingerTimer);
-    _tapPreviewLabel.value = label;
-    _tapPreviewLingerTimer = window.setTimeout(() => {
-      _tapPreviewLingerTimer = null;
-      _tapPreviewLabel.value = null;
+    if (_lingerTimer !== null) clearTimeout(_lingerTimer);
+    _lingerLabel.value = label;
+    _lingerTimer = window.setTimeout(() => {
+      _lingerTimer = null;
+      _lingerLabel.value = null;
     }, TAP_PREVIEW_LINGER_MS);
   }
 
@@ -357,21 +394,23 @@ export function useHotkeyInputMode() {
    * 回 true＝有落子（呼叫端據此 preventDefault）。無對應起按或暫停中則不動作。
    */
   function endPress(hotkey: string): boolean {
-    const start = _pressStartAt.get(hotkey);
-    if (start === undefined) return false;
+    const press = _pressStartAt.get(hotkey);
+    if (press === undefined) return false;
     _pressStartAt.delete(hotkey);
+    const { at: start, seq } = press;
     // 此鍵的 hold 是否已於達閾值時入緩衝（合併模式）。
     const wasCommitted = _holdCommitted.delete(hotkey);
+    _removeHeld(seq); // 放開＝移除此鍵的即時預顯（已落子者改由緩衝接手顯示）
     if (_pressingHotkey.value === hotkey) {
       _pressingHotkey.value = null; // 放開＝停止進度環
-      _clearHoldPreview();
+      _clearHoldTimer();
     }
 
     if (wasCommitted) {
       // 長按已在達閾值時入緩衝，此處不重複入；放開才開始合併靜默窗
       //（按住期間凍結，見 _scheduleHoldPreview）。緩衝可能已被其他操作結算（如切泳道），
       // 故僅在仍有內容時起窗。
-      if (_tapBufferLabels.value.length > 0) _restartTapCombineTimer();
+      if (_tapBuffer.value.length > 0) _restartTapCombineTimer();
       return true;
     }
 
@@ -381,14 +420,15 @@ export function useHotkeyInputMode() {
     if (!entry) {
       // 未落子（取消：tap-only 鍵長按／hold-only 鍵短按／無對映）。若緩衝有內容，
       // beginPress 起按時凍結的合併計時器須在此重啟，否則緩衝會卡著不自動結算。
-      if (_tapBufferLabels.value.length > 0) _restartTapCombineTimer();
+      if (_tapBuffer.value.length > 0) _restartTapCombineTimer();
       return false;
     }
     if (settings.value.hotkeyTapCombine) {
-      // 快速連點合併：tap／hold 一律先入緩衝，時間窗內無新輸入才串接落成一塊。
-      // 長按亦入緩衝故可雙向串接（前後皆能接）；按住期間計時器由 beginPress 凍結，
-      // 長按超過合併窗也不會被提前拆塊。
-      bufferTap(entry.label);
+      // 快速連點合併：tap／hold 一律依 seq 入緩衝，時間窗內無新輸入才串接落成一塊。
+      // 依 seq 而非放開順序 → 先按下的鍵恆排前面（修正 AE 順序錯亂）。
+      // 按住期間計時器由 beginPress 凍結，長按超過合併窗也不會被提前拆塊。
+      _insertBuffer(seq, entry.label);
+      _restartTapCombineTimer();
     } else {
       // 關閉合併：先結算緩衝（防設定中途切換的殘留），再單獨插入。
       flushTapBuffer();
@@ -508,7 +548,7 @@ export function useHotkeyInputMode() {
     _pressStartAt.clear();
     _holdCommitted.clear(); // 失焦暫停：清掉待放開的已入緩衝長按標記
     _pressingHotkey.value = null; // 失焦暫停：停止進度環，避免回焦時殘留
-    _clearHoldPreview();
+    _clearAllPreview();
   }
 
   /** 回焦恢復接收輸入。 */
@@ -521,14 +561,21 @@ export function useHotkeyInputMode() {
   const pressing = computed<boolean>(
     () => _pressingHotkey.value !== null && hotkeyMap.hasHold(_pressingHotkey.value),
   );
-  // 長按即時預顯的 label（達閾值且有 hold 條目才非空）。驅動 Swimlane 幽靈格文字。
-  const holdPreviewLabel = computed<string | null>(() => _holdPreviewLabel.value);
-  // 單擊即時預顯的 label（按住 tap 鍵、未達長按閾值期間非空）。驅動 Swimlane 幽靈格文字。
-  const tapPreviewLabel = computed<string | null>(() => _tapPreviewLabel.value);
-  // 連點合併預顯：緩衝中累積的串接文字（無待合併內容為 null）。
-  // 驅動 Swimlane 幽靈格顯示「即將合併落下的一塊」，寬度隨文字長度變化。
-  const tapCombineLabel = computed<string | null>(() =>
-    _tapBufferLabels.value.length > 0 ? _tapBufferLabels.value.join('') : null,
+  // 幽靈格預顯文字（單一來源）：把「已落子待合併的緩衝」與「目前按著各鍵的即時預顯」
+  // 合併後一律依按下序號 seq 排序串接 → 先按下的鍵恆排前面，且後按的鍵不會蓋掉
+  // 先按且未放開的鍵（消除 E→Q 中途只閃 Q 的抖動）。皆空時落到落子後的續留 label。
+  const ghostPreviewText = computed<string | null>(() => {
+    const merged = [
+      ..._tapBuffer.value.map((e) => ({ seq: e.seq, label: e.label })),
+      ..._heldPreview.value.map((e) => ({ seq: e.seq, label: e.label })),
+    ].sort((a, b) => a.seq - b.seq);
+    if (merged.length > 0) return merged.map((e) => e.label).join('');
+    return _lingerLabel.value;
+  });
+  // 是否套用「輸入進行中」高亮（幽靈格底色提亮＋實線）：緩衝已有落子、或任一按著的鍵
+  // 已達長按閾值。單純按住單擊鍵（未達閾值、緩衝空）不高亮，維持與舊版一致的觀感。
+  const previewActive = computed<boolean>(
+    () => _tapBuffer.value.length > 0 || _heldPreview.value.some((e) => e.isHold),
   );
   // 剛以熱鍵插入的區塊 id（進場動畫用；播畢為 null）。驅動 RotationBlock 落下吸附。
   const enteringId = computed<string | null>(() => _enteringId.value);
@@ -538,9 +585,8 @@ export function useHotkeyInputMode() {
     paused,
     controlsReady,
     pressing,
-    holdPreviewLabel,
-    tapPreviewLabel,
-    tapCombineLabel,
+    ghostPreviewText,
+    previewActive,
     enteringId,
     deleteFlashTick: _deleteFlashTick,
     inspecting: _inspecting,
