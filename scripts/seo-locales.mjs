@@ -173,6 +173,9 @@ export function fillHtml(template, code) {
 
 /** 產生 sitemap.xml 內容（5 個網址，各自帶 hreflang 交叉標註）。 */
 export function renderSitemap() {
+  // lastmod：build 當日日期（YYYY-MM-DD）。角色資料週更 + 每次部署都會重建，
+  // 這個日期即代表站點最後更新時間，是 Google 判斷重新抓取的主要訊號。
+  const lastmod = new Date().toISOString().slice(0, 10);
   const alternates = [
     ...LOCALES.map((l) => `    <xhtml:link rel="alternate" hreflang="${l.hreflang}" href="${pageUrl(l)}" />`),
     `    <xhtml:link rel="alternate" hreflang="x-default" href="${SITE}/" />`,
@@ -181,6 +184,7 @@ export function renderSitemap() {
     (l) => `  <url>
     <loc>${pageUrl(l)}</loc>
 ${alternates}
+    <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>${l.dir ? '0.8' : '1.0'}</priority>
   </url>`,

@@ -1,0 +1,20 @@
+{
+  "name": "WuWa Rotation Planner",
+  "short_name": "WuWa Planner",
+  "description": "Visual drag-and-drop rotation planner for Wuthering Waves.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "en",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "/Phoebe_resize.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}
